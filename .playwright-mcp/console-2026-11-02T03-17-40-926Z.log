@@ -1,5 +1,0 @@
-[      51ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
-[  526611ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1089
-[  532946ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
-[ 1024497ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/src/components/Composer.tsx?t=1793590485411:0
-[ 1024498ms] [ERROR] [vite] Failed to reload /src/components/Composer.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:367
