@@ -54,7 +54,7 @@
 ## 7. 输入卡 `src/renderer/src/components/Composer.tsx`
 
 - ~~**P1** 左侧 `+` 无 handler~~ → 已实现（图片转 base64 当附件，其余插 `@路径`）。
-- **P1** 访问权限「变更前确认」写死，pi 没有对应概念，实际不生效。
+- ~~**P1** 访问权限「变更前确认」写死~~ → **已实现**。宿主用 `DefaultResourceLoader` 多挂一个隐藏的内联扩展 `pigui-permission-gate`（`createSession()` 里），监听 `tool_call`，对 `write/edit/powershell/bash` 走 `uiContext.confirm` 逐次确认；开关切到「完全访问」后直接放行。已验证确认框弹出、确认后命令执行（`echo gate-ok`）。
 - **P1** 起始页工作区条的 `+`（添加工作区）无 handler。
 - ~~**P2** `@` 文件提及未实现~~ → 已实现（宿主 `listFiles`）。
 - ~~**P2** `/` 命令未实现~~ → 已实现（命令来自扩展，`prompt()` 派发）。

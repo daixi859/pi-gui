@@ -86,6 +86,9 @@ export interface CommandInfo {
   description?: string
 }
 
+/** 工具执行前的确认策略：confirm = 写文件/执行命令前问一次，full = 直接跑 */
+export type AccessMode = 'confirm' | 'full'
+
 export type AgentCommand =
   | { type: 'init' }
   | { type: 'prompt'; text: string; images?: PromptImage[] }
@@ -97,6 +100,7 @@ export type AgentCommand =
   | { type: 'deleteSession'; path: string }
   | { type: 'setModel'; modelId: string }
   | { type: 'setThinkingLevel'; level: string }
+  | { type: 'setAccess'; mode: AccessMode }
   | { type: 'uiReply'; id: string; reply: UiReply }
   /** 撤销一次编辑：把 edit 工具给的 patch 反向应用 */
   | { type: 'revertEdit'; patch: string }

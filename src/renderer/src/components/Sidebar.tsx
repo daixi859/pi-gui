@@ -25,7 +25,6 @@ import {
   IconSortList,
   IconSparkle,
   IconSpinner,
-  IconUpload
 } from './icons'
 
 type Nav = (route: 'start' | 'chat' | 'gallery') => void
@@ -569,7 +568,7 @@ export function CollapsedHeaderBar({
   )
 }
 
-export function WindowControls(): ReactNode {
+export function WindowControls({ sessionPath }: { sessionPath?: string }): ReactNode {
   return (
     <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <button
@@ -580,8 +579,14 @@ export function WindowControls(): ReactNode {
       >
         <IconHelp />
       </button>
-      <button type="button" aria-label="上传" className={iconBtn}>
-        <IconUpload />
+      <button
+        type="button"
+        aria-label="在文件夹中显示会话"
+        onClick={() => sessionPath && window.pi?.host.revealPath(sessionPath)}
+        disabled={!sessionPath}
+        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+      >
+        <IconFolder />
       </button>
       <button type="button" aria-label="最小化" className={iconBtn} onClick={() => window.pi.window.minimize()}>
         <IconMinimize />

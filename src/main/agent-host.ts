@@ -11,9 +11,9 @@ import { execFile } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { readdir } from 'node:fs/promises'
 import { basename, join, relative } from 'node:path'
-import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
-import type { SessionInfo } from '@earendil-works/pi-coding-agent'
-import type { AgentCommand, AgentEvent, CommandInfo, ModelOption, UiReply, UiRequest } from '@shared/ipc'
+import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from '@earendil-works/pi-coding-agent'
+import type { ExtensionAPI, SessionInfo } from '@earendil-works/pi-coding-agent'
+import type { AccessMode, AgentCommand, AgentEvent, CommandInfo, ModelOption, UiReply, UiRequest } from '@shared/ipc'
 import type { Block, DiffLine, ProjectMeta, SessionMeta, Snapshot } from '@shared/blocks'
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
@@ -35,6 +35,24 @@ let detach: (() => void) | null = null
 /** 当前会话的工作目录；默认进程 cwd，主进程可用 PI_AGENT_CWD 指定 */
 let cwd = process.env.PI_AGENT_CWD || process.cwd()
 let models: ModelOption[] = []
+/** 工具执行前的确认策略；由渲染层的「变更前确认 / 完全访问」开关控制 */
+let access: AccessMode = 'confirm'
+
+/** 会改动磁盘或执行命令的工具，这些才需要用户点头 */
+const RISKY = new Set(['write', 'edit', 'powershell', 'bash'])
+
+/** 注入给 pi 的权限门：复用 ui 桥的 confirm，所以渲染层不用认识它 */
+function permissionGate(pi: ExtensionAPI): void {
+  pi.on('tool_call', async (event) => {
+    if (access === 'full' || !RISKY.has(event.toolName)) return undefined
+    const detail = JSON.stringify(event.input ?? {})
+    const ok = await uiContext.confirm(
+      `允许执行 ${event.toolName}？`,
+      detail.length > 300 ? detail.slice(0, 300) + '…' : detail
+    )
+    return ok ? undefined : { block: true, reason: '用户拒绝了这次工具调用' }
+  })
+}
 
 /** 上一轮已定稿的块、本轮尚未归档的块、本轮折叠行 */
 let history: Block[] = []
@@ -162,7 +180,8 @@ function snapshot(): Snapshot {
     thinkingLevel: LEVEL_LABEL[session?.thinkingLevel ?? 'high'] ?? '高',
     cwd: basename(cwd),
     branch: branch(),
-    access: '变更前确认'
+    access: access === 'full' ? '完全访问' : '变更前确认',
+    accessFull: access === 'full'
   }
 }
 
@@ -382,6 +401,17 @@ async function adopt(s: Session): Promise<void> {
   await s.bindExtensions({ uiContext: uiContext as never, mode: 'rpc' })
 }
 
+/** 默认 loader 之外多挂一个权限门扩展；其余扩展、技能、模板照旧从 ~/.pi/agent 加载 */
+async function createSession(manager: SessionManager): Promise<Session> {
+  const loader = new DefaultResourceLoader({
+    cwd,
+    agentDir: getAgentDir(),
+    extensionFactories: [{ name: 'pigui-permission-gate', factory: permissionGate, hidden: true }]
+  })
+  await loader.reload()
+  return (await createAgentSession({ sessionManager: manager, cwd, resourceLoader: loader })).session
+}
+
 async function start(cwdOverride?: string): Promise<void> {
   detach?.()
   if (session) session.dispose()
@@ -389,8 +419,8 @@ async function start(cwdOverride?: string): Promise<void> {
   if (cwdOverride) cwd = cwdOverride
   const manager = SessionManager.create(cwd)
   managerRef = manager
-  const created = await createAgentSession({ sessionManager: manager, cwd })
-  await adopt(created.session)
+  const created = await createSession(manager)
+  await adopt(created)
   await loadModels()
   flushNow()
   status(false)
@@ -409,8 +439,8 @@ async function open(path: string): Promise<void> {
     const manager = SessionManager.open(path)
     cwd = manager.getCwd() || cwd
     managerRef = manager
-    const created = await createAgentSession({ sessionManager: manager, cwd })
-    await adopt(created.session)
+    const created = await createSession(manager)
+    await adopt(created)
     await loadModels()
     history = blocksFromEntries(manager.getEntries())
     flushNow()
@@ -750,6 +780,10 @@ async function handle(cmd: AgentCommand): Promise<void> {
         break
       case 'setThinkingLevel':
         setLevel(cmd.level)
+        break
+      case 'setAccess':
+        access = cmd.mode
+        status(false)
         break
       case 'uiReply':
         settleUi(cmd.id, cmd.reply)

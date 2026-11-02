@@ -31,6 +31,7 @@ export function StartPage({
           files={agent.files}
           onQueryFiles={agent.queryFiles}
           commands={agent.commands}
+          onAccess={agent.toggleAccess}
         />
         <SuggestionRow onPick={onSubmit} />
       </div>

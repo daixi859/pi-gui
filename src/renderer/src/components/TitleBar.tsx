@@ -75,7 +75,7 @@ export function TitleBar({
         </div>
       )}
       <div className="ml-auto">
-        <WindowControls />
+        <WindowControls sessionPath={sessionPath} />
       </div>
     </header>
   )

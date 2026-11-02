@@ -41,7 +41,8 @@ function Toolbar({
   onModel,
   onSend,
   onAbort,
-  onAttach
+  onAttach,
+  onAccess
 }: {
   snapshot: Snapshot
   streaming: boolean
@@ -49,6 +50,7 @@ function Toolbar({
   onSend: () => void
   onAbort: () => void
   onAttach: () => void
+  onAccess: () => void
 }): ReactNode {
   return (
     <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2">
@@ -60,10 +62,10 @@ function Toolbar({
       >
         <IconPlus />
       </button>
-      <span className={ghost}>
+      <button type="button" onClick={onAccess} className={ghost} title="切换变更前确认 / 完全访问">
         <IconHand className="size-[14px]" />
         {snapshot.access}
-      </span>
+      </button>
       <div className="ml-auto flex items-center gap-1.5">
         <button type="button" onClick={onModel} className={ghost}>
           <span className="size-[13px] rounded-full border-2 border-[#bcdcc6]" />
@@ -99,7 +101,8 @@ function InputCard({
   onLevel,
   files,
   onQueryFiles,
-  commands
+  commands,
+  onAccess
 }: {
   placeholder: string
   big?: boolean
@@ -113,6 +116,7 @@ function InputCard({
   files: string[]
   onQueryFiles: (query: string) => void
   commands: CommandInfo[]
+  onAccess: () => void
 }): ReactNode {
   const [text, setText] = useState('')
   const [images, setImages] = useState<PromptImage[]>([])
@@ -270,6 +274,7 @@ function InputCard({
         onModel={() => setMenu((v) => !v)}
         onSend={submit}
         onAbort={onAbort}
+        onAccess={onAccess}
         onAttach={() => {
           void window.pi?.host.pickFiles().then((paths) => {
             if (!paths.length) return
@@ -315,6 +320,7 @@ export interface ComposerProps {
   files: string[]
   onQueryFiles: (query: string) => void
   commands: CommandInfo[]
+  onAccess: () => void
 }
 
 /** 起始页的大输入卡 */

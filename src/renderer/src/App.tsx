@@ -148,10 +148,12 @@ export default function App(): ReactNode {
           </main>
         </div>
       </div>
+      {/* 弹窗与提示放在最外层：起始页上的工具确认也要能看到 */}
+      {agent.ui[0] && <UiPrompt req={agent.ui[0]} onReply={agent.replyUi} />}
+      <Toasts items={agent.toasts} />
     </div>
   )
 }
-
 function ChatView({
   agent,
   answerText
@@ -219,10 +221,9 @@ function ChatView({
           files={agent.files}
           onQueryFiles={agent.queryFiles}
           commands={agent.commands}
+          onAccess={agent.toggleAccess}
         />
       </div>
-      {agent.ui[0] && <UiPrompt req={agent.ui[0]} onReply={agent.replyUi} />}
-      <Toasts items={agent.toasts} />
     </div>
   )
 }

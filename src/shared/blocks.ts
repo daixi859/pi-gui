@@ -57,4 +57,6 @@ export interface Snapshot {
   cwd: string
   branch: string
   access: string
+  /** access 的机器可读版本：true = 完全访问，工具不再逐次确认 */
+  accessFull: boolean
 }

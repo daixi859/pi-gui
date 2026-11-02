@@ -5,7 +5,8 @@ export const snapshot: Snapshot = {
   thinkingLevel: '最高',
   cwd: 'ai-berkshire',
   branch: 'main',
-  access: '变更前确认'
+  access: '变更前确认',
+  accessFull: false
 }
 
 export const projects: ProjectMeta[] = [

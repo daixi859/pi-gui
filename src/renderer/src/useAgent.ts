@@ -58,7 +58,14 @@ const initial: AgentState = {
   sessionsLoading: true,
   projects: [],
   models: [],
-  snapshot: { model: '加载中…', thinkingLevel: '高', cwd: '—', branch: '—', access: '变更前确认' },
+  snapshot: {
+    model: '加载中…',
+    thinkingLevel: '高',
+    cwd: '—',
+    branch: '—',
+    access: '变更前确认',
+    accessFull: false
+  },
   streaming: false,
   settledAt: null,
   asks: [],
@@ -105,6 +112,7 @@ export function useAgent(): AgentState & {
   clearError: () => void
   setModel: (id: string) => void
   setThinkingLevel: (level: string) => void
+  toggleAccess: () => void
   answerAsk: (id: string, answers: AskAnswer[]) => void
   cancelAsk: (id: string) => void
   replyUi: (id: string, reply: { value?: string; confirmed?: boolean; cancelled?: boolean }) => void
@@ -255,6 +263,7 @@ export function useAgent(): AgentState & {
     clearError: () => setState((s) => ({ ...s, error: undefined })),
     setModel: (modelId) => sendCmd({ type: 'setModel', modelId }),
     setThinkingLevel: (level) => sendCmd({ type: 'setThinkingLevel', level }),
+    toggleAccess: () => sendCmd({ type: 'setAccess', mode: state.snapshot.accessFull ? 'confirm' : 'full' }),
     answerAsk: (id, answers) => {
       const ask = state.asks.find((a) => a.id === id)
       if (!ask) return
