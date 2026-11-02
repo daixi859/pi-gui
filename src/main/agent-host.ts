@@ -451,12 +451,20 @@ async function open(path: string): Promise<void> {
 }
 
 /** 历史会话的 entry 流转成块：工具结果回填到对应的 tool 块上，折叠规则与实时流一致 */
-function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>): Block[] {
+function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; message?: unknown }>): Block[] {
   const out: Block[] = []
   const tools = new Map<string, Tool>()
+  /** toolCallId → 原始参数，补文件卡要拿完整 path（block.args 是截断过的预览） */
+  const rawArgs = new Map<string, unknown>()
   let group: Block[] = []
+  /** 这一组第一条 entry 的时间，用来算折叠行时长 */
+  let groupStart = NaN
+  /** 最后一条 entry 的时间 */
+  let lastTs = NaN
   for (const entry of entries) {
     if (entry.type !== 'message' || !entry.message) continue
+    const ts = entry.timestamp ? Date.parse(entry.timestamp) : NaN
+    if (Number.isFinite(ts)) lastTs = ts
     const m = entry.message as {
       role: string
       content?: Array<{ type: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>
@@ -469,7 +477,8 @@ function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>):
       cancelled?: boolean
     }
     if (m.role === 'user') {
-      out.push(...settleInto(group))
+      out.push(...settleInto(group, lastTs - groupStart))
+      groupStart = ts
       const imgs = Array.isArray(m.content) ? m.content.filter((c) => c.type === 'image').length : 0
       group = [
         {
@@ -495,6 +504,7 @@ function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>):
             state: 'running'
           }
           tools.set(c.id, block)
+          rawArgs.set(c.id, c.arguments)
           group.push(block)
         }
       }
@@ -505,7 +515,9 @@ function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>):
         block.output = textOf(m.content).slice(0, 8000)
         // 历史会话里的 read 也补一张文件卡，和实时流一致
         if (block.name === 'read' && !m.isError) {
-          const p = /"path":"([^"]+)"/.exec(block.args)?.[1]
+          const raw = rawArgs.get(m.toolCallId) as { path?: unknown } | string | undefined
+          const p =
+            typeof raw === 'string' ? /"path":"([^"]+)"/.exec(raw)?.[1] : String(raw?.path ?? '')
           if (p) group.push(fileBlock(p, 0))
         }
       }
@@ -520,11 +532,11 @@ function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>):
       })
     }
   }
-  return [...out, ...settleInto(group)]
+  return [...out, ...settleInto(group, lastTs - groupStart)]
 }
 
 /** 一组块折成 [用户气泡, 折叠行, 最后一条回答]，不碰全局状态 */
-function settleInto(items: Block[]): Block[] {
+function settleInto(items: Block[], durationMs = 0): Block[] {
   const users = items.filter((b) => b.kind === 'user')
   const rest = items.filter((b) => b.kind !== 'user')
   let last = -1
@@ -534,7 +546,7 @@ function settleInto(items: Block[]): Block[] {
   const answer = last >= 0 ? rest.slice(last) : []
   const inner = last >= 0 ? rest.slice(0, last) : rest
   const wrapped: Block[] =
-    inner.length > 0 ? [{ kind: 'turn', id: `t-${++seq}`, durationMs: 0, children: inner }] : []
+    inner.length > 0 ? [{ kind: 'turn', id: `t-${++seq}`, durationMs, children: inner }] : []
   return [...users, ...wrapped, ...answer]
 }
 

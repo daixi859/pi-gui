@@ -1,10 +1,21 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, utilityProcess } from 'electron'
 import { join } from 'node:path'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import type { AgentCommand, AgentEvent } from '@shared/ipc'
 
 let win: BrowserWindow | null = null
 let host: Electron.UtilityProcess | null = null
+/** 窗口尺寸/位置落盘，下次启动还原 */
+const boundsFile = (): string => join(app.getPath('userData'), 'window.json')
+
+function readBounds(): Partial<Electron.Rectangle> {
+  try {
+    return JSON.parse(readFileSync(boundsFile(), 'utf8'))
+  } catch {
+    return {}
+  }
+}
 
 /** 引擎宿主：pi SDK 只在子进程里加载，主进程只做转发 */
 function spawnHost(): void {
@@ -31,6 +42,7 @@ function createWindow(): void {
   win = new BrowserWindow({
     width: 1192,
     height: 868,
+    ...readBounds(),
     minWidth: 900,
     minHeight: 600,
     frame: false,
@@ -45,6 +57,15 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => win?.show())
+  // 最大化时 getBounds 给的是全屏矩形，关窗会把全屏尺寸存下来，所以只在非最大化时记
+  win.on('close', () => {
+    if (!win || win.isMaximized()) return
+    try {
+      writeFileSync(boundsFile(), JSON.stringify(win.getBounds()))
+    } catch {
+      // 写入失败无所谓，下次用默认尺寸
+    }
+  })
   // 调试用：PI_SHOT=<路径> 启动后若干秒抓一张图，PI_SHOT_JS 先执行一段页面脚本
   if (process.env.PI_SHOT) {
     setTimeout(async () => {
