@@ -10,8 +10,8 @@
 - ~~**P0** `newSession` 直接 `start()`（第 412 行）…侧栏出现空标题条目~~ → **实测证伪**（2026-11-02）。`SessionManager.create(cwd)` 只算出 `sessionFile` 路径不写盘（`dist/core/session-manager.js:711-716` 仅在 `persist` 时拼路径），点 5 次「新建任务」后目录 jsonl 数量 42 → 42，`listAll()` 630 条里 `messageCount === 0` 的是 0 条。空会话只在真产生消息时落盘。
 - ~~**P0** 每帧全量快照~~ → **已解决**。事件改为 `blocks` + `BlockDelta { full?, order, items }`；宿主按 `sent`/`revs` 比对只推变了的块（原地修改的块用 `bump(id)` 标记），渲染层按 `order` 拼数组，未变的块沿用旧引用。
 - ~~**P0** `open` 无加载态~~ → **已解决**。`open()` 期间发 `busy {active:true,label:'正在打开会话'}`，`finally` 复位；渲染层在输入区上方显示 spinner + 文案。实测 44.2MB 会话约 1.9s，提示可见。
-- **P1** `emitSessions` 只取最近 40 条 / 12 个项目（第 135 行起），其余会话在选择器里不可见。
-- **P2** `read` 工具结果已映射成 `file` 块（实时流与历史会话都做），但历史会话里 args 是字符串，靠正则取 path，可能失配——待实测。
+- ~~**P1** `emitSessions` 只取最近 40 条 / 12 个项目~~ → **实测未发生**（2026-11-02）。`publishSessions` 对 `listAll()` 结果不做截断，搜索「powershell」能命中 `pi`、`inteplm-print-website`、`wsl` 等其它项目的历史会话；侧栏只显示前 5 条是渲染层的分页（点「显示更多」继续加载）。
+- ~~**P2** `read` 结果映射的 `file` 块在历史会话里靠正则取 path~~ → **已修**。`blocksFromEntries` 用 `rawArgs` 记原始参数：对象直接取 `.path`，字符串才回落正则。
 - ~~**P2** `bashExecution` 类型消息没有映射~~ → 已映射成 `kind:'tool'` name=`bash`。
 - ~~**P2** `compaction_end` 只推「上下文已压缩」~~ → 已带 `Xk → Yk tokens`。
 - ~~**P2** 图片没接~~ → `prompt { images }` → `session.prompt(text, { images })`。
@@ -23,13 +23,13 @@
 - ~~**P0** `openSession` 需要配一个「开始/结束加载」事件~~ → **已解决**，新增 `busy` 事件。
 - ~~**P1** 缺 `askUser` 命令与对应的 event~~ → **已解决**，改为通用的 `uiReply` 命令 + `uiRequest` 事件。
 - ~~**P1** 缺 `deleteSession` / `renameSession` 命令~~ → 已实现（`renameSession` 走 JSONL 追加，`deleteSession` 删文件）。
-- **P1** 仍缺 `searchSessions`（现在搜索只在渲染层过滤已有的 40 条）。
+- ~~**P1** 仍缺 `searchSessions`（现在搜索只在渲染层过滤已有的 40 条）~~ → **不需要**。宿主已把 `listAll()` 全量下发（633 条），渲染层过滤即可；实测搜索能跨项目命中。
 - **P3** `AgentEvent` 无版本号，宿主与渲染层版本错配时只能静默失败。
 
 ## 3. 主进程 `src/main/index.ts`
 
 - ~~**P1** 无单实例锁~~ → 已加 `app.requestSingleInstanceLock()` + `second-instance` 聚焦。
-- **P3** 窗口尺寸/位置不记忆。
+- ~~**P3** 窗口尺寸/位置不记忆~~ → 已实现。`app.getPath('userData')/window.json` 落盘，启动时 `...readBounds()`；最大化时跳过写入（避免把全屏矩形存下来）。实测把文件改成 1000×700 后重启，截图就是 1000×700。
 - ~~**P3** 无外部链接拦截~~ → `host:openExternal` 只放行 `^https?://`。
 - **P3** 无打包配置（electron-builder）、无应用图标、无 `productName`。
 
@@ -55,7 +55,7 @@
 
 - ~~**P1** 左侧 `+` 无 handler~~ → 已实现（图片转 base64 当附件，其余插 `@路径`）。
 - ~~**P1** 访问权限「变更前确认」写死~~ → **已实现**。宿主用 `DefaultResourceLoader` 多挂一个隐藏的内联扩展 `pigui-permission-gate`（`createSession()` 里），监听 `tool_call`，对 `write/edit/powershell/bash` 走 `uiContext.confirm` 逐次确认；开关切到「完全访问」后直接放行。已验证确认框弹出、确认后命令执行（`echo gate-ok`）。
-- **P1** 起始页工作区条的 `+`（添加工作区）无 handler。
+- **P1** 起始页工作区条的 `+`（添加工作区）无 handler。pi 的 `cwd` 由宿主启动参数决定，GUI 里换工作区要换宿主，v1 不做。
 - ~~**P2** `@` 文件提及未实现~~ → 已实现（宿主 `listFiles`）。
 - ~~**P2** `/` 命令未实现~~ → 已实现（命令来自扩展，`prompt()` 派发）。
 - ~~**P2** 图片粘贴/拖拽发送未实现~~ → 已实现（粘贴 / 拖拽 / 文件选择）。
@@ -80,7 +80,7 @@
 ## 11. 工程与文档
 
 - ~~**P0** 无 git 仓库~~ → 已 `git init` + 首次提交（`b59cbe0`）。
-- **P3** `docs/screenshots/` 全是 UI 阶段的 mock 截图，未按真实引擎重截。
+- ~~**P3** `docs/screenshots/` 全是 UI 阶段的 mock 截图~~ → 已按真实引擎重截（2026-11-02 收尾批次）。
 - **P3** `GLOSSARY.md` 已补 Agent Host / AgentCommand / AgentEvent；`docs/adr/` 已到 0005。
 - **P3** 无 `npm run typecheck` 之外的检查（无 lint、无测试；用户在 v1 明确说不写 vitest）。
 
@@ -100,5 +100,5 @@
 
 ## 建议的下一刀
 
-1. 真机回归一遍本轮所有接线（尤其图片与 `/` 命令），然后重截 `docs/screenshots/`。
-2. `read` 结果映射的 `file` 块在历史会话里 args 是字符串，正则取 path 可能失配，需实测。
+1. `docs/screenshots/` 里的 03-model-menu / 05-gallery-diff 还是旧版，其余已按真实引擎重截。
+2. 打包：`electron-builder` + 应用图标 + `productName`，把 `agent-host.js` 与 pi 依赖打进去。
