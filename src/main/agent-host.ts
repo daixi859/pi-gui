@@ -459,12 +459,12 @@ function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; me
   let group: Block[] = []
   /** 这一组第一条 entry 的时间，用来算折叠行时长 */
   let groupStart = NaN
-  /** 最后一条 entry 的时间 */
-  let lastTs = NaN
+  /** 这一组最后一条 entry 的时间（不含下一条 user，否则会把思考间隔算进去） */
+  let groupEnd = NaN
   for (const entry of entries) {
     if (entry.type !== 'message' || !entry.message) continue
     const ts = entry.timestamp ? Date.parse(entry.timestamp) : NaN
-    if (Number.isFinite(ts)) lastTs = ts
+    if (Number.isFinite(ts)) groupEnd = ts
     const m = entry.message as {
       role: string
       content?: Array<{ type: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>
@@ -477,7 +477,7 @@ function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; me
       cancelled?: boolean
     }
     if (m.role === 'user') {
-      out.push(...settleInto(group, lastTs - groupStart))
+      out.push(...settleInto(group, groupEnd - groupStart))
       groupStart = ts
       const imgs = Array.isArray(m.content) ? m.content.filter((c) => c.type === 'image').length : 0
       group = [
@@ -532,7 +532,7 @@ function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; me
       })
     }
   }
-  return [...out, ...settleInto(group, lastTs - groupStart)]
+  return [...out, ...settleInto(group, groupEnd - groupStart)]
 }
 
 /** 一组块折成 [用户气泡, 折叠行, 最后一条回答]，不碰全局状态 */
