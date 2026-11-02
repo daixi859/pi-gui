@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconCopy,
   IconFile,
+  IconImage,
   IconShare,
   IconSparkle,
   IconThumbDown,
@@ -17,10 +18,16 @@ import {
 /** 渲染层不能直接用 shell / clipboard，全部过 preload 的主进程桥 */
 const host = (): Window['pi']['host'] | undefined => window.pi?.host
 
-function UserBlock({ text }: { text: string }): ReactNode {
+function UserBlock({ text, images }: { text: string; images?: number }): ReactNode {
   return (
     <div className="flex justify-end">
       <div className="max-w-[85%] rounded-[14px] rounded-br-[6px] bg-sunken px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap">
+        {images ? (
+          <div className="mb-1 flex items-center gap-1.5 text-[12px] text-muted">
+            <IconImage className="size-3.5" />
+            {images} 张图片
+          </div>
+        ) : null}
         {text}
       </div>
     </div>
@@ -128,20 +135,29 @@ function FileBlock({ name, meta, path }: { name: string; meta: string; path?: st
 }
 
 function TurnBlock({
+  id,
   durationMs,
   aborted,
   children
 }: {
+  id: string
   durationMs: number
   aborted?: boolean
   children: Block[]
 }): ReactNode {
-  const [open, setOpen] = useState(false)
+  // 展开状态存本地：切会话、重开后还保持原样
+  const [open, setOpen] = useState(() => localStorage.getItem(`pi.turn.${id}`) === '1')
+  const toggle = (): void => {
+    setOpen((v) => {
+      localStorage.setItem(`pi.turn.${id}`, v ? '0' : '1')
+      return !v
+    })
+  }
   return (
     <div className="rounded-[10px] border border-line/70">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-[13px] text-muted transition-colors hover:text-fg"
       >
         {open ? <IconChevronDown /> : <IconChevronRight />}
@@ -177,7 +193,7 @@ function SystemBlock({ tone, text }: { tone: keyof typeof TONES; text: string })
 export function BlockView({ block }: { block: Block }): ReactNode {
   switch (block.kind) {
     case 'user':
-      return <UserBlock text={block.text} />
+      return <UserBlock text={block.text} images={block.images} />
     case 'assistant':
       return <AssistantBlock text={block.text} streaming={block.streaming} />
     case 'thinking':
@@ -198,7 +214,7 @@ export function BlockView({ block }: { block: Block }): ReactNode {
       return <FileBlock name={block.name} meta={block.meta} path={block.path} />
     case 'turn':
       return (
-        <TurnBlock durationMs={block.durationMs} aborted={block.aborted}>
+        <TurnBlock id={block.id} durationMs={block.durationMs} aborted={block.aborted}>
           {block.children}
         </TurnBlock>
       )

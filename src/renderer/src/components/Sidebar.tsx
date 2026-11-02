@@ -271,7 +271,7 @@ export function Sidebar({
       <nav className="px-2.5 pt-2">
         {navButton('新建任务', IconPlusCircle, 'Ctrl+N', onNewSession)}
         {navButton('自动化', IconSliders, undefined, () => onNavigate('gallery'))}
-        {navButton('插件市场', IconBlocks)}
+        {navButton('插件市场', IconBlocks, undefined, () => window.pi?.host.openAgentConfig())}
       </nav>
 
       <div className="my-2 border-t border-edge" />
@@ -415,7 +415,12 @@ export function Sidebar({
           <button type="button" aria-label="设备" className="text-muted hover:text-fg">
             <IconPanelRight className="size-[15px]" />
           </button>
-          <button type="button" aria-label="设置" className="text-muted hover:text-fg">
+          <button
+            type="button"
+            aria-label="设置"
+            onClick={() => window.pi?.host.openAgentConfig()}
+            className="text-muted hover:text-fg"
+          >
             <IconSettings className="size-[15px]" />
           </button>
         </div>
@@ -501,7 +506,15 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
                 }}
               />
               <MenuItem
+                label="在文件夹中显示"
+                onClick={() => {
+                  setMenu(null)
+                  window.pi?.host.revealPath(session.path)
+                }}
+              />
+              <MenuItem
                 label="删除"
+                danger
                 onClick={() => {
                   setMenu(null)
                   if (window.confirm(`删除任务「${session.title}」？文件会被永久移除。`)) onDelete()
@@ -559,7 +572,12 @@ export function CollapsedHeaderBar({
 export function WindowControls(): ReactNode {
   return (
     <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button type="button" aria-label="帮助" className={iconBtn}>
+      <button
+        type="button"
+        aria-label="帮助"
+        onClick={() => window.pi?.host.openExternal('https://github.com/earendil-works/pi')}
+        className={iconBtn}
+      >
         <IconHelp />
       </button>
       <button type="button" aria-label="上传" className={iconBtn}>

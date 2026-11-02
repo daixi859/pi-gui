@@ -216,6 +216,9 @@ function ChatView({
           onAbort={agent.abort}
           onModel={agent.setModel}
           onLevel={agent.setThinkingLevel}
+          files={agent.files}
+          onQueryFiles={agent.queryFiles}
+          commands={agent.commands}
         />
       </div>
       {agent.ui[0] && <UiPrompt req={agent.ui[0]} onReply={agent.replyUi} />}

@@ -28,6 +28,9 @@ export function StartPage({
           onAbort={agent.abort}
           onModel={agent.setModel}
           onLevel={agent.setThinkingLevel}
+          files={agent.files}
+          onQueryFiles={agent.queryFiles}
+          commands={agent.commands}
         />
         <SuggestionRow onPick={onSubmit} />
       </div>

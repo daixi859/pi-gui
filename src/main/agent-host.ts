@@ -9,10 +9,11 @@
 import { readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { readdir } from 'node:fs/promises'
+import { basename, join, relative } from 'node:path'
 import { createAgentSession, SessionManager } from '@earendil-works/pi-coding-agent'
 import type { SessionInfo } from '@earendil-works/pi-coding-agent'
-import type { AgentCommand, AgentEvent, ModelOption, UiReply, UiRequest } from '@shared/ipc'
+import type { AgentCommand, AgentEvent, CommandInfo, ModelOption, UiReply, UiRequest } from '@shared/ipc'
 import type { Block, DiffLine, ProjectMeta, SessionMeta, Snapshot } from '@shared/blocks'
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
@@ -289,7 +290,14 @@ function publishSessions(list: readonly SessionInfo[], loading = false): void {
     byProject.set(project, bucket)
   }
   const projects: ProjectMeta[] = [...byProject].map(([name, s]) => ({ name, sessions: s }))
-  send({ type: 'sessions', sessions, projects, models, loading })
+  send({ type: 'sessions', sessions, projects, models, loading, commands: commands() })
+}
+
+/** 斜杠命令列表：只取扩展注册的命令，每次读最新的 runner */
+function commands(): CommandInfo[] {
+  const runner = session?.extensionRunner
+  if (!runner) return []
+  return runner.getRegisteredCommands().map((c) => ({ name: c.name, description: c.description }))
 }
 
 /** 重命名 / 删除只改内存里的扫描结果再重发，不重扫盘（约 850ms） */
@@ -432,7 +440,15 @@ function blocksFromEntries(entries: Array<{ type: string; message?: unknown }>):
     }
     if (m.role === 'user') {
       out.push(...settleInto(group))
-      group = [{ kind: 'user', id: `u-${++seq}`, text: textOf(m.content) }]
+      const imgs = Array.isArray(m.content) ? m.content.filter((c) => c.type === 'image').length : 0
+      group = [
+        {
+          kind: 'user',
+          id: `u-${++seq}`,
+          text: textOf(m.content),
+          ...(imgs ? { images: imgs } : {})
+        }
+      ]
     } else if (m.role === 'assistant') {
       const level = LEVEL_LABEL[m.thinkingLevel ?? ''] ?? undefined
       for (const c of m.content ?? []) {
@@ -617,13 +633,21 @@ function onEvent(ev: Record<string, any>): void {
 
 /* ---------------- 命令 ---------------- */
 
-async function prompt(text: string): Promise<void> {
+async function prompt(text: string, images?: Array<{ data: string; mimeType: string }>): Promise<void> {
   if (!session) return
-  round.push({ kind: 'user', id: `u-${++seq}`, text })
+  round.push({
+    kind: 'user',
+    id: `u-${++seq}`,
+    text,
+    ...(images?.length ? { images: images.length } : {})
+  })
   turnStart = Date.now()
   flushNow()
   try {
-    await session.prompt(text)
+    await session.prompt(
+      text,
+      images?.length ? { images: images.map((i) => ({ type: 'image' as const, ...i })) } : undefined
+    )
   } catch (err) {
     round.push({ kind: 'system', id: `s-${++seq}`, tone: 'error', text: String((err as Error)?.message ?? err) })
     flushNow()
@@ -648,6 +672,28 @@ async function revert(patch: string): Promise<void> {
     rmSync(file, { force: true })
     flushNow()
   }
+}
+
+/** @ 提及：在 cwd 下按文件名模糊匹配，只扫两层，避开 node_modules */
+async function listFiles(query: string): Promise<void> {
+  const needle = query.toLowerCase()
+  const out: string[] = []
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    if (out.length >= 40 || depth > 2) return
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+    for (const e of entries) {
+      if (out.length >= 40) return
+      if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'out') continue
+      const path = join(dir, e.name)
+      if (e.isDirectory()) await walk(path, depth + 1)
+      else {
+        const rel = relative(cwd, path).replace(/\\/g, '/')
+        if (!needle || rel.toLowerCase().includes(needle)) out.push(rel)
+      }
+    }
+  }
+  await walk(cwd, 0)
+  send({ type: 'files', items: out })
 }
 
 async function setModel(id: string): Promise<void> {
@@ -676,7 +722,7 @@ async function handle(cmd: AgentCommand): Promise<void> {
         await start()
         break
       case 'prompt':
-        await prompt(cmd.text)
+        await prompt(cmd.text, cmd.images)
         break
       case 'abort':
         await session?.abort()
@@ -695,6 +741,9 @@ async function handle(cmd: AgentCommand): Promise<void> {
         break
       case 'revertEdit':
         await revert(cmd.patch)
+        break
+      case 'listFiles':
+        await listFiles(cmd.query)
         break
       case 'setModel':
         await setModel(cmd.modelId)

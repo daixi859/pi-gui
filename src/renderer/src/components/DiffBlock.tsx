@@ -71,7 +71,7 @@ export function DiffBlock({
             {file}
           </div>
           <div className="max-h-[320px] overflow-auto py-1 font-mono text-[12.5px] leading-[1.75]">
-            {lines.map((l, i) => (
+            {(lines.length > 300 ? lines.slice(0, 300) : lines).map((l, i) => (
               <div
                 key={i}
                 className={
@@ -93,6 +93,10 @@ export function DiffBlock({
                 </span>
               </div>
             ))}
+            {lines.length > 300 && (
+              <div className="px-3.5 py-1 text-faint">… 还有 {lines.length - 300} 行
+未展开</div>
+            )}
           </div>
         </div>
       )}

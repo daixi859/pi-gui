@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, utilityProcess } from 'electron'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
 import type { AgentCommand, AgentEvent } from '@shared/ipc'
 
 let win: BrowserWindow | null = null
@@ -80,11 +81,26 @@ ipcMain.handle('host:pickFiles', async () => {
   return canceled ? [] : filePaths
 })
 
+ipcMain.handle('host:readImage', async (_e, path: string) => {
+  try {
+    const buf = await (await import('node:fs/promises')).readFile(path)
+    const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+    const mimeType =
+      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/png'
+    return { data: buf.toString('base64'), mimeType }
+  } catch {
+    return null
+  }
+})
+
 ipcMain.on('agent:command', (_e, cmd: AgentCommand) => send(cmd))
+
+ipcMain.on('host:openAgentConfig', () => void shell.openPath(join(homedir(), '.pi', 'agent', 'settings.json')))
 
 // 渲染层（sandbox）拿不到 clipboard / shell / dialog，统一从这走
 ipcMain.on('host:copy', (_e, text: string) => clipboard.writeText(text))
 ipcMain.on('host:openPath', (_e, path: string) => void shell.openPath(path))
+ipcMain.on('host:revealPath', (_e, path: string) => shell.showItemInFolder(path))
 ipcMain.on('host:openExternal', (_e, url: string) => {
   if (/^https?:\/\//.test(url)) void shell.openExternal(url)
 })

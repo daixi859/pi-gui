@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AgentCommand, AgentEvent, AskAnswer, AskQuestion, ModelOption, UiRequest } from '@shared/ipc'
+import type {
+  AgentCommand,
+  AgentEvent,
+  AskAnswer,
+  AskQuestion,
+  CommandInfo,
+  ModelOption,
+  PromptImage,
+  UiRequest
+} from '@shared/ipc'
 import type { Block, ProjectMeta, SessionMeta, Snapshot } from '@shared/blocks'
 import { multiReply, questionsOf, selectReply } from './interactions'
 
@@ -34,6 +43,10 @@ export interface AgentState {
   ui: UiRequest[]
   /** 扩展的临时通知，自动消失 */
   toasts: Array<{ id: string; message: string; type: 'info' | 'warning' | 'error' }>
+  /** @ 提及的候选文件（相对 cwd） */
+  files: string[]
+  /** 扩展注册的斜杠命令 */
+  commands: CommandInfo[]
   error?: string
 }
 
@@ -50,7 +63,9 @@ const initial: AgentState = {
   settledAt: null,
   asks: [],
   ui: [],
-  toasts: []
+  toasts: [],
+  files: [],
+  commands: []
 }
 
 /**
@@ -81,7 +96,7 @@ interface UiSlot {
  * 交互适配器（interactions/）负责把 ui 请求解释成具体控件与答案格式，这里只管收发。
  */
 export function useAgent(): AgentState & {
-  prompt: (text: string) => void
+  prompt: (text: string, images?: PromptImage[]) => void
   abort: () => void
   newSession: () => void
   openSession: (path: string) => void
@@ -93,6 +108,7 @@ export function useAgent(): AgentState & {
   answerAsk: (id: string, answers: AskAnswer[]) => void
   cancelAsk: (id: string) => void
   replyUi: (id: string, reply: { value?: string; confirmed?: boolean; cancelled?: boolean }) => void
+  queryFiles: (query: string) => void
 } {
   const [state, setState] = useState<AgentState>(initial)
   const ready = useRef(false)
@@ -179,8 +195,11 @@ export function useAgent(): AgentState & {
               sessions: ev.sessions,
               projects: ev.projects,
               models: ev.models,
+              commands: ev.commands,
               sessionsLoading: ev.loading === true
             }
+          case 'files':
+            return { ...s, files: ev.items }
           case 'blocks': {
             const { full, order, items } = ev.delta
             // 全量时丢掉缓存，否则只覆盖变了的块；没变的块沿用旧引用，React 不会重渲染它们
@@ -221,7 +240,7 @@ export function useAgent(): AgentState & {
 
   return {
     ...state,
-    prompt: (text) => sendCmd({ type: 'prompt', text }),
+    prompt: (text, images) => sendCmd({ type: 'prompt', text, images }),
     abort: () => sendCmd({ type: 'abort' }),
     newSession: () => {
       setState((s) => leave(s, null))
@@ -260,6 +279,7 @@ export function useAgent(): AgentState & {
     replyUi: (id, reply) => {
       sendCmd({ type: 'uiReply', id, reply })
       setState((s) => ({ ...s, ui: s.ui.filter((r) => r.id !== id) }))
-    }
+    },
+    queryFiles: (query) => sendCmd({ type: 'listFiles', query })
   }
 }

@@ -10,7 +10,7 @@ export type ToolState = 'running' | 'done' | 'error'
 export type SystemTone = 'info' | 'warn' | 'error'
 
 export type Block =
-  | { kind: 'user'; id: string; text: string }
+  | { kind: 'user'; id: string; text: string; images?: number }
   | { kind: 'assistant'; id: string; text: string; streaming?: boolean }
   | { kind: 'thinking'; id: string; text: string; level?: string; streaming?: boolean }
   | { kind: 'tool'; id: string; name: string; args: string; state: ToolState; output?: string }

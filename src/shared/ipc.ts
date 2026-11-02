@@ -57,6 +57,18 @@ export interface HostBridge {
   saveText: (defaultName: string, text: string) => void
   /** 弹文件选择框，返回选中的绝对路径；取消时为空数组 */
   pickFiles: () => Promise<string[]>
+  /** 打开 ~/.pi/agent/settings.json（设置 / 插件入口） */
+  openAgentConfig: () => void
+  /** 读图片为 base64（渲染层跨不了 file://），失败返回 null */
+  readImage: (path: string) => Promise<{ data: string; mimeType: string } | null>
+  /** 在资源管理器里定位文件 */
+  revealPath: (path: string) => void
+}
+
+/** 图片附件：base64 数据与 MIME 类型，直接透给 pi 的 ImageContent */
+export interface PromptImage {
+  data: string
+  mimeType: string
 }
 
 export interface BlockDelta {
@@ -68,9 +80,15 @@ export interface BlockDelta {
   items: Block[]
 }
 
+/** 扩展注册的斜杠命令，供输入框的 / 菜单 */
+export interface CommandInfo {
+  name: string
+  description?: string
+}
+
 export type AgentCommand =
   | { type: 'init' }
-  | { type: 'prompt'; text: string }
+  | { type: 'prompt'; text: string; images?: PromptImage[] }
   | { type: 'abort' }
   | { type: 'newSession' }
   | { type: 'openSession'; path: string }
@@ -82,8 +100,8 @@ export type AgentCommand =
   | { type: 'uiReply'; id: string; reply: UiReply }
   /** 撤销一次编辑：把 edit 工具给的 patch 反向应用 */
   | { type: 'revertEdit'; patch: string }
-  | { type: 'renameSession'; path: string; title: string }
-  | { type: 'deleteSession'; path: string }
+  /** 取 cwd 下文件名，供输入框的 @ 提及下拉 */
+  | { type: 'listFiles'; query: string }
 
 export type AgentEvent =
   | {
@@ -93,6 +111,7 @@ export type AgentEvent =
       models: ModelOption[]
       /** 会话目录还在扫，列表会继续增长 */
       loading?: boolean
+      commands: CommandInfo[]
     }
   | { type: 'blocks'; delta: BlockDelta }
   /** path：当前挂载的会话文件，渲染层据此判断哪个侧栏条目在运行 */
@@ -103,4 +122,5 @@ export type AgentEvent =
   /** 工具开跑：args 是完整入参，只发一次，供交互适配器自行解释 */
   | { type: 'toolStart'; toolCallId: string; name: string; args: unknown }
   | { type: 'uiRequest'; req: UiRequest }
+  | { type: 'files'; items: string[] }
   | { type: 'error'; message: string }

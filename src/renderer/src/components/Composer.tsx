@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Snapshot } from '@shared/blocks'
-import type { ModelOption } from '@shared/ipc'
+import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { MenuItem, MenuLabel, MenuPanel, MenuScrim } from './Menu'
-import { IconArrowUp, IconBranch, IconChevronDown, IconFolder, IconHand, IconPlus } from './icons'
+import { IconArrowUp, IconBranch, IconChevronDown, IconFolder, IconHand, IconImage, IconPlus } from './icons'
 
 const LEVEL_LABEL: Record<string, string> = {
   off: '关闭',
@@ -96,21 +96,48 @@ function InputCard({
   onSubmit,
   onAbort,
   onModel,
-  onLevel
+  onLevel,
+  files,
+  onQueryFiles,
+  commands
 }: {
   placeholder: string
   big?: boolean
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, images?: PromptImage[]) => void
   onAbort: () => void
   onModel: (id: string) => void
   onLevel: (level: string) => void
+  files: string[]
+  onQueryFiles: (query: string) => void
+  commands: CommandInfo[]
 }): ReactNode {
   const [text, setText] = useState('')
+  const [images, setImages] = useState<PromptImage[]>([])
   const [menu, setMenu] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
+
+  // @ 提及：光标前最后一段是 @xxx 就拉候选
+  const mention = /(?:^|\s)@([^\s@]*)$/.exec(text)?.[1]
+  const typing = mention !== undefined
+
+  // / 命令：整段只由 /xxx 组成时列扩展命令（带参数的就不提示了）
+  const slash = /^\/(\S*)$/.exec(text)?.[1]
+  const cmdHits =
+    slash === undefined
+      ? []
+      : commands.filter((c) => c.name.toLowerCase().startsWith(slash.toLowerCase())).slice(0, 8)
+
+  useEffect(() => {
+    if (typing) onQueryFiles(mention ?? '')
+  }, [mention, typing, onQueryFiles])
+
+  const insert = (path: string): void => {
+    setText((t) => t.replace(/@[^\s@]*$/, `@${path} `))
+    ta.current?.focus()
+  }
 
   // 跟着内容增高（最多 max-h-40），换行不发呆
   useLayoutEffect(() => {
@@ -122,9 +149,24 @@ function InputCard({
 
   const submit = (): void => {
     const value = text.trim()
-    if (!value || streaming) return
+    if ((!value && !images.length) || streaming) return
     setText('')
-    onSubmit(value)
+    const pics = images
+    setImages([])
+    onSubmit(value, pics.length ? pics : undefined)
+  }
+
+  /** 图片从剪贴板/拖拽进来：转 base64 存着，发时随 prompt 一起给模型 */
+  const addImages = (files: FileList | File[]): void => {
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith('image/')) continue
+      const reader = new FileReader()
+      reader.onload = () => {
+        const url = String(reader.result)
+        setImages((prev) => [...prev, { data: url.slice(url.indexOf(',') + 1), mimeType: f.type }])
+      }
+      reader.readAsDataURL(f)
+    }
   }
 
   return (
@@ -137,12 +179,81 @@ function InputCard({
       }
     >
       {big && <WorkspaceBar snapshot={snapshot} />}
-      <div className="px-4 pt-3">
+      {cmdHits.length > 0 && (
+        <div className="absolute bottom-[calc(100%+6px)] left-0 w-[420px] overflow-hidden rounded-[10px] border border-edge bg-panel p-1 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.28)]">
+          {cmdHits.map((c) => (
+            <button
+              key={c.name}
+              type="button"
+              onClick={() => {
+                setText(`/${c.name} `)
+                ta.current?.focus()
+              }}
+              className="flex w-full items-baseline gap-2 rounded-[7px] px-2 py-1.5 text-left hover:bg-sunken"
+            >
+              <span className="font-mono text-[12.5px]">/{c.name}</span>
+              {c.description && (
+                <span className="truncate text-[12px] text-muted">{c.description}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      {typing && files.length > 0 && (
+        <div className="absolute bottom-[calc(100%+6px)] left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-[10px] border border-edge bg-panel p-1 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.28)]">
+          {files.slice(0, 12).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => insert(f)}
+              className="block w-full truncate rounded-[7px] px-2 py-1 text-left font-mono text-[12.5px] text-muted hover:bg-sunken hover:text-fg"
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-4 pt-2">
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-1 rounded-[6px] bg-sunken px-2 py-1 text-[11.5px] text-muted"
+            >
+              <IconImage className="size-3.5" />
+              图片 {i + 1}
+              <button
+                type="button"
+                aria-label="移除图片"
+                onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                className="ml-0.5 hover:text-fg"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div
+        className="px-4 pt-3"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault()
+          addImages(e.dataTransfer.files)
+        }}
+      >
         <textarea
           ref={ta}
           rows={1}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => {
+            const files = Array.from(e.clipboardData.files)
+            if (files.some((f) => f.type.startsWith('image/'))) {
+              e.preventDefault()
+              addImages(files)
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
@@ -162,9 +273,20 @@ function InputCard({
         onAttach={() => {
           void window.pi?.host.pickFiles().then((paths) => {
             if (!paths.length) return
-            // 附件以路径形式插到光标处，提交时随正文一起给模型（模型能用 read 打开）
-            const refs = paths.map((p) => `@${p}`).join(' ')
-            setText((t) => (t ? `${t} ${refs}` : refs))
+            // 选到图片就当附件随 prompt 发给模型，其余当 @ 路径（模型能用 read 打开）
+            const pics = paths.filter((p) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(p))
+            const rest = paths.filter((p) => !pics.includes(p))
+            for (const p of pics) {
+              void window.pi?.host
+                .readImage(p)
+                .then((img) => {
+                  if (img) setImages((prev) => [...prev, img])
+                })
+            }
+            if (rest.length) {
+              const refs = rest.map((p) => `@${p}`).join(' ')
+              setText((t) => (t ? `${t} ${refs}` : refs))
+            }
             ta.current?.focus()
           })
         }}
@@ -186,10 +308,13 @@ export interface ComposerProps {
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, images?: PromptImage[]) => void
   onAbort: () => void
   onModel: (id: string) => void
   onLevel: (level: string) => void
+  files: string[]
+  onQueryFiles: (query: string) => void
+  commands: CommandInfo[]
 }
 
 /** 起始页的大输入卡 */

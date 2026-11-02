@@ -248,6 +248,14 @@ export const IconFile = (p: P) => (
   </svg>
 )
 
+export const IconImage = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="2.4" y="3.2" width="11.2" height="9.6" rx="1.6" />
+    <circle cx="6" cy="6.6" r="1.1" />
+    <path d="M2.9 11.4 6.4 8.2l2.1 1.9 1.7-1.5 2.9 2.6" />
+  </svg>
+)
+
 export const IconUndo = (p: P) => (
   <svg {...base(p)}>
     <path d="M3.4 6.4h6a3.2 3.2 0 0 1 0 6.4H5.6" />
