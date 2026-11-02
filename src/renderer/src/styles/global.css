@@ -1,0 +1,185 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-canvas: #ececee;
+  --color-panel: #f8f8f8;
+  --color-surface: #ffffff;
+  --color-sunken: #f2f1ef;
+  /* 侧栏行 hover / 选中：比 canvas 深一档 */
+  --color-select: #e1e1e3;
+  --color-line: #e7e5e2;
+  --color-edge: #e0e0e0;
+  --color-fg: #26241f;
+  --color-muted: #8b8781;
+  --color-faint: #b6b2ab;
+  --color-accent: #26241f;
+  --color-link: #2f6feb;
+  --color-add: #1f8a4c;
+  --color-del: #c0392b;
+  --color-warn: #b7791f;
+
+  --font-ui:
+    -apple-system, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+
+  --radius-card: 14px;
+  --radius-pill: 999px;
+  --radius-panel: 12px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+::selection {
+  background: #d9d6d0;
+}
+
+/* 细滚动条，跟随主题 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* markdown 排版：只保留品牌所需的间距与层级 */
+.md {
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--color-fg);
+}
+.md > * + * {
+  margin-top: 0.9em;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.6em;
+}
+.md h1 {
+  font-size: 1.35em;
+}
+.md h2 {
+  font-size: 1.15em;
+}
+.md h3 {
+  font-size: 1.02em;
+}
+.md ul,
+.md ol {
+  padding-left: 1.4em;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li + li {
+  margin-top: 0.35em;
+}
+.md a {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--color-sunken);
+  border-radius: 4px;
+  padding: 0.12em 0.36em;
+}
+.md pre code {
+  background: transparent;
+  padding: 0;
+}
+.md blockquote {
+  border-left: 2px solid var(--color-line);
+  padding-left: 1em;
+  color: var(--color-muted);
+}
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+.md table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.md th,
+.md td {
+  border: 1px solid var(--color-line);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.md th {
+  background: var(--color-sunken);
+  font-weight: 600;
+}
+
+/* 流式光标 */
+.streaming::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--color-fg);
+  animation: caret 1s steps(2) infinite;
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+/* 侧栏标题超长时鼠标移入的走马灯，--over 由组件算出 */
+@keyframes marquee {
+  0%,
+  20% {
+    transform: translateX(0);
+  }
+  80%,
+  100% {
+    transform: translateX(var(--over));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .streaming::after {
+    animation: none;
+  }
+}
+
+/* shiki 双主题：--shiki-light / --shiki-dark 由 CodeBlock 注入 */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+}
+.shiki {
+  background: transparent !important;
+}

@@ -1,0 +1,579 @@
+import { useRef, useState, type ReactNode } from 'react'
+import type { ProjectMeta, SessionMeta } from '@shared/blocks'
+import { PiLogo } from './PiLogo'
+import { MenuItem, MenuPanel, MenuScrim } from './Menu'
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconBlocks,
+  IconClock,
+  IconChevronDown,
+  IconClose,
+  IconFilter,
+  IconFolder,
+  IconHelp,
+  IconMaximize,
+  IconMinimize,
+  IconPanelCollapse,
+  IconPanelExpand,
+  IconPanelRight,
+  IconPlus,
+  IconPlusCircle,
+  IconSearch,
+  IconSettings,
+  IconSliders,
+  IconSortList,
+  IconSparkle,
+  IconSpinner,
+  IconUpload
+} from './icons'
+
+type Nav = (route: 'start' | 'chat' | 'gallery') => void
+
+const navRow =
+  'flex h-9 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] text-fg transition-colors hover:bg-select/60'
+
+const iconBtn =
+  'grid size-7 place-items-center rounded-[6px] text-muted transition-colors hover:bg-sunken hover:text-fg'
+
+/** 折叠按钮：展开态显示品牌 logo，hover 变收起图标；收起态显示展开图标。两者垂直/水平位置重合。 */
+function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
+        onClick={onClick}
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        className={
+          'relative grid size-7 place-items-center rounded-[6px] text-fg transition-colors ' +
+          (collapsed ? 'bg-black/[0.06]' : 'hover:bg-black/[0.06]')
+        }
+      >
+        {collapsed ? (
+          <IconPanelExpand />
+        ) : (
+          <>
+            <PiLogo size={17} className="group-hover:opacity-0" />
+            <IconPanelCollapse className="absolute opacity-0 group-hover:opacity-100" />
+          </>
+        )}
+      </button>
+      <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-50 hidden whitespace-nowrap rounded-[6px] border border-edge bg-panel px-2 py-[3px] text-[11.5px] text-muted shadow-[0_4px_14px_-6px_rgba(0,0,0,0.25)] group-hover:flex">
+        {collapsed ? '展开侧栏' : '收起侧栏'}
+        <kbd className="ml-2 rounded-[4px] border border-edge px-1 text-[10.5px] text-faint">Ctrl+B</kbd>
+      </span>
+    </div>
+  )
+}
+
+const SORTS = [
+  { key: 'project', label: '项目', icon: <IconFolder className="size-[15px] text-muted" /> },
+  { key: 'group', label: '分组', icon: <span className="w-[15px] text-center text-[14px] leading-none text-muted">#</span> },
+  { key: 'recent', label: '最近更新', icon: <IconClock className="size-[15px] text-muted" /> },
+  { key: 'unread', label: '未读', icon: <IconSparkle className="size-[15px] text-muted" /> }
+] as const
+
+function SortMenu({
+  value,
+  onClose,
+  onPick
+}: {
+  value: string
+  onClose: () => void
+  onPick: (k: string) => void
+}): ReactNode {
+  return (
+    <>
+      <MenuScrim onClose={onClose} />
+      <MenuPanel className="top-[calc(100%+6px)] right-4 w-[152px]">
+        {SORTS.map((s) => (
+          <MenuItem
+            key={s.key}
+            icon={s.icon}
+            label={s.label}
+            selected={value === s.key}
+            onClick={() => {
+              onPick(s.key)
+              onClose()
+            }}
+          />
+        ))}
+      </MenuPanel>
+    </>
+  )
+}
+
+/** 按时间分桶：今天 / 昨天 / 更早 */
+function timeBucket(ms: number): string {
+  const days = Math.floor((Date.now() - ms) / 86_400_000)
+  if (days <= 0) return '今天'
+  if (days === 1) return '昨天'
+  return '更早'
+}
+
+/** 标题超长时鼠标移入做走马灯，移出复位 */
+function Marquee({ text }: { text: string }): ReactNode {
+  const box = useRef<HTMLSpanElement>(null)
+  const inner = useRef<HTMLSpanElement>(null)
+  const [over, setOver] = useState(0)
+  return (
+    <span
+      ref={box}
+      className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+      onMouseEnter={() => {
+        const o = (inner.current?.scrollWidth ?? 0) - (box.current?.clientWidth ?? 0)
+        setOver(Math.max(0, o))
+      }}
+      onMouseLeave={() => setOver(0)}
+    >
+      <span
+        ref={inner}
+        className="inline-block"
+        style={
+          over
+            ? ({
+                '--over': `-${over}px`,
+                animation: `marquee ${Math.max(3, over / 25)}s linear infinite alternate`
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
+        {text}
+      </span>
+    </span>
+  )
+}
+
+function navButton(label: string, Ico: typeof IconPlus, hint?: string, onClick?: () => void): ReactNode {
+  return (
+    <button type="button" className={navRow} onClick={onClick}>
+      <Ico className="shrink-0 text-fg/75" />
+      <span>{label}</span>
+      {hint && <span className="ml-auto text-[11.5px] text-faint">{hint}</span>}
+    </button>
+  )
+}
+
+/** 存本地的组件状态：重启、切会话、搜索后折叠状态都还在 */
+function useStored<T>(key: string, init: T): [T, (next: T | ((prev: T) => T)) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key)
+      return raw ? (JSON.parse(raw) as T) : init
+    } catch {
+      return init
+    }
+  })
+  const set = (next: T | ((prev: T) => T)): void =>
+    setValue((prev) => {
+      const v = typeof next === 'function' ? (next as (p: T) => T)(prev) : next
+      try {
+        localStorage.setItem(key, JSON.stringify(v))
+      } catch {
+        /* 存不了就只活在本进程 */
+      }
+      return v
+    })
+  return [value, set]
+}
+
+export interface SidebarProps {
+  onCollapse: () => void
+  onNavigate: Nav
+  projects: ProjectMeta[]
+  sessions: SessionMeta[]
+  /** 会话目录还在扫，侧栏显示 loading */
+  sessionsLoading: boolean
+  activeId: string | null
+  /** 正在跑 agent 的会话文件（加载图标） */
+  runningPath: string | null
+  /** 运行中被切走、未再打开的会话文件（蓝点） */
+  unread: string[]
+  onOpenSession: (id: string, path: string) => void
+  onNewSession: () => void
+  onRename: (path: string, title: string) => void
+  onDelete: (path: string) => void
+  canBack: boolean
+  canForward: boolean
+  onBack: () => void
+  onForward: () => void
+}
+
+export function Sidebar({
+  onCollapse,
+  onNavigate,
+  projects,
+  sessions,
+  sessionsLoading,
+  activeId,
+  runningPath,
+  unread,
+  onOpenSession,
+  onNewSession,
+  onRename,
+  onDelete,
+  canBack,
+  canForward,
+  onBack,
+  onForward
+}: SidebarProps): ReactNode {
+  const [sorting, setSorting] = useState(false)
+  const [sort, setSort] = useState('project')
+  const [searching, setSearching] = useState(false)
+  const [query, setQuery] = useState('')
+  /** 每个项目展开后显示多少条，默认 5，点「显示更多」每次 +10 */
+  const [limit, setLimit] = useStored<Record<string, number>>('pi.sidebar.limit', {})
+  /** 折叠的项目名集合（记住上一次，侧栏收起/重开不丢） */
+  const [folded, setFolded] = useStored<Record<string, boolean>>('pi.sidebar.folded', {})
+
+  const q = query.trim().toLowerCase()
+  const visible = sessions
+    .filter((s) => !q || s.title.toLowerCase().includes(q))
+    .sort((a, b) => b.modifiedAt - a.modifiedAt)
+  const grouped = projects
+    .map((p) => ({ ...p, sessions: visible.filter((s) => s.project === p.name) }))
+    .filter((p) => p.sessions.length > 0)
+  const rowProps = (s: SessionMeta) => ({
+    session: s,
+    active: s.id === activeId,
+    running: s.path === runningPath,
+    unread: unread.includes(s.path),
+    onClick: () => onOpenSession(s.id, s.path),
+    onRename: (title: string) => onRename(s.path, title),
+    onDelete: () => onDelete(s.path)
+  })
+
+  return (
+    <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-[7px]">
+      <div className="flex h-11 shrink-0 items-center gap-1 pl-[9px] [-webkit-app-region:drag]">
+        <CollapseButton collapsed={false} onClick={onCollapse} />
+        <button
+          type="button"
+          aria-label="后退"
+          disabled={!canBack}
+          onClick={onBack}
+          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+        >
+          <IconArrowLeft />
+        </button>
+        <button
+          type="button"
+          aria-label="前进"
+          disabled={!canForward}
+          onClick={onForward}
+          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+        >
+          <IconArrowRight />
+        </button>
+      </div>
+
+      <nav className="px-2.5 pt-2">
+        {navButton('新建任务', IconPlusCircle, 'Ctrl+N', onNewSession)}
+        {navButton('自动化', IconSliders, undefined, () => onNavigate('gallery'))}
+        {navButton('插件市场', IconBlocks)}
+      </nav>
+
+      <div className="my-2 border-t border-edge" />
+
+      {/* 固定行高：搜索时「任务列表」标题让位，输入框从左侧边缘铺开，整行高度不变所以列表不位移 */}
+      <div className={'relative flex h-9 shrink-0 items-center gap-2 ' + (searching ? 'px-2' : 'px-4')}>
+        {searching ? (
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setQuery('')
+                setSearching(false)
+              }
+            }}
+            onBlur={() => {
+              if (!query) setSearching(false)
+            }}
+            placeholder="搜索任务标题"
+            className="min-w-0 flex-1 rounded-[6px] border border-edge bg-panel/80 px-2 py-1 text-[12.5px] outline-none placeholder:text-faint focus:border-muted"
+          />
+        ) : (
+          <>
+            <span className="shrink-0 whitespace-nowrap text-[12.5px] text-muted">任务列表</span>
+            <button
+              type="button"
+              aria-label="搜索"
+              onClick={() => setSearching(true)}
+              className="ml-auto shrink-0 text-muted hover:text-fg"
+            >
+              <IconSearch className="size-[15px]" />
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          aria-label="筛选"
+          aria-expanded={sorting}
+          onClick={() => setSorting((v) => !v)}
+          className={'shrink-0 text-muted hover:text-fg ' + (sorting ? 'text-fg' : '')}
+        >
+          <IconFilter className="size-[15px]" />
+        </button>
+        {sorting && <SortMenu value={sort} onClose={() => setSorting(false)} onPick={setSort} />}
+      </div>
+
+      {/* 分组标题行：项目下拉（排序）+ 排序 / 新建 */}
+      <div className="flex h-8 shrink-0 items-center gap-1.5 px-4">
+        <button
+          type="button"
+          aria-label="切换排序"
+          aria-expanded={sorting}
+          onClick={() => setSorting((v) => !v)}
+          className="flex items-center gap-1 text-[12.5px] text-faint transition-colors hover:text-muted"
+        >
+          {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
+          <IconChevronDown className="size-3" />
+        </button>
+        <div className="ml-auto flex items-center gap-1">
+          <button type="button" aria-label="排序" className="text-muted hover:text-fg">
+            <IconSortList className="size-[15px]" />
+          </button>
+          <button type="button" aria-label="新建项目" className="text-muted hover:text-fg">
+            <IconPlus className="size-[15px]" />
+          </button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        {sessionsLoading && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-faint">
+            <IconSpinner className="size-3.5" />
+            正在加载任务…
+          </div>
+        )}
+        {sort === 'project' &&
+          grouped.map((p) => {
+            const shown = p.sessions.slice(0, limit[p.name] ?? 5)
+            const rest = p.sessions.length - shown.length
+            const isFolded = folded[p.name]
+            return (
+              <div key={p.name}>
+                <button
+                  type="button"
+                  aria-expanded={!isFolded}
+                  onClick={() => setFolded((m) => ({ ...m, [p.name]: !m[p.name] }))}
+                  className="group flex h-8 w-full items-center gap-1.5 rounded-[7px] px-2.5 text-left text-[12.5px] text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                >
+                  <IconFolder className="size-3.5 shrink-0" />
+                  <span className="truncate">{p.name || '未分组'}</span>
+                  {/* 折叠箭头平时藏起来，hover 或已折叠时才出现，保持列表干净 */}
+                  <IconChevronDown
+                    className={
+                      'ml-auto size-3 shrink-0 transition-opacity ' +
+                      (isFolded ? '-rotate-90 opacity-100' : 'opacity-0 group-hover:opacity-100')
+                    }
+                  />
+                </button>
+                {!isFolded && shown.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
+                {!isFolded && rest > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLimit((m) => ({ ...m, [p.name]: (m[p.name] ?? 5) + 10 }))}
+                    className="h-8 w-full rounded-[7px] pl-[30px] text-left text-[12.5px] text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                  >
+                    显示更多{rest > 10 ? `（还有 ${rest} 条）` : ''}
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        {sort === 'group' &&
+          ['今天', '昨天', '更早'].map((bucket) => {
+            const items = visible.filter((s) => timeBucket(s.modifiedAt) === bucket)
+            if (items.length === 0) return null
+            return (
+              <div key={bucket}>
+                <div className="px-2.5 py-1 text-[11.5px] text-faint">{bucket}</div>
+                {items.map((s) => (
+                  <SessionRow key={s.id} {...rowProps(s)} />
+                ))}
+              </div>
+            )
+          })}
+        {sort === 'recent' && visible.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
+        {sort === 'unread' &&
+          [...visible]
+            .sort((a, b) => Number(unread.includes(b.path)) - Number(unread.includes(a.path)))
+            .map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
+      </div>
+
+      <div className="border-t border-edge" />
+      <div className="flex items-center gap-2 px-4 py-2.5">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#1c1b19] text-[11px] font-medium text-white">
+          H
+        </span>
+        <span className="truncate text-[12.5px]">hwuscrxo</span>
+        <div className="ml-auto flex items-center gap-1">
+          <button type="button" aria-label="设备" className="text-muted hover:text-fg">
+            <IconPanelRight className="size-[15px]" />
+          </button>
+          <button type="button" aria-label="设置" className="text-muted hover:text-fg">
+            <IconSettings className="size-[15px]" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+interface SessionRowProps {
+  session: SessionMeta
+  active: boolean
+  running: boolean
+  unread: boolean
+  onClick: () => void
+  onRename: (title: string) => void
+  onDelete: () => void
+}
+
+/** 会话行：左侧状态（运行加载 / 未读蓝点 / 当前高亮图标），右键菜单重命名与删除 */
+function SessionRow({ session, active, running, unread, onClick, onRename, onDelete }: SessionRowProps): ReactNode {
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(session.title)
+
+  const commit = (): void => {
+    setEditing(false)
+    if (draft.trim() && draft.trim() !== session.title) onRename(draft)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onClick}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setMenu({ x: e.clientX, y: e.clientY })
+        }}
+        className={
+          // 激活态只换底色/字重，左右内边距与普通行相同，标题不左右跳
+          'flex h-8 w-full items-center gap-2 rounded-[7px] pr-2.5 pl-2 text-left text-[13px] transition-colors ' +
+          (active ? 'bg-select font-medium' : 'hover:bg-select/60')
+        }
+      >
+        <span className="grid size-3.5 shrink-0 place-items-center">
+          {running ? (
+            <IconSpinner className="size-3.5" />
+          ) : unread ? (
+            <span className="size-1.5 rounded-full bg-link" aria-label="未读" />
+          ) : active ? (
+            <IconSparkle className="size-3 text-muted" />
+          ) : null}
+        </span>
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+            onBlur={commit}
+            className="min-w-0 flex-1 rounded-[4px] border border-edge bg-panel px-1 outline-none"
+          />
+        ) : (
+          <Marquee text={session.title} />
+        )}
+        <span className="ml-auto shrink-0 text-[11px] text-faint">{session.ageLabel}</span>
+      </button>
+      {menu && (
+        <>
+          <MenuScrim onClose={() => setMenu(null)} />
+          <div className="fixed z-50" style={{ left: menu.x, top: menu.y }}>
+            <MenuPanel className="top-0 left-0 w-[132px]">
+              <MenuItem
+                label="重命名"
+                onClick={() => {
+                  setMenu(null)
+                  setDraft(session.title)
+                  setEditing(true)
+                }}
+              />
+              <MenuItem
+                label="删除"
+                onClick={() => {
+                  setMenu(null)
+                  if (window.confirm(`删除任务「${session.title}」？文件会被永久移除。`)) onDelete()
+                }}
+              />
+            </MenuPanel>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+/** 收起侧栏后顶部浮出的工具条：logo / 前进后退 / 展开 */
+export function CollapsedHeaderBar({
+  onExpand,
+  canBack,
+  canForward,
+  onBack,
+  onForward
+}: {
+  onExpand: () => void
+  canBack: boolean
+  canForward: boolean
+  onBack: () => void
+  onForward: () => void
+}): ReactNode {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-11 items-center pl-0.5">
+      <div className="pointer-events-auto flex items-center gap-1 [-webkit-app-region:drag]">
+        <CollapseButton collapsed onClick={onExpand} />
+        <button
+          type="button"
+          aria-label="后退"
+          disabled={!canBack}
+          onClick={onBack}
+          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+        >
+          <IconArrowLeft />
+        </button>
+        <button
+          type="button"
+          aria-label="前进"
+          disabled={!canForward}
+          onClick={onForward}
+          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+        >
+          <IconArrowRight />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function WindowControls(): ReactNode {
+  return (
+    <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <button type="button" aria-label="帮助" className={iconBtn}>
+        <IconHelp />
+      </button>
+      <button type="button" aria-label="上传" className={iconBtn}>
+        <IconUpload />
+      </button>
+      <button type="button" aria-label="最小化" className={iconBtn} onClick={() => window.pi.window.minimize()}>
+        <IconMinimize />
+      </button>
+      <button type="button" aria-label="最大化" className={iconBtn} onClick={() => window.pi.window.toggleMaximize()}>
+        <IconMaximize />
+      </button>
+      <button type="button" aria-label="关闭" className={iconBtn} onClick={() => window.pi.window.close()}>
+        <IconClose />
+      </button>
+    </div>
+  )
+}

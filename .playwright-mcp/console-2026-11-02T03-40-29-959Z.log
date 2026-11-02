@@ -1,0 +1,37 @@
+[      56ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
+[  331045ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1089
+[ 1374954ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
+[ 1374977ms] TypeError: Cannot read properties of undefined (reading 'agent')
+    at http://localhost:5173/src/useAgent.ts:22:25
+    at Object.react_stack_bottom_frame (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:14175:13)
+    at runWithFiberInDEV (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:941:66)
+    at commitHookEffectListMount (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:6898:153)
+    at commitHookPassiveMountEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:6933:55)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8310:22)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8297:313)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8369:14)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8297:313)
+    at commitPassiveMountOnFiber (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8319:6)
+[ 1374977ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@vite/client:367
+[ 1374978ms] TypeError: Cannot read properties of undefined (reading 'agent')
+    at http://localhost:5173/src/useAgent.ts:22:25
+    at Object.react_stack_bottom_frame (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:14175:13)
+    at runWithFiberInDEV (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:941:66)
+    at commitHookEffectListMount (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:6898:153)
+    at commitHookPassiveMountEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:6933:55)
+    at reconnectPassiveEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8398:6)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8385:5)
+    at reconnectPassiveEffects (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8410:14)
+    at doubleInvokeEffectsOnFiber (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:9696:181)
+    at runWithFiberInDEV (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:941:66)
+[ 1374978ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@vite/client:367
+[ 1431684ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:1089
+[ 1436369ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801

@@ -1,0 +1,17 @@
+[   36207ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
+[   36238ms] ReferenceError: IconPanelLeft is not defined
+    at CollapseButton (http://localhost:5173/src/components/Sidebar.tsx:29:38)
+    at Object.react_stack_bottom_frame (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:14139:12)
+    at renderWithHooks (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:4397:19)
+    at updateFunctionComponent (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:5772:16)
+    at beginWork (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:6388:20)
+    at runWithFiberInDEV (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:941:66)
+    at performUnitOfWork (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:9145:92)
+    at workLoopSync (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:9041:37)
+    at renderRootSync (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:9025:6)
+    at performWorkOnRoot (http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:8712:27)
+[   36238ms] [WARNING] %s
+
+%s
+ An error occurred in the <CollapseButton> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/@vite/client:367

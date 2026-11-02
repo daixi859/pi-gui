@@ -1,0 +1,101 @@
+import { useState, type ReactNode } from 'react'
+import type { DiffLine } from '@shared/blocks'
+import { IconChevronDown, IconChevronRight, IconUndo } from './icons'
+
+export function DiffBlock({
+  file,
+  added,
+  removed,
+  lines,
+  patch
+}: {
+  file: string
+  added: number
+  removed: number
+  lines: DiffLine[]
+  patch?: string
+}): ReactNode {
+  const [open, setOpen] = useState(false)
+  const [reverting, setReverting] = useState(false)
+  const count = lines.length > 0
+  const changed = added + removed > 0
+
+  const revert = (): void => {
+    if (!patch || reverting) return
+    setReverting(true)
+    window.pi?.agent.send({ type: 'revertEdit', patch })
+    // 引擎会回一条 system 块，这里只负责防连点
+    setTimeout(() => setReverting(false), 1200)
+  }
+
+  return (
+    <div className="rounded-[10px] border border-line">
+      <button
+        type="button"
+        onClick={() => count && setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
+      >
+        {count ? (
+          open ? (
+            <IconChevronDown className="text-muted" />
+          ) : (
+            <IconChevronRight className="text-muted" />
+          )
+        ) : (
+          <span className="w-4" />
+        )}
+        <span className="text-[13px]">
+          {changed ? '1 个文件已更改' : '暂无差异内容'}
+        </span>
+        <span className="font-mono text-[12px] text-add">+{added}</span>
+        <span className="font-mono text-[12px] text-del">-{removed}</span>
+        <span
+          role={patch ? 'button' : undefined}
+          onClick={(e) => {
+            if (!patch) return
+            e.stopPropagation()
+            revert()
+          }}
+          className={
+            'ml-auto flex items-center gap-1 text-[12px] ' +
+            (patch ? 'text-muted hover:text-fg' : 'text-faint')
+          }
+        >
+          <IconUndo className="size-3.5" />
+          {reverting ? '撤销中…' : '撤销'}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-line">
+          <div className="border-b border-line bg-sunken px-3.5 py-1.5 font-mono text-[11px] text-muted">
+            {file}
+          </div>
+          <div className="max-h-[320px] overflow-auto py-1 font-mono text-[12.5px] leading-[1.75]">
+            {lines.map((l, i) => (
+              <div
+                key={i}
+                className={
+                  'flex gap-3 px-3.5 ' +
+                  (l.type === 'add' ? 'bg-add/6' : l.type === 'del' ? 'bg-del/6' : '')
+                }
+              >
+                <span className="w-8 shrink-0 text-right text-faint select-none">{l.no ?? ''}</span>
+                <span
+                  className={
+                    'w-2 shrink-0 select-none ' +
+                    (l.type === 'add' ? 'text-add' : l.type === 'del' ? 'text-del' : 'text-transparent')
+                  }
+                >
+                  {l.type === 'add' ? '+' : l.type === 'del' ? '−' : '.'}
+                </span>
+                <span className={l.type === 'del' ? 'whitespace-pre-wrap text-del/85' : 'whitespace-pre-wrap'}>
+                  {l.text}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

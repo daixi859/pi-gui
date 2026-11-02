@@ -1,0 +1,69 @@
+# GLOSSARY
+
+本文件只定义语言，不记录实现。
+
+## Block（块）
+
+对话记录的最小渲染单元。一个 Block 有唯一 `id` 与 `kind`，渲染层只会根据 `kind` 选择组件，不知道消息来自哪个模型、哪次请求。
+
+Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking / tool / assistant / diff）。
+
+## Turn（回合）
+
+用户发出一次输入，到助手停止工作之间的完整过程。Turn 是 Block 的容器，可以折叠、可以带中断标记与时长。Turn 之外出现的 Block 属于会话级提示（见 System）。
+
+## System 提示
+
+不属于任何一方发言的会话内通知，只有语气（info / warn / error）和文本，没有内容结构。例如「上下文已压缩」「操作已中断」。
+
+## Transcript（对话记录）
+
+当前会话的 Block 线性序列，按发生顺序排列。Transcript 只追加，不重排。
+
+## Session（会话）
+
+一个可独立恢复的 Transcript，绑定唯一工作目录（Project）。会话之间不共享历史。
+
+## Project（项目）
+
+以工作目录标识的一组会话的分组单位，用于侧栏归类。一个 Project 不是 git 仓库的同义词。
+
+## Workspace 快照（Snapshot）
+
+输入卡顶部展示的当前状态：工作目录、分支，以及输入卡底部的模型、思考强度、访问权限。它是「下一轮会用什么」的声明，不是会话属性的记录。
+
+## 访问权限（Access）
+
+助手工具调用可触达的范围，取值见 `完全访问` 等档位。它是用户在输入框上显式选择的授权，不是模型自行推断的。
+
+## 思考强度（Thinking Level）
+
+模型在回答前允许投入的推理预算档位（关闭 / 低 / 中 / 高 / 最高）。它不是模型名的一部分，同一模型可在不同档位下工作。
+
+## Gallery（块画廊）
+
+开发期调试页，按 Block 种类并排展示样本，用于校对视觉与状态。不属于用户可到达的功能。
+
+## Agent Host（引擎宿主）
+
+独立子进程，唯一持有 pi SDK 与活动会话的地方。渲染层不认识 pi，只认识 Block；主进程只做转发。宿主崩溃或重启不影响窗口存活。
+
+## AgentCommand / AgentEvent（跨进程协议）
+
+渲染层对引擎的全部输入输出。Command 是意图（发送、中止、切换会话、换模型、回答 UI 请求），Event 是事实（完整块序列、工具调用开始、UI 请求、状态快照、结束、错误）。Event 不承载增量补丁，每次都是当前完整快照，避免两层状态对不上。
+
+## UI 桥
+
+把宿主进程里的 `ui.select / confirm / input / editor / notify` 统一翻译成 `uiRequest` 事件、
+再把渲染层的 `uiReply` 兑现回 Promise 的那一层。宿主不理解请求语义，不区分「问卷」「确认框」，
+只负责搬运，所以换一个扩展不需要改宿主。
+
+## UiRequest / UiReply
+
+桥的两种原语。前者描述要问什么（kind + 标题 + 选项），后者描述答了什么（value / confirmed / cancelled）。
+
+## 交互适配器（Interaction Adapter）
+
+渲染层里认领某类 UI 请求的小模块，声明 `claims(toolName, args)` 与 `reply(answers)`。
+`askQuestion` 认领 `ask_user_question` 并把结构化问卷渲染成卡片；没有适配器认领的请求
+落到原生弹窗 UiPrompt。新增一个扩展的界面支持 = 注册一个适配器，不改宿主。

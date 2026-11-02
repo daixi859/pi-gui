@@ -1,0 +1,2 @@
+[   36388ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/@fs/D:/workspace/PiGui/node_modules/.vite/deps/react-dom_client.js?v=1ef30e44:15801
+[   36447ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0

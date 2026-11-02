@@ -1,0 +1,9 @@
+node_modules/
+out/
+dist/
+dev.log
+dev.cmd
+*.png
+.playwright-mcp/
+!docs/screenshots/**
+
