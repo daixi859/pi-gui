@@ -25,9 +25,9 @@ export interface AgentState {
   busy?: string
   /** 会话列表（侧栏） */
   sessions: SessionMeta[]
-  /** 正在运行 agent 的会话文件，侧栏用加载图标标出 */
-  runningPath: string | null
-  /** 运行中被切走（宿主 dispose 了它）、还没再打开过的会话文件，侧栏用蓝点标出 */
+  /** 正在看的会话文件；切走后它仍在后台跑，侧栏用加载图标标出 */
+  viewPath: string | null
+  /** 后台跑完、还没再打开过的会话文件，侧栏用蓝点标出 */
   unread: string[]
   /** 会话目录还在扫，列表会继续增长 */
   sessionsLoading: boolean
@@ -53,7 +53,7 @@ export interface AgentState {
 const initial: AgentState = {
   blocks: [],
   sessions: [],
-  runningPath: null,
+  viewPath: null,
   unread: [],
   sessionsLoading: true,
   projects: [],
@@ -76,14 +76,11 @@ const initial: AgentState = {
 }
 
 /**
- * 切走会话（新建或打开别的）：宿主会 dispose 当前会话，正在跑的那个就此中断，
- * 标成未读让用户知道它还有没看的输出；打开的目标则清掉它的未读标记。
+ * 切到某个会话：清掉它的未读标记。正在跑的那个宿主不会 dispose，
+ * 留在后台继续跑，跑完才标未读。
  */
-function leave(s: AgentState, nextPath: string | null): AgentState {
-  const lost = s.runningPath && s.runningPath !== nextPath ? s.runningPath : null
-  const unread = s.unread.filter((p) => p !== nextPath)
-  if (lost && !unread.includes(lost)) unread.push(lost)
-  return { ...s, runningPath: null, unread }
+function enter(s: AgentState, path: string | null): AgentState {
+  return { ...s, viewPath: path, unread: s.unread.filter((p) => p !== path) }
 }
 
 /** 一个工具调用里挂起的 ui 请求：rpiv 逐题 await，所以同一时刻最多一个在等 */
@@ -228,12 +225,20 @@ export function useAgent(): AgentState & {
               ...s,
               snapshot: ev.snapshot,
               streaming: ev.streaming,
-              runningPath: ev.streaming ? ev.path : null
+              // 切换挂载期间旧会话仍会推 status，别把已经切过去的目标路径拉回来
+              viewPath: s.viewPath ?? ev.path
             }
           case 'error':
             return { ...s, error: ev.message }
-          case 'settled':
-            return { ...s, streaming: false, settledAt: Date.now() }
+          case 'settled': {
+            // 后台会话跑完只打未读点；正在看的才收掉 streaming / 记结束时间
+            const mine = ev.path !== null && ev.path === s.viewPath
+            const unread =
+              !mine && ev.path && !s.unread.includes(ev.path) ? [...s.unread, ev.path] : s.unread
+            return mine
+              ? { ...s, streaming: false, settledAt: Date.now(), unread }
+              : { ...s, unread }
+          }
           default:
             return s
         }
@@ -251,15 +256,21 @@ export function useAgent(): AgentState & {
     prompt: (text, images) => sendCmd({ type: 'prompt', text, images }),
     abort: () => sendCmd({ type: 'abort' }),
     newSession: () => {
-      setState((s) => leave(s, null))
+      setState((s) => enter(s, null))
       sendCmd({ type: 'newSession' })
     },
     openSession: (path) => {
-      setState((s) => leave(s, path))
+      setState((s) => enter(s, path))
       sendCmd({ type: 'openSession', path })
     },
     renameSession: (path, title) => sendCmd({ type: 'renameSession', path, title }),
-    deleteSession: (path) => sendCmd({ type: 'deleteSession', path }),
+    deleteSession: (path) => {
+      // 删的是正在看的会话：宿主会切到新会话，路径等它回来再认
+      setState((s) =>
+        s.viewPath === path ? { ...s, viewPath: null, streaming: false } : s
+      )
+      sendCmd({ type: 'deleteSession', path })
+    },
     clearError: () => setState((s) => ({ ...s, error: undefined })),
     setModel: (modelId) => sendCmd({ type: 'setModel', modelId }),
     setThinkingLevel: (level) => sendCmd({ type: 'setThinkingLevel', level }),

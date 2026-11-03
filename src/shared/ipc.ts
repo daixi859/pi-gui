@@ -120,7 +120,8 @@ export type AgentEvent =
   | { type: 'blocks'; delta: BlockDelta }
   /** path：当前挂载的会话文件，渲染层据此判断哪个侧栏条目在运行 */
   | { type: 'status'; snapshot: Snapshot; streaming: boolean; path: string | null }
-  | { type: 'settled'; aborted: boolean }
+  /** path：这轮结束的会话文件；不是当前在看的会话时渲染层标成未读 */
+  | { type: 'settled'; aborted: boolean; path: string | null }
   /** 长耗时操作（打开大会话）期间的阻塞提示 */
   | { type: 'busy'; active: boolean; label?: string }
   /** 工具开跑：args 是完整入参，只发一次，供交互适配器自行解释 */

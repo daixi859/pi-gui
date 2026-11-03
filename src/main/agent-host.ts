@@ -30,91 +30,116 @@ const LEVEL_LABEL: Record<string, string> = {
   max: '最高'
 }
 
-let session: Session | null = null
-let detach: (() => void) | null = null
+/** 一个会话在宿主里的全部状态：切走后原样留着，后台继续跑，切回来直接恢复 */
+interface Mounted {
+  session: Session
+  manager: SessionManager
+  detach: () => void
+  cwd: string
+  /** 上一轮已定稿的块、本轮尚未归档的块、本轮折叠行 */
+  history: Block[]
+  round: Block[]
+  turn: Turn | null
+  turnStart: number
+  msgSeq: number
+  /** 已推给渲染层的块（按 id 存引用，引用变了就重发）+ 渲染层已有的顺序 */
+  sent: Map<string, { block: Block; rev: number }>
+  sentOrder: string[]
+  /** 增量比对用的版本号：块被原地修改时手动 bump */
+  revs: Map<string, number>
+  forceFull: boolean
+  /** 流式文本每 60ms 推一次增量，避免渲染层重排风暴 */
+  flushTimer: NodeJS.Timeout | null
+  /** 尚未结束的工具调用，栈顶即最近开始的那个；ui 请求据此认领到具体工具 */
+  liveTools: string[]
+}
+
+/** key 是会话文件路径；后台会话也在里面，切走不会 dispose 它们 */
+const mounted = new Map<string, Mounted>()
+/** 当前展示的会话 */
+let current: Mounted | null = null
+/** 切换会话串行执行：挂载大会话要几秒，这期间到的 prompt 必须等切完再写进正确的会话 */
+let switching: Promise<void> = Promise.resolve()
+function switchTo(run: () => Promise<void>): Promise<void> {
+  const next = switching.then(run, run)
+  switching = next.catch(() => {})
+  return next
+}
 /** 当前会话的工作目录；默认进程 cwd，主进程可用 PI_AGENT_CWD 指定 */
 let cwd = process.env.PI_AGENT_CWD || process.cwd()
 let models: ModelOption[] = []
 /** 工具执行前的确认策略；由渲染层的「变更前确认 / 完全访问」开关控制 */
 let access: AccessMode = 'confirm'
+let seq = 0
 
 /** 会改动磁盘或执行命令的工具，这些才需要用户点头 */
 const RISKY = new Set(['write', 'edit', 'powershell', 'bash'])
 
-/** 注入给 pi 的权限门：复用 ui 桥的 confirm，所以渲染层不用认识它 */
-function permissionGate(pi: ExtensionAPI): void {
-  pi.on('tool_call', async (event) => {
-    if (access === 'full' || !RISKY.has(event.toolName)) return undefined
-    const detail = JSON.stringify(event.input ?? {})
-    const ok = await uiContext.confirm(
-      `允许执行 ${event.toolName}？`,
-      detail.length > 300 ? detail.slice(0, 300) + '…' : detail
-    )
-    return ok ? undefined : { block: true, reason: '用户拒绝了这次工具调用' }
-  })
-}
+type UiBridge = ReturnType<typeof uiContextFor>
 
-/** 上一轮已定稿的块、本轮尚未归档的块、本轮折叠行 */
-let history: Block[] = []
-/** 本轮全部块，按到达顺序；settled 时最后一条回答进正文，其余收进折叠行 */
-let round: Block[] = []
-let turn: Turn | null = null
-let turnStart = 0
-let seq = 0
-let msgSeq = 0
+/** 注入给 pi 的权限门：复用 ui 桥的 confirm，所以渲染层不用认识它 */
+function permissionGate(ui: UiBridge): (pi: ExtensionAPI) => void {
+  return (pi) => {
+    pi.on('tool_call', async (event) => {
+      if (access === 'full' || !RISKY.has(event.toolName)) return undefined
+      const detail = JSON.stringify(event.input ?? {})
+      const ok = await ui.confirm(
+        `允许执行 ${event.toolName}？`,
+        detail.length > 300 ? detail.slice(0, 300) + '…' : detail
+      )
+      return ok ? undefined : { block: true, reason: '用户拒绝了这次工具调用' }
+    })
+  }
+}
 
 const port = (process as unknown as { parentPort?: { postMessage(m: unknown): void; on(e: string, f: (m: { data: AgentCommand }) => void): void } }).parentPort
 const send = (e: AgentEvent): void => port?.postMessage(e)
 
-/** 已推给渲染层的块（按 id 存引用，引用变了就重发）+ 渲染层已有的顺序 */
-let sent = new Map<string, { block: Block; rev: number }>()
-let sentOrder: string[] = []
-/** 增量比对用的版本号：块被原地修改时手动 bump */
-const revs = new Map<string, number>()
-let forceFull = false
-const bump = (id: string): void => void revs.set(id, (revs.get(id) ?? 0) + 1)
+const bump = (rec: Mounted, id: string): void => void rec.revs.set(id, (rec.revs.get(id) ?? 0) + 1)
 
-/** 转瞬间的合并：流式文本每 60ms 推一次增量，避免渲染层重排风暴 */
-let flushTimer: NodeJS.Timeout | null = null
-function schedule(): void {
-  if (flushTimer) return
-  flushTimer = setTimeout(() => {
-    flushTimer = null
-    flushBlocks()
+function schedule(rec: Mounted): void {
+  if (rec.flushTimer) return
+  rec.flushTimer = setTimeout(() => {
+    rec.flushTimer = null
+    flushBlocks(rec)
   }, 60)
 }
-function flushNow(): void {
-  if (flushTimer) {
-    clearTimeout(flushTimer)
-    flushTimer = null
+function flushNow(rec: Mounted): void {
+  if (rec.flushTimer) {
+    clearTimeout(rec.flushTimer)
+    rec.flushTimer = null
   }
-  flushBlocks()
+  flushBlocks(rec)
 }
 
 /** 只推变了的块：顶层引用换了或被 bump 过。turn 自己带 children，整块重发 */
-function flushBlocks(): void {
-  const blocks = all()
+function flushBlocks(rec: Mounted): void {
+  // 后台会话只维护自己的状态，不推给渲染层；切回来时 forceFull 一次补齐
+  if (rec !== current) return
+  const blocks = all(rec)
   const order = blocks.map((b) => b.id)
   const items: Block[] = []
   for (const b of blocks) {
-    const prev = sent.get(b.id)
-    if (!prev || prev.block !== b || prev.rev !== (revs.get(b.id) ?? 0)) {
+    const prev = rec.sent.get(b.id)
+    // full 时渲染层会清空缓存，所以必须把全部块都带上，否则切回未变的会话会整页空白
+    if (rec.forceFull || !prev || prev.block !== b || prev.rev !== (rec.revs.get(b.id) ?? 0)) {
       items.push(b)
-      sent.set(b.id, { block: b, rev: revs.get(b.id) ?? 0 })
+      rec.sent.set(b.id, { block: b, rev: rec.revs.get(b.id) ?? 0 })
     }
   }
-  const orderChanged = order.length !== sentOrder.length || order.some((id, i) => id !== sentOrder[i])
-  if (!items.length && !orderChanged && !forceFull) return
+  const orderChanged =
+    order.length !== rec.sentOrder.length || order.some((id, i) => id !== rec.sentOrder[i])
+  if (!items.length && !orderChanged && !rec.forceFull) return
   if (orderChanged) {
     const live = new Set(order)
-    for (const id of sent.keys()) if (!live.has(id)) sent.delete(id)
+    for (const id of rec.sent.keys()) if (!live.has(id)) rec.sent.delete(id)
   }
-  sentOrder = order
-  send({ type: 'blocks', delta: { full: forceFull, order, items } })
-  forceFull = false
+  rec.sentOrder = order
+  send({ type: 'blocks', delta: { full: rec.forceFull, order, items } })
+  rec.forceFull = false
 }
-function all(): Block[] {
-  return turn ? [...history, ...round, turn] : [...history, ...round]
+function all(rec: Mounted): Block[] {
+  return rec.turn ? [...rec.history, ...rec.round, rec.turn] : [...rec.history, ...rec.round]
 }
 
 function textOf(content: unknown): string {
@@ -176,8 +201,8 @@ function branch(): string {
 
 function snapshot(): Snapshot {
   return {
-    model: session?.model?.name ?? '未选择模型',
-    thinkingLevel: LEVEL_LABEL[session?.thinkingLevel ?? 'high'] ?? '高',
+    model: current?.session.model?.name ?? '未选择模型',
+    thinkingLevel: LEVEL_LABEL[current?.session.thinkingLevel ?? 'high'] ?? '高',
     cwd: basename(cwd),
     branch: branch(),
     access: access === 'full' ? '完全访问' : '变更前确认',
@@ -186,7 +211,7 @@ function snapshot(): Snapshot {
 }
 
 function status(streaming: boolean): void {
-  send({ type: 'status', snapshot: snapshot(), streaming, path: session?.sessionFile ?? null })
+  send({ type: 'status', snapshot: snapshot(), streaming, path: current?.manager.getSessionFile() ?? null })
 }
 
 /* ---------------- 扩展 UI 桥 ----------------
@@ -200,11 +225,9 @@ interface PendingUi {
 }
 
 const pending = new Map<string, PendingUi>()
-/** 尚未结束的工具调用，栈顶即最近开始的那个 */
-const liveTools: string[] = []
 let uiSeq = 0
 
-function ask(req: Omit<UiRequest, 'id' | 'toolCallId'>): Promise<UiReply> {
+function ask(liveTools: string[], req: Omit<UiRequest, 'id' | 'toolCallId'>): Promise<UiReply> {
   const id = `ui-${++uiSeq}`
   const full: UiRequest = { ...req, id, toolCallId: liveTools[liveTools.length - 1] }
   return new Promise((resolve) => {
@@ -221,48 +244,50 @@ function settleUi(id: string, reply: UiReply): void {
 }
 
 /** 给 pi 的 uiContext：所有原语都转发给渲染层，宿主不做业务判断 */
-const uiContext = {
-  async select(title: string, options: string[]) {
-    const r = await ask({ kind: 'select', title, options })
-    return r.cancelled ? undefined : r.value
-  },
-  async confirm(title: string, message: string) {
-    return Boolean((await ask({ kind: 'confirm', title, message })).confirmed)
-  },
-  async input(title: string, placeholder?: string) {
-    const r = await ask({ kind: 'input', title, placeholder })
-    return r.cancelled ? undefined : r.value
-  },
-  async editor(title: string, prefill?: string) {
-    const r = await ask({ kind: 'editor', title, prefill })
-    return r.cancelled ? undefined : r.value
-  },
-  notify(message: string, type?: 'info' | 'warning' | 'error') {
-    void ask({ kind: 'notify', message, notifyType: type })
-  },
-  onTerminalInput: () => () => {},
-  setStatus() {},
-  setWorkingMessage() {},
-  setWorkingVisible() {},
-  setWorkingIndicator() {},
-  setHiddenThinkingLabel() {},
-  setWidget() {},
-  setFooter() {},
-  setHeader() {},
-  setTitle() {},
-  custom: async () => undefined,
-  pasteToEditor() {},
-  setEditorText() {},
-  getEditorText: () => '',
-  addAutocompleteProvider() {},
-  get theme() {
-    return undefined
-  },
-  getAllThemes: () => [],
-  getTheme: () => undefined,
-  setTheme: () => ({ success: false, error: 'no theme' }),
-  getToolsExpanded: () => false,
-  setToolsExpanded() {}
+function uiContextFor(liveTools: string[]) {
+  return {
+    async select(title: string, options: string[]) {
+      const r = await ask(liveTools, { kind: 'select', title, options })
+      return r.cancelled ? undefined : r.value
+    },
+    async confirm(title: string, message: string) {
+      return Boolean((await ask(liveTools, { kind: 'confirm', title, message })).confirmed)
+    },
+    async input(title: string, placeholder?: string) {
+      const r = await ask(liveTools, { kind: 'input', title, placeholder })
+      return r.cancelled ? undefined : r.value
+    },
+    async editor(title: string, prefill?: string) {
+      const r = await ask(liveTools, { kind: 'editor', title, prefill })
+      return r.cancelled ? undefined : r.value
+    },
+    notify(message: string, type?: 'info' | 'warning' | 'error') {
+      void ask(liveTools, { kind: 'notify', message, notifyType: type })
+    },
+    onTerminalInput: () => () => {},
+    setStatus() {},
+    setWorkingMessage() {},
+    setWorkingVisible() {},
+    setWorkingIndicator() {},
+    setHiddenThinkingLabel() {},
+    setWidget() {},
+    setFooter() {},
+    setHeader() {},
+    setTitle() {},
+    custom: async () => undefined,
+    pasteToEditor() {},
+    setEditorText() {},
+    getEditorText: () => '',
+    addAutocompleteProvider() {},
+    get theme() {
+      return undefined
+    },
+    getAllThemes: () => [],
+    getTheme: () => undefined,
+    setTheme: () => ({ success: false, error: 'no theme' }),
+    getToolsExpanded: () => false,
+    setToolsExpanded() {}
+  }
 }
 
 /* ---------------- 会话列表 ---------------- */
@@ -284,8 +309,10 @@ function titleOf(info: { name?: string; firstMessage: string }): string {
   return clean.length > 28 ? clean.slice(0, 28) + '…' : clean
 }
 
-/** 会话扫描可能重入（init 与 turn 结束都会触发），只跑一个 */
+/** 会话扫描可能重入（init / 用户消息 / turn 结束都会触发），只跑一个 */
 let scanning = false
+/** 扫描期间又来了请求（通常是新会话刚落盘），跑完再补一次 */
+let scanAgain = false
 /** 最近一次扫描结果，用于重发（模型列表变了但不必重扫盘） */
 let lastList: readonly SessionInfo[] = []
 
@@ -301,7 +328,9 @@ function publishSessions(list: readonly SessionInfo[], loading = false): void {
       title: titleOf(info),
       project,
       ageLabel: ageLabel(info.modified),
-      modifiedAt: info.modified.getTime()
+      modifiedAt: info.modified.getTime(),
+      // 后台会话也在跑，侧栏按会话标加载图标
+      running: mounted.get(info.path)?.session.isStreaming === true
     }
     sessions.push(meta)
     const bucket = byProject.get(project) ?? []
@@ -314,7 +343,7 @@ function publishSessions(list: readonly SessionInfo[], loading = false): void {
 
 /** 斜杠命令列表：只取扩展注册的命令，每次读最新的 runner */
 function commands(): CommandInfo[] {
-  const runner = session?.extensionRunner
+  const runner = current?.session.extensionRunner
   if (!runner) return []
   return runner.getRegisteredCommands().map((c) => ({ name: c.name, description: c.description }))
 }
@@ -323,23 +352,33 @@ function commands(): CommandInfo[] {
 async function renameSession(path: string, title: string): Promise<void> {
   const clean = title.trim()
   if (!clean) return
-  // managerRef 只指向当前会话，其他会话要单独打开才能写
-  const manager = managerRef?.getSessionFile() === path ? managerRef : SessionManager.open(path)
+  // 只有挂载中的会话能直接用它的 manager，其余的单独打开才能写
+  const manager = mounted.get(path)?.manager ?? SessionManager.open(path)
   manager.appendSessionInfo(clean)
   lastList = lastList.map((i) => (i.path === path ? { ...i, name: clean } : i))
   publishSessions(lastList, scanning)
 }
 
 async function deleteSession(path: string): Promise<void> {
+  const rec = mounted.get(path)
+  if (rec) {
+    mounted.delete(path)
+    if (rec === current) current = null
+    rec.detach()
+    rec.session.dispose()
+  }
   lastList = lastList.filter((i) => i.path !== path)
-  // 删的是当前挂载的会话：先切到新会话，免得 dispose 后还往已删文件写
-  if (session?.sessionFile === path) await start()
+  // 删的是当前挂载的会话：先切到新会话，免得删完没东西可看
+  if (!current) await start()
   unlinkSync(path)
   publishSessions(lastList, scanning)
 }
 
 async function emitSessions(): Promise<void> {
-  if (scanning) return
+  if (scanning) {
+    scanAgain = true
+    return
+  }
   scanning = true
   // 上一批结果先顶上，免得重扫时侧栏一闪变空
   publishSessions(lastList, true)
@@ -352,17 +391,17 @@ async function emitSessions(): Promise<void> {
     publishSessions(list)
   } finally {
     scanning = false
+    if (scanAgain) {
+      scanAgain = false
+      void emitSessions()
+    }
   }
 }
 
 /* ---------------- 会话 ---------------- */
 
-/** 当前会话的 manager：重命名要往它的 JSONL 里追加 session_info */
-let managerRef: SessionManager | null = null
-
-async function loadModels(): Promise<void> {
-  if (!session) return
-  models = (await session.modelRuntime.getAvailable()).map((m) => ({
+async function loadModels(rec: Mounted): Promise<void> {
+  models = (await rec.session.modelRuntime.getAvailable()).map((m) => ({
     id: m.id,
     name: m.name,
     provider: m.provider,
@@ -378,76 +417,101 @@ function levelsOf(model: { thinkingLevelMap?: Record<string, string | null>; rea
   return Object.keys(LEVEL_LABEL).filter((k) => typeof map[k] === 'string')
 }
 
-function bind(s: Session): void {
-  detach?.()
-  session = s
-  detach = s.subscribe(onEvent)
-}
-
-function resetTranscript(): void {
-  history = []
-  round = []
-  turn = null
-  msgSeq = 0
-  sent = new Map()
-  sentOrder = []
-  revs.clear()
-  forceFull = true
-}
-
-/** 建会话后挂上 UI 桥；mode="rpc" 让扩展走可编程的 ui.* 路径而不是 TUI 渲染 */
-async function adopt(s: Session): Promise<void> {
-  bind(s)
-  await s.bindExtensions({ uiContext: uiContext as never, mode: 'rpc' })
-}
-
 /** 默认 loader 之外多挂一个权限门扩展；其余扩展、技能、模板照旧从 ~/.pi/agent 加载 */
-async function createSession(manager: SessionManager): Promise<Session> {
+async function createSession(manager: SessionManager, ui: UiBridge): Promise<Session> {
+  const dir = manager.getCwd() || cwd
   const loader = new DefaultResourceLoader({
-    cwd,
+    cwd: dir,
     agentDir: getAgentDir(),
-    extensionFactories: [{ name: 'pigui-permission-gate', factory: permissionGate, hidden: true }]
+    extensionFactories: [{ name: 'pigui-permission-gate', factory: permissionGate(ui), hidden: true }]
   })
   await loader.reload()
-  return (await createAgentSession({ sessionManager: manager, cwd, resourceLoader: loader })).session
+  return (await createAgentSession({ sessionManager: manager, cwd: dir, resourceLoader: loader })).session
+}
+
+/** 建会话、订阅事件、挂 UI 桥；一个会话一份状态，切走不是 dispose */
+async function mount(manager: SessionManager): Promise<Mounted> {
+  const liveTools: string[] = []
+  const ui = uiContextFor(liveTools)
+  const created = await createSession(manager, ui)
+  const rec: Mounted = {
+    session: created,
+    manager,
+    detach: () => {},
+    cwd: manager.getCwd() || cwd,
+    history: [],
+    round: [],
+    turn: null,
+    turnStart: 0,
+    msgSeq: 0,
+    sent: new Map(),
+    sentOrder: [],
+    revs: new Map(),
+    forceFull: true,
+    flushTimer: null,
+    liveTools
+  }
+  rec.detach = created.subscribe((ev) => onEvent(rec, ev))
+  // mode="rpc" 让扩展走可编程的 ui.* 路径而不是 TUI 渲染
+  await created.bindExtensions({ uiContext: ui as never, mode: 'rpc' })
+  mounted.set(manager.getSessionFile() ?? '', rec)
+  return rec
+}
+
+/** 切到某个会话：后台那个不 dispose，继续跑；块全量重发给渲染层 */
+function activate(rec: Mounted): void {
+  current = rec
+  cwd = rec.cwd
+  rec.forceFull = true
+  flushNow(rec)
+  status(rec.session.isStreaming)
+}
+
+/** 切走后空闲的会话不必留在内存里（切回来从磁盘重读）；还在跑/压缩的留着继续跑 */
+function prune(): void {
+  for (const [path, rec] of mounted) {
+    if (rec === current || !rec.session.isIdle) continue
+    mounted.delete(path)
+    rec.detach()
+    rec.session.dispose()
+  }
 }
 
 async function start(cwdOverride?: string): Promise<void> {
-  detach?.()
-  if (session) session.dispose()
-  resetTranscript()
   if (cwdOverride) cwd = cwdOverride
   const manager = SessionManager.create(cwd)
-  managerRef = manager
-  const created = await createSession(manager)
-  await adopt(created)
-  await loadModels()
-  flushNow()
-  status(false)
+  const rec = await mount(manager)
+  await loadModels(rec)
+  activate(rec)
   // 会话列表不阻塞建会话：init 时就并行扫了；这里只把模型列表补给渲染层
   // scanning 时不能报 loading=false，否则会把正在用的搜索状态清掉
   publishSessions(lastList, scanning)
+  prune()
 }
 
 async function open(path: string): Promise<void> {
+  // 已经挂着的（比如刚切走的会话）直接恢复，不重读磁盘
+  const existing = mounted.get(path)
+  if (existing) {
+    await loadModels(existing)
+    activate(existing)
+    publishSessions(lastList, scanning)
+    prune()
+    return
+  }
   // 大会话（几十 MB / 上千条 entry）要几秒，先告诉渲染层进阻塞态
   send({ type: 'busy', active: true, label: '正在打开会话' })
   try {
-    detach?.()
-    if (session) session.dispose()
-    resetTranscript()
     const manager = SessionManager.open(path)
-    cwd = manager.getCwd() || cwd
-    managerRef = manager
-    const created = await createSession(manager)
-    await adopt(created)
-    await loadModels()
-    history = blocksFromEntries(manager.getEntries())
-    flushNow()
+    const rec = await mount(manager)
+    rec.history = blocksFromEntries(manager.getEntries())
+    await loadModels(rec)
+    activate(rec)
     status(false)
   } finally {
     send({ type: 'busy', active: false })
   }
+  prune()
 }
 
 /** 历史会话的 entry 流转成块：工具结果回填到对应的 tool 块上，折叠规则与实时流一致 */
@@ -551,72 +615,78 @@ function settleInto(items: Block[], durationMs = 0): Block[] {
 }
 
 /** 当前 assistant 消息渲染进 round：先清掉这条消息上一帧的块，再按顺序重新放 */
-function syncMessage(partial: { content?: unknown[]; thinkingLevel?: string }, streaming: boolean): void {
-  round = round.filter((b) => !b.id.startsWith(`m${msgSeq}-`))
+function syncMessage(rec: Mounted, partial: { content?: unknown[]; thinkingLevel?: string }, streaming: boolean): void {
+  rec.round = rec.round.filter((b) => !b.id.startsWith(`m${rec.msgSeq}-`))
   const level = LEVEL_LABEL[partial.thinkingLevel ?? ''] ?? undefined
   ;(partial.content ?? []).forEach((raw, i) => {
     const c = raw as { type: string; text?: string; thinking?: string }
     if (c.type === 'thinking' && c.thinking) {
-      round.push({ kind: 'thinking', id: `m${msgSeq}-th${i}`, text: c.thinking, level, streaming })
+      rec.round.push({ kind: 'thinking', id: `m${rec.msgSeq}-th${i}`, text: c.thinking, level, streaming })
     } else if (c.type === 'text' && c.text) {
-      round.push({ kind: 'assistant', id: `m${msgSeq}-a${i}`, text: c.text, streaming })
+      rec.round.push({ kind: 'assistant', id: `m${rec.msgSeq}-a${i}`, text: c.text, streaming })
     }
   })
 }
 
 /** 一轮结束：用户气泡与最后一条回答留在正文，其余过程收进折叠行（保持时间顺序） */
-function settleRound(aborted: boolean): void {
-  const items = settleInto(round).map((b) =>
-    b.kind === 'turn' ? { ...b, durationMs: Date.now() - turnStart, aborted } : b
+function settleRound(rec: Mounted, aborted: boolean): void {
+  const items = settleInto(rec.round).map((b) =>
+    b.kind === 'turn' ? { ...b, durationMs: Date.now() - rec.turnStart, aborted } : b
   )
-  history = [...history, ...items]
-  round = []
-  turn = null
+  rec.history = [...rec.history, ...items]
+  rec.round = []
+  rec.turn = null
 }
 
-function onEvent(ev: Record<string, any>): void {
+function onEvent(rec: Mounted, ev: Record<string, any>): void {
+  const live = rec === current
   switch (ev.type) {
     case 'message_start':
-      if (ev.message?.role === 'assistant') msgSeq++
+      if (ev.message?.role === 'assistant') rec.msgSeq++
       break
     case 'message_update':
       if (ev.message?.role === 'assistant') {
-        syncMessage(ev.message, ev.message.stopReason === 'pending')
-        schedule()
+        syncMessage(rec, ev.message, ev.message.stopReason === 'pending')
+        schedule(rec)
       }
       break
     case 'message_end':
       if (ev.message?.role === 'assistant') {
-        syncMessage(ev.message, false)
-        flushNow()
+        syncMessage(rec, ev.message, false)
+        flushNow(rec)
+      }
+      // 新会话这时才落盘，侧栏得补一次条目；已在列表里的不必每条消息都重扫
+      if (ev.message?.role === 'user') {
+        const path = rec.manager.getSessionFile()
+        if (!lastList.some((i) => i.path === path)) setTimeout(() => void emitSessions(), 0)
       }
       break
     case 'tool_execution_start': {
-      round.push({
+      rec.round.push({
         kind: 'tool',
         id: `tc-${ev.toolCallId}`,
         name: ev.toolName,
         args: preview(ev.args),
         state: 'running'
       })
-      liveTools.push(ev.toolCallId)
+      rec.liveTools.push(ev.toolCallId)
       // 完整入参只发一次，交渲染层的交互适配器自行解释（宿主不解析工具参数）
       send({ type: 'toolStart', toolCallId: ev.toolCallId, name: ev.toolName, args: ev.args })
-      flushNow()
+      flushNow(rec)
       break
     }
     case 'tool_execution_end': {
-      const at = liveTools.lastIndexOf(ev.toolCallId)
-      if (at >= 0) liveTools.splice(at, 1)
-      const block = round.find((b) => b.id === `tc-${ev.toolCallId}`) as Tool | undefined
+      const at = rec.liveTools.lastIndexOf(ev.toolCallId)
+      if (at >= 0) rec.liveTools.splice(at, 1)
+      const block = rec.round.find((b) => b.id === `tc-${ev.toolCallId}`) as Tool | undefined
       if (block) {
         block.state = ev.isError ? 'error' : 'done'
         block.output = textOf(ev.result?.content).slice(0, 8000) || preview(ev.result?.details)
-        bump(block.id)
+        bump(rec, block.id)
         const diff = ev.result?.details?.diff
         const patch = ev.result?.details?.patch
         if (typeof diff === 'string' && diff) {
-          round.push({
+          rec.round.push({
             ...parseDiff(diff, String(ev.args?.path ?? ev.toolName)),
             patch: typeof patch === 'string' ? patch : undefined
           })
@@ -624,26 +694,29 @@ function onEvent(ev: Record<string, any>): void {
         // read 成功时补一张文件卡，模型看到了什么用户也看得到
         if (ev.toolName === 'read' && !ev.isError) {
           const path = String(ev.args?.path ?? '')
-          if (path) round.push(fileBlock(path, Number(ev.args?.limit ?? 0)))
+          if (path) rec.round.push(fileBlock(path, Number(ev.args?.limit ?? 0)))
         }
       }
-      flushNow()
+      flushNow(rec)
       break
     }
     case 'thinking_level_changed':
-      status(session?.isStreaming ?? false)
+      if (live) status(rec.session.isStreaming)
       break
     case 'agent_start':
-      turnStart = Date.now()
-      status(true)
-      flushNow()
+      rec.turnStart = Date.now()
+      if (live) status(true)
+      // 后台会话开跑也要让侧栏标上加载图标
+      publishSessions(lastList, scanning)
       break
     case 'agent_settled': {
-      settleRound(Boolean(ev.aborted))
-      flushNow()
-      status(false)
-      send({ type: 'settled', aborted: Boolean(ev.aborted) })
-      // 新会话这时才落盘，标题/顺序都会变
+      settleRound(rec, Boolean(ev.aborted))
+      flushNow(rec)
+      if (live) status(false)
+      // 路径让渲染层区分：不是正在看的会话就把未读点打上
+      send({ type: 'settled', aborted: Boolean(ev.aborted), path: rec.manager.getSessionFile() ?? null })
+      publishSessions(lastList, scanning)
+      // 标题/顺序会变（新会话也是这时才落盘）
       void emitSessions()
       break
     }
@@ -653,7 +726,7 @@ function onEvent(ev: Record<string, any>): void {
       if (!ev.aborted && ev.result) {
         const before = Math.round(Number(ev.result.tokensBefore ?? 0) / 1000)
         const after = Math.round(Number(ev.result.estimatedTokensAfter ?? 0) / 1000)
-        round.push({
+        rec.round.push({
           kind: 'system',
           id: `s-${++seq}`,
           tone: 'info',
@@ -662,13 +735,13 @@ function onEvent(ev: Record<string, any>): void {
       }
       break
     case 'auto_retry_start':
-      round.push({
+      rec.round.push({
         kind: 'system',
         id: `s-${++seq}`,
         tone: 'warn',
         text: `请求失败，${Math.round(ev.delayMs / 1000)}s 后重试（${ev.attempt}/${ev.maxAttempts}）：${ev.errorMessage}`
       })
-      flushNow()
+      flushNow(rec)
       break
   }
 }
@@ -676,23 +749,26 @@ function onEvent(ev: Record<string, any>): void {
 /* ---------------- 命令 ---------------- */
 
 async function prompt(text: string, images?: Array<{ data: string; mimeType: string }>): Promise<void> {
-  if (!session) return
-  round.push({
+  // 切换还在挂载时发的消息，等切完再落到目标会话，别写进上一个
+  await switching
+  const rec = current
+  if (!rec) return
+  rec.round.push({
     kind: 'user',
     id: `u-${++seq}`,
     text,
     ...(images?.length ? { images: images.length } : {})
   })
-  turnStart = Date.now()
-  flushNow()
+  rec.turnStart = Date.now()
+  flushNow(rec)
   try {
-    await session.prompt(
+    await rec.session.prompt(
       text,
       images?.length ? { images: images.map((i) => ({ type: 'image' as const, ...i })) } : undefined
     )
   } catch (err) {
-    round.push({ kind: 'system', id: `s-${++seq}`, tone: 'error', text: String((err as Error)?.message ?? err) })
-    flushNow()
+    rec.round.push({ kind: 'system', id: `s-${++seq}`, tone: 'error', text: String((err as Error)?.message ?? err) })
+    flushNow(rec)
   }
 }
 
@@ -706,13 +782,14 @@ async function revert(patch: string): Promise<void> {
         err ? reject(new Error(String(stderr || err.message).trim())) : resolve()
       )
     })
-    round.push({ kind: 'system', id: `s-${++seq}`, tone: 'info', text: '已撤销这次修改' })
+    const rec = current
+    rec?.round.push({ kind: 'system', id: `s-${++seq}`, tone: 'info', text: '已撤销这次修改' })
   } catch (err) {
     console.error('[agent-host] revert failed', err)
     send({ type: 'error', message: `撤销失败：${(err as Error).message}` })
   } finally {
     rmSync(file, { force: true })
-    flushNow()
+    if (current) flushNow(current)
   }
 }
 
@@ -739,20 +816,23 @@ async function listFiles(query: string): Promise<void> {
 }
 
 async function setModel(id: string): Promise<void> {
-  if (!session) return
-  const available = await session.modelRuntime.getAvailable()
+  const rec = current
+  if (!rec) return
+  const available = await rec.session.modelRuntime.getAvailable()
   const found = available.find((m) => m.id === id)
   if (!found) return
-  await session.setModel(found as Parameters<Session['setModel']>[0])
-  await loadModels()
-  flushNow()
-  status(session.isStreaming)
+  await rec.session.setModel(found as Parameters<Session['setModel']>[0])
+  await loadModels(rec)
+  flushNow(rec)
+  status(rec.session.isStreaming)
 }
 
 function setLevel(level: string): void {
-  session?.setThinkingLevel(level as Parameters<Session['setThinkingLevel']>[0])
-  status(session?.isStreaming ?? false)
-  flushNow()
+  const rec = current
+  if (!rec) return
+  rec.session.setThinkingLevel(level as Parameters<Session['setThinkingLevel']>[0])
+  status(rec.session.isStreaming)
+  flushNow(rec)
 }
 
 async function handle(cmd: AgentCommand): Promise<void> {
@@ -767,13 +847,13 @@ async function handle(cmd: AgentCommand): Promise<void> {
         await prompt(cmd.text, cmd.images)
         break
       case 'abort':
-        await session?.abort()
+        await current?.session.abort()
         break
       case 'newSession':
-        await start()
+        await switchTo(() => start())
         break
       case 'openSession':
-        await open(cmd.path)
+        await switchTo(() => open(cmd.path))
         break
       case 'renameSession':
         await renameSession(cmd.path, cmd.title)
@@ -795,7 +875,7 @@ async function handle(cmd: AgentCommand): Promise<void> {
         break
       case 'setAccess':
         access = cmd.mode
-        status(false)
+        status(current?.session.isStreaming ?? false)
         break
       case 'uiReply':
         settleUi(cmd.id, cmd.reply)

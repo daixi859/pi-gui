@@ -44,6 +44,8 @@ export interface SessionMeta {
   ageLabel: string
   /** 最后活动时间（毫秒），用于排序与时间分组 */
   modifiedAt: number
+  /** 这个会话的 agent 还在后台跑（侧栏显示加载图标） */
+  running?: boolean
 }
 
 export interface ProjectMeta {

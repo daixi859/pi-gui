@@ -100,7 +100,6 @@ export default function App(): ReactNode {
           sessions={agent.sessions}
           sessionsLoading={agent.sessionsLoading}
           activeId={activeId}
-          runningPath={agent.runningPath}
           unread={agent.unread}
           onOpenSession={openSession}
           onNewSession={() => {

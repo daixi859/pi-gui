@@ -184,9 +184,7 @@ export interface SidebarProps {
   /** 会话目录还在扫，侧栏显示 loading */
   sessionsLoading: boolean
   activeId: string | null
-  /** 正在跑 agent 的会话文件（加载图标） */
-  runningPath: string | null
-  /** 运行中被切走、未再打开的会话文件（蓝点） */
+  /** 后台跑完、未再打开的会话文件（蓝点） */
   unread: string[]
   onOpenSession: (id: string, path: string) => void
   onNewSession: () => void
@@ -205,7 +203,6 @@ export function Sidebar({
   sessions,
   sessionsLoading,
   activeId,
-  runningPath,
   unread,
   onOpenSession,
   onNewSession,
@@ -235,7 +232,7 @@ export function Sidebar({
   const rowProps = (s: SessionMeta) => ({
     session: s,
     active: s.id === activeId,
-    running: s.path === runningPath,
+    running: s.running === true,
     unread: unread.includes(s.path),
     onClick: () => onOpenSession(s.id, s.path),
     onRename: (title: string) => onRename(s.path, title),
