@@ -23,7 +23,7 @@ export function UiPrompt({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/20" role="dialog" aria-modal="true">
       <div className="pi-card w-[440px] max-w-[calc(100vw-48px)] p-4 shadow-dialog">
         <div className="flex items-start gap-2">
-          <p className="min-w-0 flex-1 whitespace-pre-wrap text-xs leading-[1.55] text-fg">
+          <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-[1.55] text-fg">
             {title || req.message}
           </p>
           <button
@@ -36,7 +36,7 @@ export function UiPrompt({
           </button>
         </div>
 
-        {req.kind === 'confirm' && req.message && <p className="mt-2 text-xs text-muted">{req.message}</p>}
+        {req.kind === 'confirm' && req.message && <p className="mt-2 text-sm text-muted">{req.message}</p>}
 
         {req.kind === 'select' && (
           <div className="mt-2 max-h-[280px] overflow-y-auto">
@@ -45,7 +45,7 @@ export function UiPrompt({
                 key={o}
                 type="button"
                 onClick={() => onReply(req.id, { value: o })}
-                className="flex w-full items-start rounded-sm px-2 py-2 text-left text-xs text-fg hover:bg-tint-soft"
+                className="flex w-full items-start rounded-sm px-2 py-2 text-left text-sm text-fg hover:bg-tint"
               >
                 {o}
               </button>
@@ -60,7 +60,7 @@ export function UiPrompt({
             onChange={(e) => setText(e.target.value)}
             placeholder={req.placeholder}
             rows={req.kind === 'editor' ? 6 : 3}
-            className="mt-2 w-full resize-none rounded-sm border border-edge bg-canvas px-2 py-2 text-xs text-fg outline-none placeholder:text-faint focus:border-faint"
+            className="mt-2 w-full resize-none rounded-sm border border-edge bg-canvas px-2 py-2 text-sm text-fg outline-none placeholder:text-faint focus:border-faint"
           />
         )}
 
@@ -68,7 +68,7 @@ export function UiPrompt({
           <button
             type="button"
             onClick={close}
-            className="rounded-md border border-edge px-2 py-1 text-xs text-fg hover:bg-tint-soft"
+            className="rounded-md border border-edge px-2 py-1 text-sm text-fg hover:bg-tint"
           >
             取消
           </button>
@@ -76,7 +76,7 @@ export function UiPrompt({
             <button
               type="button"
               onClick={() => onReply(req.id, { confirmed: true })}
-              className="rounded-md bg-fg px-2 py-1 text-xs text-white"
+              className="pi-btn"
             >
               确认
             </button>
@@ -84,7 +84,7 @@ export function UiPrompt({
             <button
               type="button"
               onClick={() => onReply(req.id, { value: text })}
-              className="rounded-md bg-fg px-2 py-1 text-xs text-white"
+              className="pi-btn"
             >
               确定
             </button>

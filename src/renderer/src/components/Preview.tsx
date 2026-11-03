@@ -36,7 +36,7 @@ const DEFAULTS = {
   surface: '#ffffff',
   fg: '#26241f',
   muted: '#8b8781',
-  accent: '#26241f'
+  edge: '#e0e0e0'
 }
 type Tokens = typeof DEFAULTS
 type TokenKey = keyof Tokens
@@ -55,11 +55,12 @@ const VARS: Record<TokenKey, [string, 'px' | '']> = {
   surface: ['--color-surface', ''],
   fg: ['--color-fg', ''],
   muted: ['--color-muted', ''],
-  accent: ['--color-accent', '']
+  edge: ['--color-edge', '']
 }
 const NUM_KEYS: TokenKey[] = ['spacing', 'radiusSm', 'radiusMd', 'radiusLg', 'textXs', 'textSm', 'textXl']
-const COLOR_KEYS: TokenKey[] = ['canvas', 'panel', 'surface', 'fg', 'muted', 'accent']
-const STORE = 'pi.preview.tokens'
+const COLOR_KEYS: TokenKey[] = ['canvas', 'panel', 'surface', 'fg', 'muted', 'edge']
+/* 键带版本：默认令牌变化时换版本号，旧的持久化值作废 */
+const STORE = 'pi.preview.tokens.v4'
 
 function useTokens(): [Tokens, (k: TokenKey, v: number | string) => void, () => void] {
   const [tokens, setTokens] = useState<Tokens>(() => {
@@ -102,7 +103,7 @@ function TokenPanel({
     '}'
   ].join('\n')
   return (
-    <aside className="flex w-[236px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-line p-3">
+    <aside className="flex w-[236px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-edge p-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-fg">外观令牌</span>
         <button type="button" onClick={reset} className="text-xs text-muted hover:text-fg">
@@ -187,7 +188,7 @@ function IconsDemo(): ReactNode {
         {list.map(([name, Icon]) => (
           <div
             key={name}
-            className="flex flex-col items-center gap-1 rounded-sm border border-line px-1 py-2"
+            className="flex flex-col items-center gap-1 rounded-sm border border-edge px-1 py-2"
             title={name}
           >
             <span className={color}>
@@ -358,7 +359,7 @@ export function Preview(): ReactNode {
   const [tokens, set, reset] = useTokens()
   return (
     <div className="flex h-full">
-      <nav className="w-[168px] shrink-0 overflow-y-auto border-r border-line py-3">
+      <nav className="w-[168px] shrink-0 overflow-y-auto border-r border-edge py-3">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}

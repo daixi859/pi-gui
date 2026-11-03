@@ -14,12 +14,12 @@ const LEVEL_LABEL: Record<string, string> = {
   max: '最高'
 }
 
-const ghost = 'flex items-center gap-1 rounded-md px-1 py-1 text-xs hover:bg-sunken'
+const ghost = 'flex items-center gap-1 rounded-md px-1 py-1 text-sm hover:bg-sunken'
 
 /** 输入卡顶部的项目 / 分支条 */
 function WorkspaceBar({ snapshot }: { snapshot: Snapshot }): ReactNode {
   return (
-    <div className="flex items-center gap-0.5 rounded-t-lg bg-chip px-2 py-1 text-xs text-muted">
+    <div className="flex items-center gap-0.5 rounded-t-lg bg-sunken px-2 py-1 text-xs text-muted">
       <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconFolder className="size-[14px]" />
         {snapshot.cwd}
@@ -68,7 +68,7 @@ function Toolbar({
       </button>
       <div className="ml-auto flex items-center gap-1">
         <button type="button" onClick={onModel} className={ghost}>
-          <span className="size-[13px] rounded-full border-2 border-add-soft" />
+          <span className="size-[13px] rounded-full border-2 border-add/30" />
           <span className="font-medium text-fg">{snapshot.model}</span>
           <span className="text-muted">{snapshot.thinkingLevel}</span>
           <IconChevronDown className="size-3 text-muted" />
@@ -77,10 +77,7 @@ function Toolbar({
           type="button"
           aria-label={streaming ? '停止' : '发送'}
           onClick={streaming ? onAbort : onSend}
-          className={
-            'grid size-8 place-items-center rounded-full text-white transition-colors ' +
-            (streaming ? 'bg-send hover:bg-send-hover' : 'bg-send hover:bg-send-hover')
-          }
+          className="grid size-8 place-items-center rounded-full bg-fg text-white transition-colors hover:bg-fg/85"
         >
           {streaming ? <span className="size-2.5 rounded-sm bg-white" /> : <IconArrowUp className="size-[17px]" />}
         </button>
@@ -178,13 +175,13 @@ function InputCard({
       className={
         'relative rounded-lg border border-edge/80 bg-surface ' +
         (big
-          ? 'shadow-composer'
+          ? 'shadow-card'
           : 'shadow-hairline')
       }
     >
       {big && <WorkspaceBar snapshot={snapshot} />}
       {cmdHits.length > 0 && (
-        <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-menu">
+        <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-pop">
           {cmdHits.map((c) => (
             <button
               key={c.name}
@@ -204,7 +201,7 @@ function InputCard({
         </div>
       )}
       {typing && files.length > 0 && (
-        <div className="absolute bottom-full mb-1 left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-menu">
+        <div className="absolute bottom-full mb-1 left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-pop">
           {files.slice(0, 12).map((f) => (
             <button
               key={f}
@@ -348,7 +345,7 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
           key={label}
           type="button"
           onClick={() => onPick(label)}
-          className="flex items-center gap-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-muted transition-colors hover:bg-sunken hover:text-fg"
+          className="flex items-center gap-1 rounded-md border border-edge bg-panel px-2 py-1 text-sm text-muted transition-colors hover:bg-sunken hover:text-fg"
         >
           <span className="size-3 rounded-sm border border-faint" />
           {label}
@@ -413,9 +410,9 @@ function ModelMenu({
             value={Math.max(0, levels.indexOf(currentLevel))}
             onChange={(e) => onLevel(levels[Number(e.target.value)])}
             aria-label="思考强度"
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-[#2f9be0] [&::-webkit-slider-thumb]:shadow"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-link [&::-webkit-slider-thumb]:shadow"
             style={{
-              background: `linear-gradient(to right, var(--color-ramp-1), var(--color-ramp-2), var(--color-ramp-3)) 0 / ${pct}% no-repeat, var(--color-line)`
+              background: `linear-gradient(to right, var(--color-add), var(--color-link)) 0 / ${pct}% no-repeat, var(--color-edge)`
             }}
           />
           <div className="mt-1 flex justify-between text-xs text-faint">

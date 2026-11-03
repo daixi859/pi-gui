@@ -50,8 +50,8 @@ export function CodeBlock({ code, lang }: { code: string; lang: string }): React
   }, [html, key, lang, code])
 
   return (
-    <figure className="my-4 overflow-hidden rounded-md border border-line">
-      <figcaption className="flex items-center justify-between border-b border-line bg-sunken px-2 py-1 text-xs text-muted">
+    <figure className="my-4 overflow-hidden rounded-md border border-edge">
+      <figcaption className="flex items-center justify-between border-b border-edge bg-sunken px-2 py-1 text-xs text-muted">
         <span className="font-mono">{lang}</span>
       </figcaption>
       {html ? (

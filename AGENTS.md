@@ -50,8 +50,8 @@ npm run typecheck  # 三端类型检查，改完必跑
 **动手前先读 `docs/STYLE.md`**，那里是完整规范。四条硬规则：
 
 - 只写令牌类名，不写任意值：`bg-panel`、`text-muted`、`text-xs`、`rounded-md`、`p-2`、`shadow-card`；禁止 `text-[13px]`、`bg-[#f0f0f0]`、`shadow-[...]`。
-- 刻度：间距 2/4/8/16、圆角 4/8/16、字号 12/14/28。刻度外的值按「就近、平局偏小」归入；新代码不得引入刻度外的值。
-- 重复 3 次以上的类组合提成 `pi-` 语义类（`pi-panel`、`pi-card`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`），定义在 `global.css` 的 `@utility`。
+- 刻度：间距 2/4/8/16、圆角 4/8/16、字号 12/14（正文/标题 14，代码与小字 12），展示字号特例 `text-2xl` 28px 仅用于问候/品牌大字。刻度外的值按「就近、平局偏小」归入；新代码不得引入刻度外的值。
+- 重复 3 次以上的类组合提成 `pi-` 语义类（`pi-panel`、`pi-card`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`、`pi-btn`），定义在 `global.css` 的 `@utility`。
 - 可访问性底线：可点区域 ≥28px、键盘焦点可见、正文对比 ≥4.5:1；动效尊重 `prefers-reduced-motion`。
 
 令牌调整走「组件预览」页（`components/Preview.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `@theme`。图标全是手绘 SVG，在 `components/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
@@ -59,3 +59,5 @@ npm run typecheck  # 三端类型检查，改完必跑
 ## 调试
 
 主进程支持 `PI_SHOT=<png路径>` + `PI_SHOT_JS=<页面脚本>` + `PI_SHOT_AT=<触发ms>` + `PI_SHOT_DELAY=<截图前ms>`，用于无头截图验证。改代码后重启 dev（热更新对 main/host 不生效）。
+
+**纯样式调试（类名/令牌/圆角/间距/颜色）不需要启动客户端截图确认**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 行为、布局逻辑或跨进程改动时才需要启动验证。

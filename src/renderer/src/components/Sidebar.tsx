@@ -30,7 +30,7 @@ import {
 type Nav = (route: 'start' | 'chat' | 'gallery') => void
 
 const navRow =
-  'flex h-9 w-full items-center gap-2 rounded-md px-2 text-xs text-fg transition-colors hover:bg-select/60'
+  'flex h-9 w-full items-center gap-2 rounded-sm px-2 text-sm text-fg transition-colors hover:bg-select/60'
 
 const iconBtn = 'pi-icon-btn'
 
@@ -57,7 +57,7 @@ function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: (
           </>
         )}
       </button>
-      <span className="pointer-events-none absolute top-full mt-1 left-0 z-50 hidden whitespace-nowrap rounded-sm border border-edge bg-panel px-2 py-0.5 text-xs text-muted shadow-tip group-hover:flex">
+      <span className="pointer-events-none absolute top-full mt-1 left-0 z-50 hidden whitespace-nowrap rounded-sm border border-edge bg-panel px-2 py-0.5 text-xs text-muted shadow-pop group-hover:flex">
         {collapsed ? '展开侧栏' : '收起侧栏'}
         <kbd className="ml-2 rounded-sm border border-edge px-1 text-xs text-faint">Ctrl+B</kbd>
       </span>
@@ -295,7 +295,7 @@ export function Sidebar({
           />
         ) : (
           <>
-            <span className="shrink-0 whitespace-nowrap text-xs text-muted">任务列表</span>
+            <span className="shrink-0 whitespace-nowrap text-sm text-muted">任务列表</span>
             <button
               type="button"
               aria-label="搜索"
@@ -325,7 +325,7 @@ export function Sidebar({
           aria-label="切换排序"
           aria-expanded={sorting}
           onClick={() => setSorting((v) => !v)}
-          className="flex items-center gap-1 text-xs text-faint transition-colors hover:text-muted"
+          className="flex items-center gap-1 text-sm text-faint transition-colors hover:text-muted"
         >
           {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
           <IconChevronDown className="size-3" />
@@ -340,7 +340,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pl-2 pr-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto pl-2 pb-2">
         {sessionsLoading && (
           <div className="flex items-center gap-2 px-2 py-1 text-xs text-faint">
             <IconSpinner className="size-3.5" />
@@ -358,7 +358,7 @@ export function Sidebar({
                   type="button"
                   aria-expanded={!isFolded}
                   onClick={() => setFolded((m) => ({ ...m, [p.name]: !m[p.name] }))}
-                  className="flex h-8 w-full items-center gap-1 rounded-md px-2 text-left text-xs text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                  className="mb-0.5 flex h-7 w-full items-center gap-1 rounded-sm px-2 text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
                 >
                   {/* 收起/展开用文件夹开合表示：闭合 = 折叠，翻开 = 展开 */}
                   {isFolded ? (
@@ -373,7 +373,7 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={() => setLimit((m) => ({ ...m, [p.name]: (m[p.name] ?? 5) + 10 }))}
-                    className="h-8 w-full rounded-md pl-[30px] text-left text-xs text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                    className="mb-0.5 h-7 w-full rounded-sm pl-[30px] text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
                   >
                     显示更多{rest > 10 ? `（还有 ${rest} 条）` : ''}
                   </button>
@@ -403,10 +403,10 @@ export function Sidebar({
 
       <div className="border-t border-edge" />
       <div className="flex items-center gap-2 px-4 py-2">
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-avatar text-xs font-medium text-white">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-fg text-xs font-medium text-white">
           H
         </span>
-        <span className="truncate text-xs">hwuscrxo</span>
+        <span className="truncate text-sm">hwuscrxo</span>
         <div className="ml-auto flex items-center gap-1">
           <button
             type="button"
@@ -454,7 +454,7 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
         }}
         className={
           // 激活态只换底色/字重，左右内边距与普通行相同，标题不左右跳
-          'flex h-8 w-full items-center gap-2 rounded-md pr-1 pl-2 text-left text-xs transition-colors ' +
+          'mb-0.5 flex h-7 w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors ' +
           (active ? 'bg-select font-medium' : 'hover:bg-select/60')
         }
       >

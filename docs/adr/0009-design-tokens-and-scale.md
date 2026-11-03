@@ -6,9 +6,9 @@
 
 1. `@theme` 里的 CSS 变量：颜色（含透明黑蒙层、组件专用色）、字号、圆角、阴影、Tailwind 的 `--spacing`。
 2. Tailwind 生成的原生工具类（`bg-panel`、`text-xs`、`rounded-md`、`p-2`、`shadow-card`）。
-3. `@utility` 定义的 `pi-` 语义类（`pi-card`、`pi-panel`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`），只收重复 3 次以上的组合。
+3. `@utility` 定义的 `pi-` 语义类（`pi-card`、`pi-panel`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`、`pi-btn`），只收重复 3 次以上的组合。
 
-刻度：间距 2/4/8/16（Tailwind 的 `p-0.5/1/2/4`）、圆角 4/8/16、字号 12/14/28。刻度外的取值按「就近、平局偏小」归入（6→4、7→8、13→12）。≥24px 的布局间距、宽度、高度不纳入距离。
+刻度：间距 2/4/8/16（Tailwind 的 `p-0.5/1/2/4`）、圆角 4/8/16、字号 12/14（正文/标题 14，代码与小字 12），另有 28px 展示字号特例（`text-2xl`）只用于问候/品牌大字。刻度外的取值按「就近、平局偏小」归入（6→4、7→8、13→12）。≥24px 的布局间距、宽度、高度不纳入距离。
 
 组件预览页的「外观令牌」面板把改动写到 `:root` 内联变量并记在 localStorage，可「复制为 CSS」手动回填，**不写文件**。
 

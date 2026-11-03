@@ -29,7 +29,7 @@ export function DiffBlock({
   }
 
   return (
-    <div className="rounded-md border border-line">
+    <div className="rounded-md border border-edge">
       <button
         type="button"
         onClick={() => count && setOpen((v) => !v)}
@@ -66,8 +66,8 @@ export function DiffBlock({
         </span>
       </button>
       {open && (
-        <div className="border-t border-line">
-          <div className="border-b border-line bg-sunken px-4 py-1 font-mono text-xs text-muted">
+        <div className="border-t border-edge">
+          <div className="border-b border-edge bg-sunken px-4 py-1 font-mono text-xs text-muted">
             {file}
           </div>
           <div className="max-h-[320px] overflow-auto py-1 font-mono text-xs leading-[1.75]">

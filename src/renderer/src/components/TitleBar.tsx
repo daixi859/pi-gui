@@ -30,7 +30,7 @@ export function TitleBar({
       {showTitle && title && (
         <>
           <IconFolder className="shrink-0 text-muted" />
-          <span className="truncate text-xs">{title}</span>
+          <span className="truncate text-sm">{title}</span>
           <div className="relative">
             <button
               type="button"

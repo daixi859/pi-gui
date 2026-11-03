@@ -64,7 +64,7 @@ function ThinkingBlock({
         </span>
       </button>
       {open && (
-        <div className="mt-1 pl-4 text-xs leading-[1.8] whitespace-pre-wrap text-muted">
+        <div className="mt-1 pl-4 text-sm leading-[1.8] whitespace-pre-wrap text-muted">
           {text}
         </div>
       )}
@@ -114,7 +114,7 @@ function ToolBlock({
 
 function FileBlock({ name, meta, path }: { name: string; meta: string; path?: string }): ReactNode {
   return (
-    <div className="flex items-center gap-2 rounded-sm border border-line px-4 py-2">
+    <div className="flex items-center gap-2 rounded-sm border border-edge px-4 py-2">
       <div className="grid size-9 shrink-0 place-items-center rounded-sm bg-link/8 text-link">
         <IconFile className="size-[18px]" />
       </div>
@@ -126,7 +126,7 @@ function FileBlock({ name, meta, path }: { name: string; meta: string; path?: st
         type="button"
         disabled={!path}
         onClick={() => path && host()?.openPath(path)}
-        className="ml-auto flex shrink-0 items-center gap-1 rounded-sm border border-line px-2 py-1 text-xs transition-colors hover:bg-sunken disabled:opacity-40 disabled:hover:bg-transparent"
+        className="ml-auto flex shrink-0 items-center gap-1 rounded-sm border border-edge px-2 py-1 text-sm transition-colors hover:bg-sunken disabled:opacity-40 disabled:hover:bg-transparent"
       >
         打开
       </button>
@@ -154,7 +154,7 @@ function TurnBlock({
     })
   }
   return (
-    <div className="rounded-md border border-line/70">
+    <div className="rounded-md border border-edge/70">
       <button
         type="button"
         onClick={toggle}
@@ -165,7 +165,7 @@ function TurnBlock({
         <span className="text-faint">· {formatDuration(durationMs)}</span>
       </button>
       {open && (
-        <div className="space-y-3 border-t border-line/70 px-2 py-2">
+        <div className="space-y-3 border-t border-edge/70 px-2 py-2">
           {children.map((c) => (
             <BlockView key={c.id} block={c} />
           ))}
