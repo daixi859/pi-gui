@@ -53,10 +53,10 @@
   @apply grid size-7 place-items-center rounded-sm text-muted transition-colors hover:bg-sunken hover:text-fg;
 }
 @utility pi-menu {
-  @apply absolute z-50 rounded-sm border border-edge bg-panel p-1 shadow-pop;
+  @apply absolute z-50 flex flex-col gap-0.5 rounded-md border border-edge bg-panel p-1 shadow-pop;
 }
 @utility pi-menu-item {
-  @apply flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-sunken;
+  @apply flex h-7 w-full items-center gap-2 rounded-sm px-2 text-left text-sm transition-colors hover:bg-sunken;
 }
 @utility pi-page {
   @apply mx-auto w-full max-w-[820px] px-8 pt-1 pb-8;

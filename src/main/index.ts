@@ -142,8 +142,9 @@ ipcMain.on('host:saveText', async (_e, name: string, text: string) => {
 })
 
 app.whenReady().then(() => {
-  // 双击图标只开一个窗口，否则两个宿主抢同一批会话文件
-  if (!app.requestSingleInstanceLock()) {
+  // 双击图标只开一个窗口，否则两个宿主抢同一批会话文件。
+  // dev（有 ELECTRON_RENDERER_URL）不抢：它要和构建产物并行跑起来调试。
+  if (!process.env.ELECTRON_RENDERER_URL && !app.requestSingleInstanceLock()) {
     app.quit()
     return
   }

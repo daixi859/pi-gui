@@ -80,7 +80,7 @@
 | `pi-panel` | 面板容器：8px 圆角 + `edge` 描边 + `panel` 底 |
 | `pi-card` | 卡片/对话框：16px 圆角 + `edge` 描边 + `surface` 底 |
 | `pi-icon-btn` | 28×28 图标按钮（含 hover 态） |
-| `pi-menu` / `pi-menu-item` | 下拉容器 / 下拉项 |
+| `pi-menu` / `pi-menu-item` | 下拉容器（8px 圆角）/ 下拉项（28px 行高、项间距 2px、hover 4px 圆角） |
 | `pi-page` | 内容页容器（820px 最大宽 + 32px 横向内边距） |
 | `pi-input` | 单行输入框（含 placeholder / focus 描边） |
 | `pi-btn` | 主按钮：`fg` 底 + 白字 + 14px 字号 |

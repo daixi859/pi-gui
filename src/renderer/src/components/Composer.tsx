@@ -37,21 +37,26 @@ function WorkspaceBar({ snapshot }: { snapshot: Snapshot }): ReactNode {
 
 function Toolbar({
   snapshot,
+  models,
   streaming,
   onModel,
+  onLevel,
   onSend,
   onAbort,
   onAttach,
   onAccess
 }: {
   snapshot: Snapshot
+  models: ModelOption[]
   streaming: boolean
-  onModel: () => void
+  onModel: (id: string) => void
+  onLevel: (level: string) => void
   onSend: () => void
   onAbort: () => void
   onAttach: () => void
   onAccess: () => void
 }): ReactNode {
+  const [menu, setMenu] = useState(false)
   return (
     <div className="flex items-center gap-1 px-2 pt-1 pb-2">
       <button
@@ -67,19 +72,30 @@ function Toolbar({
         {snapshot.access}
       </button>
       <div className="ml-auto flex items-center gap-1">
-        <button type="button" onClick={onModel} className={ghost}>
-          <span className="size-[13px] rounded-full border-2 border-add/30" />
-          <span className="font-medium text-fg">{snapshot.model}</span>
-          <span className="text-muted">{snapshot.thinkingLevel}</span>
-          <IconChevronDown className="size-3 text-muted" />
-        </button>
+        <div className="relative">
+          <button type="button" onClick={() => setMenu((v) => !v)} className={ghost}>
+            <span className="size-[13px] rounded-full border-2 border-add/30" />
+            <span className="font-medium text-fg">{snapshot.model}</span>
+            <span className="text-muted">{snapshot.thinkingLevel}</span>
+            <IconChevronDown className="size-3 text-muted" />
+          </button>
+          {menu && (
+            <ModelMenu
+              snapshot={snapshot}
+              models={models}
+              onModel={onModel}
+              onLevel={onLevel}
+              onClose={() => setMenu(false)}
+            />
+          )}
+        </div>
         <button
           type="button"
           aria-label={streaming ? '停止' : '发送'}
           onClick={streaming ? onAbort : onSend}
-          className="grid size-8 place-items-center rounded-full bg-fg text-white transition-colors hover:bg-fg/85"
+          className="grid size-7 place-items-center rounded-full bg-muted text-white transition-colors hover:bg-muted/85"
         >
-          {streaming ? <span className="size-2.5 rounded-sm bg-white" /> : <IconArrowUp className="size-[17px]" />}
+          {streaming ? <span className="size-2 rounded-sm bg-white" /> : <IconArrowUp className="size-4" />}
         </button>
       </div>
     </div>
@@ -117,7 +133,6 @@ function InputCard({
 }): ReactNode {
   const [text, setText] = useState('')
   const [images, setImages] = useState<PromptImage[]>([])
-  const [menu, setMenu] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
 
   // @ 提及：光标前最后一段是 @xxx 就拉候选
@@ -262,13 +277,15 @@ function InputCard({
             }
           }}
           placeholder={placeholder}
-          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent text-sm leading-[1.7] outline-none placeholder:text-faint"
+          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent text-sm leading-[1.6] outline-none placeholder:text-faint"
         />
       </div>
       <Toolbar
         snapshot={snapshot}
+        models={models}
         streaming={streaming}
-        onModel={() => setMenu((v) => !v)}
+        onModel={onModel}
+        onLevel={onLevel}
         onSend={submit}
         onAbort={onAbort}
         onAccess={onAccess}
@@ -293,15 +310,6 @@ function InputCard({
           })
         }}
       />
-      {menu && (
-        <ModelMenu
-          snapshot={snapshot}
-          models={models}
-          onModel={onModel}
-          onLevel={onLevel}
-          onClose={() => setMenu(false)}
-        />
-      )}
     </div>
   )
 }
@@ -378,7 +386,7 @@ function ModelMenu({
   return (
     <>
       <MenuScrim onClose={onClose} />
-      <MenuPanel className="right-2 bottom-full mb-2 w-[320px]">
+      <MenuPanel className="right-0 bottom-full mb-1 w-[320px]">
         <div className="max-h-[240px] overflow-y-auto">
           {groups.map((g) => (
             <div key={g}>
