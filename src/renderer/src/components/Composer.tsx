@@ -14,21 +14,21 @@ const LEVEL_LABEL: Record<string, string> = {
   max: '最高'
 }
 
-const ghost = 'flex items-center gap-1 rounded-[7px] px-1.5 py-1 text-[12.5px] hover:bg-sunken'
+const ghost = 'flex items-center gap-1 rounded-md px-1 py-1 text-xs hover:bg-sunken'
 
 /** 输入卡顶部的项目 / 分支条 */
 function WorkspaceBar({ snapshot }: { snapshot: Snapshot }): ReactNode {
   return (
-    <div className="flex items-center gap-0.5 rounded-t-[13px] bg-[#f0f0f0] px-2 py-1.5 text-[12.5px] text-muted">
-      <span className="flex items-center gap-1.5 rounded-[6px] px-1.5 py-0.5">
+    <div className="flex items-center gap-0.5 rounded-t-lg bg-chip px-2 py-1 text-xs text-muted">
+      <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconFolder className="size-[14px]" />
         {snapshot.cwd}
       </span>
-      <span className="flex items-center gap-1.5 rounded-[6px] px-1.5 py-0.5">
+      <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconBranch className="size-[14px]" />
         {snapshot.branch}
       </span>
-      <button type="button" aria-label="添加工作区" className="grid size-6 place-items-center rounded-[6px] hover:bg-black/5">
+      <button type="button" aria-label="添加工作区" className="grid size-6 place-items-center rounded-sm hover:bg-black/5">
         <IconPlus className="size-[14px]" />
       </button>
     </div>
@@ -53,7 +53,7 @@ function Toolbar({
   onAccess: () => void
 }): ReactNode {
   return (
-    <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-2">
+    <div className="flex items-center gap-1 px-2 pt-1 pb-2">
       <button
         type="button"
         aria-label="添加附件"
@@ -66,9 +66,9 @@ function Toolbar({
         <IconHand className="size-[14px]" />
         {snapshot.access}
       </button>
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ml-auto flex items-center gap-1">
         <button type="button" onClick={onModel} className={ghost}>
-          <span className="size-[13px] rounded-full border-2 border-[#bcdcc6]" />
+          <span className="size-[13px] rounded-full border-2 border-add-soft" />
           <span className="font-medium text-fg">{snapshot.model}</span>
           <span className="text-muted">{snapshot.thinkingLevel}</span>
           <IconChevronDown className="size-3 text-muted" />
@@ -79,10 +79,10 @@ function Toolbar({
           onClick={streaming ? onAbort : onSend}
           className={
             'grid size-8 place-items-center rounded-full text-white transition-colors ' +
-            (streaming ? 'bg-[#444444] hover:bg-[#2f2f2f]' : 'bg-[#444444] hover:bg-[#2f2f2f]')
+            (streaming ? 'bg-send hover:bg-send-hover' : 'bg-send hover:bg-send-hover')
           }
         >
-          {streaming ? <span className="size-2.5 rounded-[2px] bg-white" /> : <IconArrowUp className="size-[17px]" />}
+          {streaming ? <span className="size-2.5 rounded-sm bg-white" /> : <IconArrowUp className="size-[17px]" />}
         </button>
       </div>
     </div>
@@ -176,15 +176,15 @@ function InputCard({
   return (
     <div
       className={
-        'relative rounded-[14px] border border-edge/80 bg-surface ' +
+        'relative rounded-lg border border-edge/80 bg-surface ' +
         (big
-          ? 'shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-14px_rgba(0,0,0,0.16)]'
-          : 'shadow-[0_1px_2px_rgba(0,0,0,0.04)]')
+          ? 'shadow-composer'
+          : 'shadow-hairline')
       }
     >
       {big && <WorkspaceBar snapshot={snapshot} />}
       {cmdHits.length > 0 && (
-        <div className="absolute bottom-[calc(100%+6px)] left-0 w-[420px] overflow-hidden rounded-[10px] border border-edge bg-panel p-1 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.28)]">
+        <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-menu">
           {cmdHits.map((c) => (
             <button
               key={c.name}
@@ -193,24 +193,24 @@ function InputCard({
                 setText(`/${c.name} `)
                 ta.current?.focus()
               }}
-              className="flex w-full items-baseline gap-2 rounded-[7px] px-2 py-1.5 text-left hover:bg-sunken"
+              className="flex w-full items-baseline gap-2 rounded-md px-2 py-1 text-left hover:bg-sunken"
             >
-              <span className="font-mono text-[12.5px]">/{c.name}</span>
+              <span className="font-mono text-xs">/{c.name}</span>
               {c.description && (
-                <span className="truncate text-[12px] text-muted">{c.description}</span>
+                <span className="truncate text-xs text-muted">{c.description}</span>
               )}
             </button>
           ))}
         </div>
       )}
       {typing && files.length > 0 && (
-        <div className="absolute bottom-[calc(100%+6px)] left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-[10px] border border-edge bg-panel p-1 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.28)]">
+        <div className="absolute bottom-full mb-1 left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-menu">
           {files.slice(0, 12).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => insert(f)}
-              className="block w-full truncate rounded-[7px] px-2 py-1 text-left font-mono text-[12.5px] text-muted hover:bg-sunken hover:text-fg"
+              className="block w-full truncate rounded-md px-2 py-1 text-left font-mono text-xs text-muted hover:bg-sunken hover:text-fg"
             >
               {f}
             </button>
@@ -218,11 +218,11 @@ function InputCard({
         </div>
       )}
       {images.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 px-4 pt-2">
+        <div className="flex flex-wrap gap-1 px-4 pt-2">
           {images.map((_, i) => (
             <span
               key={i}
-              className="flex items-center gap-1 rounded-[6px] bg-sunken px-2 py-1 text-[11.5px] text-muted"
+              className="flex items-center gap-1 rounded-sm bg-sunken px-2 py-1 text-xs text-muted"
             >
               <IconImage className="size-3.5" />
               图片 {i + 1}
@@ -239,7 +239,7 @@ function InputCard({
         </div>
       )}
       <div
-        className="px-4 pt-3"
+        className="px-4 pt-2"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault()
@@ -265,7 +265,7 @@ function InputCard({
             }
           }}
           placeholder={placeholder}
-          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent text-[14px] leading-[1.7] outline-none placeholder:text-faint"
+          className="max-h-40 w-full resize-none overflow-y-auto bg-transparent text-sm leading-[1.7] outline-none placeholder:text-faint"
         />
       </div>
       <Toolbar
@@ -348,9 +348,9 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
           key={label}
           type="button"
           onClick={() => onPick(label)}
-          className="flex items-center gap-1.5 rounded-[10px] border border-edge bg-panel px-3 py-1.5 text-[12.5px] text-muted transition-colors hover:bg-sunken hover:text-fg"
+          className="flex items-center gap-1 rounded-md border border-edge bg-panel px-2 py-1 text-xs text-muted transition-colors hover:bg-sunken hover:text-fg"
         >
-          <span className="size-3 rounded-[3px] border border-faint" />
+          <span className="size-3 rounded-sm border border-faint" />
           {label}
         </button>
       ))}
@@ -381,7 +381,7 @@ function ModelMenu({
   return (
     <>
       <MenuScrim onClose={onClose} />
-      <MenuPanel className="right-2 bottom-[calc(100%+8px)] w-[320px]">
+      <MenuPanel className="right-2 bottom-full mb-2 w-[320px]">
         <div className="max-h-[240px] overflow-y-auto">
           {groups.map((g) => (
             <div key={g}>
@@ -400,11 +400,11 @@ function ModelMenu({
           ))}
         </div>
         <div className="mt-1 flex items-center gap-2 border-t border-edge px-2 pt-2 pb-1">
-          <span className="text-[12.5px] text-muted">思考强度</span>
-          <span className="text-[12.5px] font-medium">{LEVEL_LABEL[currentLevel] ?? snapshot.thinkingLevel}</span>
-          <span className="ml-auto rounded-[5px] border border-edge px-1.5 py-0.5 text-[10.5px] text-faint">Ctrl+T</span>
+          <span className="text-xs text-muted">思考强度</span>
+          <span className="text-xs font-medium">{LEVEL_LABEL[currentLevel] ?? snapshot.thinkingLevel}</span>
+          <span className="ml-auto rounded-sm border border-edge px-1 py-0.5 text-xs text-faint">Ctrl+T</span>
         </div>
-        <div className="px-2 pt-1.5 pb-2">
+        <div className="px-2 pt-1 pb-2">
           <input
             type="range"
             min={0}
@@ -415,10 +415,10 @@ function ModelMenu({
             aria-label="思考强度"
             className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-[#2f9be0] [&::-webkit-slider-thumb]:shadow"
             style={{
-              background: `linear-gradient(to right, #1f9d55, #2f9be0, #7b5cf0) 0 / ${pct}% no-repeat, #e7e5e2`
+              background: `linear-gradient(to right, var(--color-ramp-1), var(--color-ramp-2), var(--color-ramp-3)) 0 / ${pct}% no-repeat, var(--color-line)`
             }}
           />
-          <div className="mt-1 flex justify-between text-[10.5px] text-faint">
+          <div className="mt-1 flex justify-between text-xs text-faint">
             {levels.map((l) => (
               <span key={l}>{LEVEL_LABEL[l] ?? l}</span>
             ))}

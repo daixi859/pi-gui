@@ -16,7 +16,7 @@ export function StartPage({
       <div className="-mb-2 select-none">
         <PiWatermark />
       </div>
-      <h1 className="mb-8 text-[29px] leading-tight font-semibold tracking-tight">
+      <h1 className="mb-8 text-2xl leading-tight font-semibold tracking-tight">
         上午好呀，有什么想让我帮忙的吗
       </h1>
       <div className="w-full max-w-[672px]">

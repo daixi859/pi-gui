@@ -50,14 +50,14 @@ export function CodeBlock({ code, lang }: { code: string; lang: string }): React
   }, [html, key, lang, code])
 
   return (
-    <figure className="my-4 overflow-hidden rounded-[10px] border border-line">
-      <figcaption className="flex items-center justify-between border-b border-line bg-sunken px-3 py-1.5 text-[11px] text-muted">
+    <figure className="my-4 overflow-hidden rounded-md border border-line">
+      <figcaption className="flex items-center justify-between border-b border-line bg-sunken px-2 py-1 text-xs text-muted">
         <span className="font-mono">{lang}</span>
       </figcaption>
       {html ? (
-        <div className="overflow-x-auto px-3.5 py-3 text-[12.5px] leading-[1.7]" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="overflow-x-auto px-4 py-2 text-xs leading-[1.7]" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <pre className="overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-[1.7]">{code}</pre>
+        <pre className="overflow-x-auto px-4 py-2 font-mono text-xs leading-[1.7]">{code}</pre>
       )}
     </figure>
   )
@@ -81,12 +81,12 @@ export function Disclosure({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 text-left text-[13px] text-muted transition-colors hover:text-fg"
+        className="flex w-full items-center gap-1 text-left text-xs text-muted transition-colors hover:text-fg"
       >
         {open ? <IconChevronDown className="shrink-0" /> : <IconChevronRight className="shrink-0" />}
         {summary}
       </button>
-      {open && <div className="pt-1.5 pl-[22px]">{children}</div>}
+      {open && <div className="pt-1 pl-4">{children}</div>}
     </div>
   )
 }

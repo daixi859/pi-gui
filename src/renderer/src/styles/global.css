@@ -18,13 +18,70 @@
   --color-del: #c0392b;
   --color-warn: #b7791f;
 
+  /* 透明黑蒙层：按原 alpha 分档，hover / 选中 / 图标底用 */
+  --color-tint-faint: rgb(0 0 0 / 0.03);
+  --color-tint-soft: rgb(0 0 0 / 0.04);
+  --color-tint: rgb(0 0 0 / 0.05);
+  --color-tint-strong: rgb(0 0 0 / 0.06);
+
+  /* 组件专用色：从 TSX 里的裸色值提出来 */
+  --color-send: #444444;
+  --color-send-hover: #2f2f2f;
+  --color-chip: #f0f0f0;
+  --color-avatar: #1c1b19;
+  --color-add-soft: #bcdcc6;
+  --color-ramp-1: #1f9d55;
+  --color-ramp-2: #2f9be0;
+  --color-ramp-3: #7b5cf0;
+
   --font-ui:
     -apple-system, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
   --font-mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
 
-  --radius-card: 14px;
+  /* 字号刻度：整体改字号只动这里 */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-2xl: 28px;
+
+  /* 圆角刻度：2/3/4/5/6 → sm；7/10 → md；14 → lg */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
-  --radius-panel: 12px;
+
+  /* 阴影：提炼原值，按用途命名 */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -16px rgb(0 0 0 / 0.18);
+  --shadow-surface: 0 1px 2px rgb(0 0 0 / 0.04), 0 10px 28px -18px rgb(0 0 0 / 0.25);
+  --shadow-composer: 0 1px 2px rgb(0 0 0 / 0.04), 0 10px 30px -14px rgb(0 0 0 / 0.16);
+  --shadow-hairline: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-menu: 0 8px 24px -12px rgb(0 0 0 / 0.28);
+  --shadow-tip: 0 4px 14px -6px rgb(0 0 0 / 0.25);
+  --shadow-dialog: 0 12px 40px -12px rgb(0 0 0 / 0.3);
+  --shadow-popover: 0 12px 40px -12px rgb(0 0 0 / 0.2);
+  --shadow-toast: 0 6px 20px -10px rgb(0 0 0 / 0.3);
+}
+
+/* 语义类：前缀 pi-，只收重复 3 次以上的组合 */
+@utility pi-card {
+  @apply rounded-lg border border-edge bg-surface;
+}
+@utility pi-panel {
+  @apply rounded-sm border border-edge bg-panel;
+}
+@utility pi-icon-btn {
+  @apply grid size-7 place-items-center rounded-sm text-muted transition-colors hover:bg-sunken hover:text-fg;
+}
+@utility pi-menu {
+  @apply absolute z-50 rounded-sm border border-edge bg-panel p-1 shadow-popover;
+}
+@utility pi-menu-item {
+  @apply flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-sunken;
+}
+@utility pi-page {
+  @apply mx-auto w-full max-w-[820px] px-8 pt-1 pb-8;
+}
+@utility pi-input {
+  @apply rounded-sm border border-edge bg-panel/80 px-2 py-1 text-xs text-fg outline-none placeholder:text-faint focus:border-muted;
 }
 
 html,

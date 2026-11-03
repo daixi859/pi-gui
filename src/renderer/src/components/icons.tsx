@@ -91,6 +91,14 @@ export const IconFolder = (p: P) => (
   </svg>
 )
 
+/** 打开的文件夹（翻开的盖），表示分组已展开 */
+export const IconFolderOpen = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M3.33 12.67 5.2 8.53a1.23 1.23 0 0 1 1.11-.69h6.35a.67.67 0 0 1 .59.99l-1.64 3.24a1.23 1.23 0 0 1-1.11.69Z" />
+    <path d="M3.33 12.67A1.33 1.33 0 0 1 2 11.33v-6A1.33 1.33 0 0 1 3.33 4h2l1.33 1.33h4A1.33 1.33 0 0 1 12 6.67v.66" />
+  </svg>
+)
+
 export const IconChevronDown = (p: P) => (
   <svg {...base(p)}>
     <path d="M4.2 6.4 8 10.2l3.8-3.8" />

@@ -3,12 +3,11 @@ import { IconDots, IconFolder, IconClose } from './icons'
 import { WindowControls } from './Sidebar'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
 
-const iconBtn =
-  'grid size-7 place-items-center rounded-[6px] text-muted transition-colors hover:bg-sunken hover:text-fg'
+const iconBtn = 'pi-icon-btn'
 
-/** 面板顶部：会话标题 + 窗口控件。收起侧栏时左侧由 CollapsedHeaderBar 占位。 */
+/** 面板顶部：左槽（收起侧栏时的工具条）+ 会话标题 + 窗口控件。 */
 export function TitleBar({
-  collapsed,
+  leading,
   title,
   showTitle,
   sessionPath,
@@ -16,7 +15,7 @@ export function TitleBar({
   error,
   onClearError
 }: {
-  collapsed: boolean
+  leading?: ReactNode
   title?: string
   showTitle: boolean
   sessionPath?: string
@@ -26,12 +25,12 @@ export function TitleBar({
 }): ReactNode {
   const [menu, setMenu] = useState(false)
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1.5 px-3 [-webkit-app-region:drag]">
-      <div className={collapsed ? 'w-[92px] shrink-0' : 'hidden'} />
+    <header className="flex h-11 shrink-0 items-center gap-1 px-2 [-webkit-app-region:drag]">
+      {leading}
       {showTitle && title && (
         <>
           <IconFolder className="shrink-0 text-muted" />
-          <span className="truncate text-[13px]">{title}</span>
+          <span className="truncate text-xs">{title}</span>
           <div className="relative">
             <button
               type="button"
@@ -45,7 +44,7 @@ export function TitleBar({
             {menu && (
               <>
                 <MenuScrim onClose={() => setMenu(false)} />
-                <MenuPanel className="top-[calc(100%+6px)] left-0 w-[176px]">
+                <MenuPanel className="top-full mt-1 left-0 w-[176px]">
                   <MenuItem
                     label="复制会话路径"
                     onClick={() => {
@@ -67,7 +66,7 @@ export function TitleBar({
         </>
       )}
       {error && (
-        <div className="ml-2 flex min-w-0 items-center gap-1.5 rounded-[7px] bg-del/8 px-2 py-1 text-[12px] text-del [-webkit-app-region:no-drag]">
+        <div className="ml-2 flex min-w-0 items-center gap-1 rounded-md bg-del/8 px-2 py-1 text-xs text-del [-webkit-app-region:no-drag]">
           <span className="truncate">{error}</span>
           <button type="button" aria-label="关闭提示" onClick={onClearError} className="shrink-0 opacity-70 hover:opacity-100">
             <IconClose className="size-3.5" />

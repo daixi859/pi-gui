@@ -11,8 +11,7 @@ export function MenuPanel({ className = '', children }: { className?: string; ch
   return (
     <div
       className={
-        'absolute z-50 rounded-[12px] border border-edge bg-panel p-1.5 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] ' +
-        className
+        'pi-menu ' + className
       }
     >
       {children}
@@ -41,7 +40,7 @@ export function MenuItem({
       type="button"
       onClick={onClick}
       className={
-        'flex w-full items-center gap-2.5 rounded-[8px] px-2 py-[7px] text-left text-[13.5px] transition-colors hover:bg-sunken ' +
+        'pi-menu-item ' +
         (danger ? 'text-del ' : '') +
         (selected ? 'font-medium' : '')
       }
@@ -55,5 +54,5 @@ export function MenuItem({
 }
 
 export function MenuLabel({ children }: { children: ReactNode }): ReactNode {
-  return <div className="px-2 pt-1 pb-1 text-[11.5px] text-faint">{children}</div>
+  return <div className="px-2 pt-1 pb-1 text-xs text-faint">{children}</div>
 }

@@ -29,11 +29,11 @@ export function DiffBlock({
   }
 
   return (
-    <div className="rounded-[10px] border border-line">
+    <div className="rounded-md border border-line">
       <button
         type="button"
         onClick={() => count && setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left"
+        className="flex w-full items-center gap-2 px-4 py-2 text-left"
       >
         {count ? (
           open ? (
@@ -44,11 +44,11 @@ export function DiffBlock({
         ) : (
           <span className="w-4" />
         )}
-        <span className="text-[13px]">
+        <span className="text-xs">
           {changed ? '1 个文件已更改' : '暂无差异内容'}
         </span>
-        <span className="font-mono text-[12px] text-add">+{added}</span>
-        <span className="font-mono text-[12px] text-del">-{removed}</span>
+        <span className="font-mono text-xs text-add">+{added}</span>
+        <span className="font-mono text-xs text-del">-{removed}</span>
         <span
           role={patch ? 'button' : undefined}
           onClick={(e) => {
@@ -57,7 +57,7 @@ export function DiffBlock({
             revert()
           }}
           className={
-            'ml-auto flex items-center gap-1 text-[12px] ' +
+            'ml-auto flex items-center gap-1 text-xs ' +
             (patch ? 'text-muted hover:text-fg' : 'text-faint')
           }
         >
@@ -67,15 +67,15 @@ export function DiffBlock({
       </button>
       {open && (
         <div className="border-t border-line">
-          <div className="border-b border-line bg-sunken px-3.5 py-1.5 font-mono text-[11px] text-muted">
+          <div className="border-b border-line bg-sunken px-4 py-1 font-mono text-xs text-muted">
             {file}
           </div>
-          <div className="max-h-[320px] overflow-auto py-1 font-mono text-[12.5px] leading-[1.75]">
+          <div className="max-h-[320px] overflow-auto py-1 font-mono text-xs leading-[1.75]">
             {(lines.length > 300 ? lines.slice(0, 300) : lines).map((l, i) => (
               <div
                 key={i}
                 className={
-                  'flex gap-3 px-3.5 ' +
+                  'flex gap-2 px-4 ' +
                   (l.type === 'add' ? 'bg-add/6' : l.type === 'del' ? 'bg-del/6' : '')
                 }
               >
@@ -94,7 +94,7 @@ export function DiffBlock({
               </div>
             ))}
             {lines.length > 300 && (
-              <div className="px-3.5 py-1 text-faint">… 还有 {lines.length - 300} 行
+              <div className="px-4 py-1 text-faint">… 还有 {lines.length - 300} 行
 未展开</div>
             )}
           </div>

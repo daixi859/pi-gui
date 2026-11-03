@@ -50,20 +50,20 @@ export function AskCard({
   }
 
   return (
-    <div className="rounded-[14px] border border-edge bg-surface px-4 pt-3.5 pb-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_28px_-18px_rgba(0,0,0,0.25)]">
+    <div className="pi-card px-4 pt-4 pb-2 shadow-surface">
       <div className="flex items-start gap-2">
         {q.header && (
-          <span className="mt-[1px] shrink-0 rounded-[6px] bg-sunken px-1.5 py-[3px] text-[11px] leading-none text-muted">
+          <span className="mt-0.5 shrink-0 rounded-sm bg-sunken px-1 py-0.5 text-xs leading-none text-muted">
             {q.header}
           </span>
         )}
-        <p className="min-w-0 flex-1 text-[13.5px] leading-[1.5] text-fg">{q.question}</p>
-        <div className="ml-1 flex shrink-0 items-center gap-1 text-[11.5px] text-faint">
+        <p className="min-w-0 flex-1 text-sm leading-[1.5] text-fg">{q.question}</p>
+        <div className="ml-1 flex shrink-0 items-center gap-1 text-xs text-faint">
           <button
             type="button"
             disabled={step === 0}
             onClick={() => setStep((s) => s - 1)}
-            className="grid h-5 w-5 place-items-center rounded-[5px] hover:bg-black/[0.05] disabled:opacity-30 disabled:hover:bg-transparent"
+            className="grid h-5 w-5 place-items-center rounded-sm hover:bg-tint disabled:opacity-30 disabled:hover:bg-transparent"
             aria-label="上一题"
           >
             <IconArrowLeft {...px(12)} />
@@ -75,7 +75,7 @@ export function AskCard({
             type="button"
             disabled={step === last}
             onClick={() => setStep((s) => s + 1)}
-            className="grid h-5 w-5 place-items-center rounded-[5px] hover:bg-black/[0.05] disabled:opacity-30 disabled:hover:bg-transparent"
+            className="grid h-5 w-5 place-items-center rounded-sm hover:bg-tint disabled:opacity-30 disabled:hover:bg-transparent"
             aria-label="下一题"
           >
             <IconArrowRight {...px(12)} />
@@ -83,7 +83,7 @@ export function AskCard({
         </div>
       </div>
 
-      <div className="mt-2.5">
+      <div className="mt-2">
         {q.options.map((o, i) => {
           const on = q.multiSelect ? d.selected.includes(i) : !d.custom.trim() && d.option === i
           return (
@@ -97,25 +97,25 @@ export function AskCard({
                     : { option: i, custom: '' }
                 )
               }
-              className={`flex w-full items-start gap-2 rounded-[8px] px-2 py-[7px] text-left transition-colors ${
-                on ? 'bg-black/[0.045]' : 'hover:bg-black/[0.03]'
+              className={`flex w-full items-start gap-2 rounded-sm px-2 py-2 text-left transition-colors ${
+                on ? 'bg-tint-soft' : 'hover:bg-tint-faint'
               }`}
             >
               {q.multiSelect ? (
                 <span
-                  className={`mt-[2px] grid h-[15px] w-[15px] shrink-0 place-items-center rounded-[4px] border ${
+                  className={`mt-0.5 grid h-[15px] w-[15px] shrink-0 place-items-center rounded-sm border ${
                     on ? 'border-fg bg-fg text-white' : 'border-edge'
                   }`}
                 >
                   {on && <IconCheck {...px(10)} />}
                 </span>
               ) : (
-                <span className="mt-[1px] w-[16px] shrink-0 text-[12.5px] tabular-nums text-faint">{i + 1}.</span>
+                <span className="mt-0.5 w-[16px] shrink-0 text-xs tabular-nums text-faint">{i + 1}.</span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] leading-[1.35] font-medium text-fg">{o.label}</span>
+                <span className="block text-xs leading-[1.35] font-medium text-fg">{o.label}</span>
                 {o.description && (
-                  <span className="mt-[1px] block text-[12px] leading-[1.45] text-muted">{o.description}</span>
+                  <span className="mt-0.5 block text-xs leading-[1.45] text-muted">{o.description}</span>
                 )}
               </span>
             </button>
@@ -123,35 +123,35 @@ export function AskCard({
         })}
 
         {d.typing ? (
-          <div className="mt-1 flex items-start gap-2 rounded-[8px] bg-black/[0.03] px-2 py-[7px]">
-            <span className="mt-[1px] w-[16px] shrink-0 text-[12.5px] text-faint">{q.options.length + 1}.</span>
+          <div className="mt-1 flex items-start gap-2 rounded-sm bg-tint-faint px-2 py-2">
+            <span className="mt-0.5 w-[16px] shrink-0 text-xs text-faint">{q.options.length + 1}.</span>
             <input
               autoFocus
               value={d.custom}
               onChange={(e) => patch({ custom: e.target.value })}
               placeholder="输入你的回答…"
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-faint"
+              className="min-w-0 flex-1 bg-transparent text-xs text-fg outline-none placeholder:text-faint"
             />
           </div>
         ) : (
           <button
             type="button"
             onClick={() => patch({ typing: true, option: undefined })}
-            className="mt-1 flex w-full items-start gap-2 rounded-[8px] px-2 py-[7px] text-left text-[13px] text-faint hover:bg-black/[0.03]"
+            className="mt-1 flex w-full items-start gap-2 rounded-sm px-2 py-2 text-left text-xs text-faint hover:bg-tint-faint"
           >
-            {!q.multiSelect && <span className="mt-[1px] w-[16px] shrink-0 text-[12.5px]">{q.options.length + 1}.</span>}
+            {!q.multiSelect && <span className="mt-0.5 w-[16px] shrink-0 text-xs">{q.options.length + 1}.</span>}
             <span className="min-w-0 flex-1 truncate">{d.custom || '输入你的回答…'}</span>
           </button>
         )}
       </div>
 
       <div className="mt-2 flex items-center justify-between border-t border-edge/70 pt-2">
-        <span className="text-[11px] text-faint">ⓘ 使用 Tab / 上下键选择，回车或空格选中</span>
-        <div className="flex items-center gap-1.5">
+        <span className="text-xs text-faint">ⓘ 使用 Tab / 上下键选择，回车或空格选中</span>
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onCancel(id)}
-            className="rounded-[7px] border border-edge px-2.5 py-[4px] text-[12px] text-fg hover:bg-black/[0.04]"
+            className="rounded-md border border-edge px-2 py-1 text-xs text-fg hover:bg-tint-soft"
           >
             忽略
           </button>
@@ -160,7 +160,7 @@ export function AskCard({
               type="button"
               onClick={() => setStep((s) => s + 1)}
               disabled={!answered(d)}
-              className="rounded-[7px] bg-fg px-2.5 py-[4px] text-[12px] text-white disabled:opacity-35"
+              className="rounded-md bg-fg px-2 py-1 text-xs text-white disabled:opacity-35"
             >
               继续
             </button>
@@ -169,7 +169,7 @@ export function AskCard({
               type="button"
               onClick={submit}
               disabled={!answered(d)}
-              className="rounded-[7px] bg-fg px-2.5 py-[4px] text-[12px] text-white disabled:opacity-35"
+              className="rounded-md bg-fg px-2 py-1 text-xs text-white disabled:opacity-35"
             >
               提交
             </button>

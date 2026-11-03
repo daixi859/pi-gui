@@ -9,7 +9,7 @@ npm run dev        # 开发（先确认没在跑：Get-Process electron | Stop-P
 npm run typecheck  # 三端类型检查，改完必跑
 ```
 
-无测试、无 lint、无 git。**没有版本控制**，改文件只用 edit 工具做精确替换，禁止脚本按字符串切片重写（已因此丢过一次 agent-host.ts）。
+无测试、无 lint、无 git。**没有版本控制**，改文件要精确替换并跑 `npm run typecheck`。
 
 ## 进程模型
 
@@ -40,13 +40,21 @@ npm run typecheck  # 三端类型检查，改完必跑
 | `src/renderer/src/interactions/` | 扩展 UI 请求 → 具体控件的适配器 |
 | `src/renderer/src/components/` | 纯展示组件，props 驱动 |
 | `docs/ARCHITECTURE.md` | 分层图 + 数据流 + 逐文件职责 |
+| `docs/STYLE.md` | 样式规范：令牌、刻度、语义类、新增流程 |
 | `docs/BACKLOG.md` | 待办与已证伪的误判，动手前先看 |
 | `docs/adr/` | 架构决策记录 |
 | `GLOSSARY.md` | 领域术语 |
 
 ## 样式
 
-Tailwind 4，设计 token 全在 `src/renderer/src/styles/global.css` 的 `@theme` 里（`--color-canvas/panel/edge/fg/muted/faint/line/accent/...`）。**不要写死颜色值**，用 token 类名（`bg-panel`、`text-muted`）。图标全是手绘 SVG，在 `components/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
+**动手前先读 `docs/STYLE.md`**，那里是完整规范。四条硬规则：
+
+- 只写令牌类名，不写任意值：`bg-panel`、`text-muted`、`text-xs`、`rounded-md`、`p-2`、`shadow-card`；禁止 `text-[13px]`、`bg-[#f0f0f0]`、`shadow-[...]`。
+- 刻度：间距 2/4/8/16、圆角 4/8/16、字号 12/14/28。刻度外的值按「就近、平局偏小」归入；新代码不得引入刻度外的值。
+- 重复 3 次以上的类组合提成 `pi-` 语义类（`pi-panel`、`pi-card`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`），定义在 `global.css` 的 `@utility`。
+- 可访问性底线：可点区域 ≥28px、键盘焦点可见、正文对比 ≥4.5:1；动效尊重 `prefers-reduced-motion`。
+
+令牌调整走「组件预览」页（`components/Preview.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `@theme`。图标全是手绘 SVG，在 `components/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
 
 ## 调试
 

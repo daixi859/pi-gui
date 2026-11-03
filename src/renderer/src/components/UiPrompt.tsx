@@ -21,31 +21,31 @@ export function UiPrompt({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/20" role="dialog" aria-modal="true">
-      <div className="w-[440px] max-w-[calc(100vw-48px)] rounded-[14px] border border-edge bg-surface p-4 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.3)]">
-        <div className="flex items-start gap-3">
-          <p className="min-w-0 flex-1 whitespace-pre-wrap text-[13px] leading-[1.55] text-fg">
+      <div className="pi-card w-[440px] max-w-[calc(100vw-48px)] p-4 shadow-dialog">
+        <div className="flex items-start gap-2">
+          <p className="min-w-0 flex-1 whitespace-pre-wrap text-xs leading-[1.55] text-fg">
             {title || req.message}
           </p>
           <button
             type="button"
             onClick={close}
             aria-label="关闭"
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-[6px] text-faint hover:bg-black/[0.05]"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-sm text-faint hover:bg-tint"
           >
             <IconClose width={12} height={12} />
           </button>
         </div>
 
-        {req.kind === 'confirm' && req.message && <p className="mt-2 text-[12.5px] text-muted">{req.message}</p>}
+        {req.kind === 'confirm' && req.message && <p className="mt-2 text-xs text-muted">{req.message}</p>}
 
         {req.kind === 'select' && (
-          <div className="mt-3 max-h-[280px] overflow-y-auto">
+          <div className="mt-2 max-h-[280px] overflow-y-auto">
             {(req.options ?? []).map((o) => (
               <button
                 key={o}
                 type="button"
                 onClick={() => onReply(req.id, { value: o })}
-                className="flex w-full items-start rounded-[8px] px-2 py-[7px] text-left text-[13px] text-fg hover:bg-black/[0.04]"
+                className="flex w-full items-start rounded-sm px-2 py-2 text-left text-xs text-fg hover:bg-tint-soft"
               >
                 {o}
               </button>
@@ -60,15 +60,15 @@ export function UiPrompt({
             onChange={(e) => setText(e.target.value)}
             placeholder={req.placeholder}
             rows={req.kind === 'editor' ? 6 : 3}
-            className="mt-3 w-full resize-none rounded-[8px] border border-edge bg-canvas px-2.5 py-2 text-[13px] text-fg outline-none placeholder:text-faint focus:border-faint"
+            className="mt-2 w-full resize-none rounded-sm border border-edge bg-canvas px-2 py-2 text-xs text-fg outline-none placeholder:text-faint focus:border-faint"
           />
         )}
 
-        <div className="mt-3 flex justify-end gap-1.5">
+        <div className="mt-2 flex justify-end gap-1">
           <button
             type="button"
             onClick={close}
-            className="rounded-[7px] border border-edge px-2.5 py-[5px] text-[12px] text-fg hover:bg-black/[0.04]"
+            className="rounded-md border border-edge px-2 py-1 text-xs text-fg hover:bg-tint-soft"
           >
             取消
           </button>
@@ -76,7 +76,7 @@ export function UiPrompt({
             <button
               type="button"
               onClick={() => onReply(req.id, { confirmed: true })}
-              className="rounded-[7px] bg-fg px-2.5 py-[5px] text-[12px] text-white"
+              className="rounded-md bg-fg px-2 py-1 text-xs text-white"
             >
               确认
             </button>
@@ -84,7 +84,7 @@ export function UiPrompt({
             <button
               type="button"
               onClick={() => onReply(req.id, { value: text })}
-              className="rounded-[7px] bg-fg px-2.5 py-[5px] text-[12px] text-white"
+              className="rounded-md bg-fg px-2 py-1 text-xs text-white"
             >
               确定
             </button>

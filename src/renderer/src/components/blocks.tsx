@@ -21,9 +21,9 @@ const host = (): Window['pi']['host'] | undefined => window.pi?.host
 function UserBlock({ text, images }: { text: string; images?: number }): ReactNode {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-[14px] rounded-br-[6px] bg-sunken px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap">
+      <div className="max-w-[85%] rounded-lg rounded-br-sm bg-sunken px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap">
         {images ? (
-          <div className="mb-1 flex items-center gap-1.5 text-[12px] text-muted">
+          <div className="mb-1 flex items-center gap-1 text-xs text-muted">
             <IconImage className="size-3.5" />
             {images} 张图片
           </div>
@@ -54,7 +54,7 @@ function ThinkingBlock({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-fg"
+        className="flex items-center gap-1 text-xs text-muted transition-colors hover:text-fg"
       >
         {open ? <IconChevronDown /> : <IconChevronRight />}
         <span>Thinking</span>
@@ -64,7 +64,7 @@ function ThinkingBlock({
         </span>
       </button>
       {open && (
-        <div className="mt-1.5 pl-[22px] text-[13px] leading-[1.8] whitespace-pre-wrap text-muted">
+        <div className="mt-1 pl-4 text-xs leading-[1.8] whitespace-pre-wrap text-muted">
           {text}
         </div>
       )}
@@ -86,7 +86,7 @@ function ToolBlock({
 }): ReactNode {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-[8px] text-[13px]">
+    <div className="rounded-sm text-xs">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -98,13 +98,13 @@ function ToolBlock({
           <IconChevronRight className="shrink-0 text-faint" />
         )}
         <span className={state === 'error' ? 'font-medium text-del' : 'font-medium'}>{name}</span>
-        <span className="truncate font-mono text-[12px] text-muted">{args}</span>
-        <span className="ml-auto shrink-0 text-[11px] text-faint">
+        <span className="truncate font-mono text-xs text-muted">{args}</span>
+        <span className="ml-auto shrink-0 text-xs text-faint">
           {state === 'running' ? '运行中' : state === 'error' ? '失败' : '完成'}
         </span>
       </button>
       {open && output && (
-        <pre className="mt-1.5 ml-[22px] max-h-[280px] overflow-auto rounded-[8px] bg-sunken px-3 py-2 font-mono text-[12px] leading-[1.7] whitespace-pre-wrap text-muted">
+        <pre className="mt-1 ml-4 max-h-[280px] overflow-auto rounded-sm bg-sunken px-2 py-2 font-mono text-xs leading-[1.7] whitespace-pre-wrap text-muted">
           {output}
         </pre>
       )}
@@ -114,19 +114,19 @@ function ToolBlock({
 
 function FileBlock({ name, meta, path }: { name: string; meta: string; path?: string }): ReactNode {
   return (
-    <div className="flex items-center gap-3 rounded-[12px] border border-line px-3.5 py-3">
-      <div className="grid size-9 shrink-0 place-items-center rounded-[8px] bg-link/8 text-link">
+    <div className="flex items-center gap-2 rounded-sm border border-line px-4 py-2">
+      <div className="grid size-9 shrink-0 place-items-center rounded-sm bg-link/8 text-link">
         <IconFile className="size-[18px]" />
       </div>
       <div className="min-w-0">
-        <div className="truncate text-[13.5px]">{name}</div>
-        <div className="text-[12px] text-muted">{meta}</div>
+        <div className="truncate text-sm">{name}</div>
+        <div className="text-xs text-muted">{meta}</div>
       </div>
       <button
         type="button"
         disabled={!path}
         onClick={() => path && host()?.openPath(path)}
-        className="ml-auto flex shrink-0 items-center gap-1 rounded-[8px] border border-line px-2.5 py-1.5 text-[12.5px] transition-colors hover:bg-sunken disabled:opacity-40 disabled:hover:bg-transparent"
+        className="ml-auto flex shrink-0 items-center gap-1 rounded-sm border border-line px-2 py-1 text-xs transition-colors hover:bg-sunken disabled:opacity-40 disabled:hover:bg-transparent"
       >
         打开
       </button>
@@ -154,18 +154,18 @@ function TurnBlock({
     })
   }
   return (
-    <div className="rounded-[10px] border border-line/70">
+    <div className="rounded-md border border-line/70">
       <button
         type="button"
         onClick={toggle}
-        className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-[13px] text-muted transition-colors hover:text-fg"
+        className="flex w-full items-center gap-1 px-2 py-2 text-left text-xs text-muted transition-colors hover:text-fg"
       >
         {open ? <IconChevronDown /> : <IconChevronRight />}
         <span>{aborted ? '已中断' : '已完成'}</span>
         <span className="text-faint">· {formatDuration(durationMs)}</span>
       </button>
       {open && (
-        <div className="space-y-3 border-t border-line/70 px-3 py-3">
+        <div className="space-y-3 border-t border-line/70 px-2 py-2">
           {children.map((c) => (
             <BlockView key={c.id} block={c} />
           ))}
@@ -183,7 +183,7 @@ const TONES = {
 
 function SystemBlock({ tone, text }: { tone: keyof typeof TONES; text: string }): ReactNode {
   return (
-    <div className={'flex items-center gap-2 text-[12.5px] ' + TONES[tone]}>
+    <div className={'flex items-center gap-2 text-xs ' + TONES[tone]}>
       <IconSparkle className="size-3.5 shrink-0" />
       <span>{text}</span>
     </div>
@@ -268,14 +268,14 @@ export function MessageActions({ text, time }: { text: string; time: string }): 
           aria-label={label}
           onClick={onClick}
           className={
-            'grid size-7 place-items-center rounded-[6px] transition-colors hover:bg-sunken hover:text-muted ' +
+            'grid size-7 place-items-center rounded-sm transition-colors hover:bg-sunken hover:text-muted ' +
             (active ? 'text-fg' : '')
           }
         >
           <Ico className="size-[15px]" />
         </button>
       ))}
-      <span className="ml-1 text-[12px]">{time}</span>
+      <span className="ml-1 text-xs">{time}</span>
     </div>
   )
 }

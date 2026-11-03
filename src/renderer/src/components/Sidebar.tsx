@@ -11,12 +11,12 @@ import {
   IconClose,
   IconFilter,
   IconFolder,
+  IconFolderOpen,
   IconHelp,
   IconMaximize,
   IconMinimize,
   IconPanelCollapse,
   IconPanelExpand,
-  IconPanelRight,
   IconPlus,
   IconPlusCircle,
   IconSearch,
@@ -30,10 +30,9 @@ import {
 type Nav = (route: 'start' | 'chat' | 'gallery') => void
 
 const navRow =
-  'flex h-9 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] text-fg transition-colors hover:bg-select/60'
+  'flex h-9 w-full items-center gap-2 rounded-md px-2 text-xs text-fg transition-colors hover:bg-select/60'
 
-const iconBtn =
-  'grid size-7 place-items-center rounded-[6px] text-muted transition-colors hover:bg-sunken hover:text-fg'
+const iconBtn = 'pi-icon-btn'
 
 /** 折叠按钮：展开态显示品牌 logo，hover 变收起图标；收起态显示展开图标。两者垂直/水平位置重合。 */
 function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
@@ -45,22 +44,22 @@ function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: (
         onClick={onClick}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         className={
-          'relative grid size-7 place-items-center rounded-[6px] text-fg transition-colors ' +
-          (collapsed ? 'bg-black/[0.06]' : 'hover:bg-black/[0.06]')
+          'relative grid size-7 place-items-center rounded-sm text-fg transition-colors ' +
+          (collapsed ? 'bg-tint-strong' : 'hover:bg-tint-strong')
         }
       >
         {collapsed ? (
-          <IconPanelExpand />
+          <IconPanelExpand className="size-[18px]" />
         ) : (
           <>
-            <PiLogo size={17} className="group-hover:opacity-0" />
-            <IconPanelCollapse className="absolute opacity-0 group-hover:opacity-100" />
+            <PiLogo size={20} className="group-hover:opacity-0" />
+            <IconPanelCollapse className="absolute size-[18px] opacity-0 group-hover:opacity-100" />
           </>
         )}
       </button>
-      <span className="pointer-events-none absolute top-[calc(100%+6px)] left-0 z-50 hidden whitespace-nowrap rounded-[6px] border border-edge bg-panel px-2 py-[3px] text-[11.5px] text-muted shadow-[0_4px_14px_-6px_rgba(0,0,0,0.25)] group-hover:flex">
+      <span className="pointer-events-none absolute top-full mt-1 left-0 z-50 hidden whitespace-nowrap rounded-sm border border-edge bg-panel px-2 py-0.5 text-xs text-muted shadow-tip group-hover:flex">
         {collapsed ? '展开侧栏' : '收起侧栏'}
-        <kbd className="ml-2 rounded-[4px] border border-edge px-1 text-[10.5px] text-faint">Ctrl+B</kbd>
+        <kbd className="ml-2 rounded-sm border border-edge px-1 text-xs text-faint">Ctrl+B</kbd>
       </span>
     </div>
   )
@@ -68,7 +67,7 @@ function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: (
 
 const SORTS = [
   { key: 'project', label: '项目', icon: <IconFolder className="size-[15px] text-muted" /> },
-  { key: 'group', label: '分组', icon: <span className="w-[15px] text-center text-[14px] leading-none text-muted">#</span> },
+  { key: 'group', label: '分组', icon: <span className="w-[15px] text-center text-sm leading-none text-muted">#</span> },
   { key: 'recent', label: '最近更新', icon: <IconClock className="size-[15px] text-muted" /> },
   { key: 'unread', label: '未读', icon: <IconSparkle className="size-[15px] text-muted" /> }
 ] as const
@@ -85,7 +84,7 @@ function SortMenu({
   return (
     <>
       <MenuScrim onClose={onClose} />
-      <MenuPanel className="top-[calc(100%+6px)] right-4 w-[152px]">
+      <MenuPanel className="top-full mt-1 right-4 w-[152px]">
         {SORTS.map((s) => (
           <MenuItem
             key={s.key}
@@ -149,7 +148,7 @@ function navButton(label: string, Ico: typeof IconPlus, hint?: string, onClick?:
     <button type="button" className={navRow} onClick={onClick}>
       <Ico className="shrink-0 text-fg/75" />
       <span>{label}</span>
-      {hint && <span className="ml-auto text-[11.5px] text-faint">{hint}</span>}
+      {hint && <span className="ml-auto text-xs text-faint">{hint}</span>}
     </button>
   )
 }
@@ -244,8 +243,8 @@ export function Sidebar({
   })
 
   return (
-    <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-[7px]">
-      <div className="flex h-11 shrink-0 items-center gap-1 pl-[9px] [-webkit-app-region:drag]">
+    <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-2">
+      <div className="flex h-11 shrink-0 items-center gap-1 pl-2 [-webkit-app-region:drag]">
         <CollapseButton collapsed={false} onClick={onCollapse} />
         <button
           type="button"
@@ -267,9 +266,9 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav className="px-2.5 pt-2">
+      <nav className="px-2 pt-2">
         {navButton('新建任务', IconPlusCircle, 'Ctrl+N', onNewSession)}
-        {navButton('自动化', IconSliders, undefined, () => onNavigate('gallery'))}
+        {navButton('组件预览', IconSliders, undefined, () => onNavigate('gallery'))}
         {navButton('插件市场', IconBlocks, undefined, () => window.pi?.host.openAgentConfig())}
       </nav>
 
@@ -292,11 +291,11 @@ export function Sidebar({
               if (!query) setSearching(false)
             }}
             placeholder="搜索任务标题"
-            className="min-w-0 flex-1 rounded-[6px] border border-edge bg-panel/80 px-2 py-1 text-[12.5px] outline-none placeholder:text-faint focus:border-muted"
+            className="pi-input min-w-0 flex-1"
           />
         ) : (
           <>
-            <span className="shrink-0 whitespace-nowrap text-[12.5px] text-muted">任务列表</span>
+            <span className="shrink-0 whitespace-nowrap text-xs text-muted">任务列表</span>
             <button
               type="button"
               aria-label="搜索"
@@ -320,13 +319,13 @@ export function Sidebar({
       </div>
 
       {/* 分组标题行：项目下拉（排序）+ 排序 / 新建 */}
-      <div className="flex h-8 shrink-0 items-center gap-1.5 px-4">
+      <div className="flex h-8 shrink-0 items-center gap-1 px-4">
         <button
           type="button"
           aria-label="切换排序"
           aria-expanded={sorting}
           onClick={() => setSorting((v) => !v)}
-          className="flex items-center gap-1 text-[12.5px] text-faint transition-colors hover:text-muted"
+          className="flex items-center gap-1 text-xs text-faint transition-colors hover:text-muted"
         >
           {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
           <IconChevronDown className="size-3" />
@@ -341,9 +340,9 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      <div className="min-h-0 flex-1 overflow-y-auto pl-2 pr-2 pb-2">
         {sessionsLoading && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-faint">
+          <div className="flex items-center gap-2 px-2 py-1 text-xs text-faint">
             <IconSpinner className="size-3.5" />
             正在加载任务…
           </div>
@@ -359,24 +358,22 @@ export function Sidebar({
                   type="button"
                   aria-expanded={!isFolded}
                   onClick={() => setFolded((m) => ({ ...m, [p.name]: !m[p.name] }))}
-                  className="group flex h-8 w-full items-center gap-1.5 rounded-[7px] px-2.5 text-left text-[12.5px] text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                  className="flex h-8 w-full items-center gap-1 rounded-md px-2 text-left text-xs text-muted transition-colors hover:bg-select/60 hover:text-fg"
                 >
-                  <IconFolder className="size-3.5 shrink-0" />
+                  {/* 收起/展开用文件夹开合表示：闭合 = 折叠，翻开 = 展开 */}
+                  {isFolded ? (
+                    <IconFolder className="size-4 shrink-0" />
+                  ) : (
+                    <IconFolderOpen className="size-4 shrink-0" />
+                  )}
                   <span className="truncate">{p.name || '未分组'}</span>
-                  {/* 折叠箭头平时藏起来，hover 或已折叠时才出现，保持列表干净 */}
-                  <IconChevronDown
-                    className={
-                      'ml-auto size-3 shrink-0 transition-opacity ' +
-                      (isFolded ? '-rotate-90 opacity-100' : 'opacity-0 group-hover:opacity-100')
-                    }
-                  />
                 </button>
                 {!isFolded && shown.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
                 {!isFolded && rest > 0 && (
                   <button
                     type="button"
                     onClick={() => setLimit((m) => ({ ...m, [p.name]: (m[p.name] ?? 5) + 10 }))}
-                    className="h-8 w-full rounded-[7px] pl-[30px] text-left text-[12.5px] text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                    className="h-8 w-full rounded-md pl-[30px] text-left text-xs text-muted transition-colors hover:bg-select/60 hover:text-fg"
                   >
                     显示更多{rest > 10 ? `（还有 ${rest} 条）` : ''}
                   </button>
@@ -390,7 +387,7 @@ export function Sidebar({
             if (items.length === 0) return null
             return (
               <div key={bucket}>
-                <div className="px-2.5 py-1 text-[11.5px] text-faint">{bucket}</div>
+                <div className="px-2 py-1 text-xs text-faint">{bucket}</div>
                 {items.map((s) => (
                   <SessionRow key={s.id} {...rowProps(s)} />
                 ))}
@@ -405,15 +402,12 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-edge" />
-      <div className="flex items-center gap-2 px-4 py-2.5">
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#1c1b19] text-[11px] font-medium text-white">
+      <div className="flex items-center gap-2 px-4 py-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-avatar text-xs font-medium text-white">
           H
         </span>
-        <span className="truncate text-[12.5px]">hwuscrxo</span>
+        <span className="truncate text-xs">hwuscrxo</span>
         <div className="ml-auto flex items-center gap-1">
-          <button type="button" aria-label="设备" className="text-muted hover:text-fg">
-            <IconPanelRight className="size-[15px]" />
-          </button>
           <button
             type="button"
             aria-label="设置"
@@ -460,7 +454,7 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
         }}
         className={
           // 激活态只换底色/字重，左右内边距与普通行相同，标题不左右跳
-          'flex h-8 w-full items-center gap-2 rounded-[7px] pr-2.5 pl-2 text-left text-[13px] transition-colors ' +
+          'flex h-8 w-full items-center gap-2 rounded-md pr-1 pl-2 text-left text-xs transition-colors ' +
           (active ? 'bg-select font-medium' : 'hover:bg-select/60')
         }
       >
@@ -484,12 +478,12 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
               if (e.key === 'Escape') setEditing(false)
             }}
             onBlur={commit}
-            className="min-w-0 flex-1 rounded-[4px] border border-edge bg-panel px-1 outline-none"
+            className="min-w-0 flex-1 rounded-sm border border-edge bg-panel px-1 outline-none"
           />
         ) : (
           <Marquee text={session.title} />
         )}
-        <span className="ml-auto shrink-0 text-[11px] text-faint">{session.ageLabel}</span>
+        <span className="ml-auto shrink-0 text-xs text-faint">{session.ageLabel}</span>
       </button>
       {menu && (
         <>
@@ -527,7 +521,7 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
   )
 }
 
-/** 收起侧栏后顶部浮出的工具条：logo / 前进后退 / 展开 */
+/** 收起侧栏后顶部工具条：logo / 前进后退 / 展开。放在 TitleBar 的左槽里，不能绝对定位叠在拖拽区上 */
 export function CollapsedHeaderBar({
   onExpand,
   canBack,
@@ -542,28 +536,26 @@ export function CollapsedHeaderBar({
   onForward: () => void
 }): ReactNode {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-11 items-center pl-0.5">
-      <div className="pointer-events-auto flex items-center gap-1 [-webkit-app-region:drag]">
-        <CollapseButton collapsed onClick={onExpand} />
-        <button
-          type="button"
-          aria-label="后退"
-          disabled={!canBack}
-          onClick={onBack}
-          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-        >
-          <IconArrowLeft />
-        </button>
-        <button
-          type="button"
-          aria-label="前进"
-          disabled={!canForward}
-          onClick={onForward}
-          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-        >
-          <IconArrowRight />
-        </button>
-      </div>
+    <div className="-ml-2 flex items-center gap-1 [-webkit-app-region:drag]">
+      <CollapseButton collapsed onClick={onExpand} />
+      <button
+        type="button"
+        aria-label="后退"
+        disabled={!canBack}
+        onClick={onBack}
+        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+      >
+        <IconArrowLeft />
+      </button>
+      <button
+        type="button"
+        aria-label="前进"
+        disabled={!canForward}
+        onClick={onForward}
+        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
+      >
+        <IconArrowRight />
+      </button>
     </div>
   )
 }

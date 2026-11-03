@@ -57,6 +57,13 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => win?.show())
+  // F12 / Ctrl+Shift+I 开关开发者工具
+  win.webContents.on('before-input-event', (_e, input) => {
+    const key = input.key.toLowerCase()
+    if (input.type === 'keyDown' && (key === 'f12' || (input.control && input.shift && key === 'i'))) {
+      win?.webContents.toggleDevTools()
+    }
+  })
   // 最大化时 getBounds 给的是全屏矩形，关窗会把全屏尺寸存下来，所以只在非最大化时记
   win.on('close', () => {
     if (!win || win.isMaximized()) return

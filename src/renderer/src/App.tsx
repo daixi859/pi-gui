@@ -4,7 +4,7 @@ import { TitleBar } from './components/TitleBar'
 import { StartPage } from './components/StartPage'
 import { ChatComposer } from './components/Composer'
 import { MessageActions, TranscriptStack, lastText } from './components/blocks'
-import { Gallery } from './components/Gallery'
+import { Preview } from './components/Preview'
 import { AskCard } from './components/AskCard'
 import { UiPrompt } from './components/UiPrompt'
 import { Toasts } from './components/Toasts'
@@ -119,19 +119,21 @@ export default function App(): ReactNode {
           onForward={forward}
         />
       )}
-      <div className="flex min-w-0 flex-1 flex-col p-[6px]">
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] border border-edge bg-panel shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-16px_rgba(0,0,0,0.18)]">
-          {collapsed && (
-            <CollapsedHeaderBar
-              onExpand={toggle}
-              canBack={past.current.length > 0}
-              canForward={future.current.length > 0}
-              onBack={back}
-              onForward={forward}
-            />
-          )}
+      {/* 展开时主卡片贴住侧栏右缘，侧栏分隔线与卡片左边框连成一条贯穿线；收起时四边留相等边距 */}
+      <div className={'flex min-w-0 flex-1 flex-col p-1 ' + (collapsed ? '' : 'pl-0')}>
+        <div className="pi-panel relative flex min-h-0 flex-1 flex-col overflow-hidden shadow-card">
           <TitleBar
-            collapsed={collapsed}
+            leading={
+              collapsed && (
+                <CollapsedHeaderBar
+                  onExpand={toggle}
+                  canBack={past.current.length > 0}
+                  canForward={future.current.length > 0}
+                  onBack={back}
+                  onForward={forward}
+                />
+              )
+            }
             title={current?.title}
             showTitle={route === 'chat'}
             sessionPath={current?.path}
@@ -143,7 +145,7 @@ export default function App(): ReactNode {
           />
           <main className="min-h-0 flex-1 overflow-hidden">
             {route === 'start' && <StartPage agent={agent} onSubmit={send} />}
-            {route === 'gallery' && <Gallery />}
+            {route === 'gallery' && <Preview />}
             {route === 'chat' && <ChatView agent={agent} answerText={answerText} />}
           </main>
         </div>
@@ -173,16 +175,16 @@ function ChatView({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[820px] px-8 pt-1 pb-8">
+        <div className="pi-page">
           {agent.blocks.length === 0 ? (
-            <p className="pt-10 text-center text-[13px] text-faint">
+            <p className="pt-10 text-center text-xs text-faint">
               {agent.busy ?? '这个会话还没有内容'}
             </p>
           ) : (
             <>
               <TranscriptStack blocks={agent.blocks} />
               {!agent.streaming && (
-                <div className="mt-3 pl-1">
+                <div className="mt-2 pl-1">
                   <MessageActions
                     text={answerText || toMarkdown(agent.blocks)}
                     time={agent.settledAt ? new Date(agent.settledAt).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -195,7 +197,7 @@ function ChatView({
       </div>
       <div className="mx-auto w-full max-w-[820px] px-8 pb-4">
         {agent.busy && (
-          <p className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
+          <p className="mb-2 flex items-center gap-2 text-xs text-muted">
             <IconSpinner />
             {agent.busy}…
           </p>
