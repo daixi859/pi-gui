@@ -71,6 +71,8 @@ export default function App(): ReactNode {
         agent.newSession()
         setPlace({ route: 'start', id: null })
       }
+      // Esc 停止生成；输入框/弹层自己认领的 Esc 会先 preventDefault
+      if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && agent.streaming) agent.abort()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -145,7 +147,7 @@ export default function App(): ReactNode {
           <main className="min-h-0 flex-1 overflow-hidden">
             {route === 'start' && <StartPage agent={agent} onSubmit={send} />}
             {route === 'gallery' && <Preview />}
-            {route === 'chat' && <ChatView agent={agent} answerText={answerText} />}
+            {route === 'chat' && <ChatView agent={agent} answerText={answerText} scope={activeId ?? 'new'} />}
           </main>
         </div>
       </div>
@@ -157,10 +159,12 @@ export default function App(): ReactNode {
 }
 function ChatView({
   agent,
-  answerText
+  answerText,
+  scope
 }: {
   agent: ReturnType<typeof useAgent>
   answerText: string
+  scope: string
 }): ReactNode {
   const scroller = useRef<HTMLDivElement>(null)
   // 流式时跟到底部，用户往上翻就松手
@@ -212,6 +216,7 @@ function ChatView({
           </div>
         )}
         <ChatComposer
+          scope={scope}
           snapshot={agent.snapshot}
           models={agent.models}
           streaming={agent.streaming}

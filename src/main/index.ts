@@ -77,10 +77,18 @@ function createWindow(): void {
   if (process.env.PI_SHOT) {
     setTimeout(async () => {
       if (!win) return
-      if (process.env.PI_SHOT_JS) await win.webContents.executeJavaScript(process.env.PI_SHOT_JS)
+      if (process.env.PI_SHOT_JS || process.env.PI_SHOT_JS_FILE) {
+        // PI_SHOT_JS_FILE 优先：脚本写在文件里，省得和 PowerShell 的引号搏斗
+        const js = process.env.PI_SHOT_JS_FILE
+          ? readFileSync(process.env.PI_SHOT_JS_FILE, 'utf8')
+          : process.env.PI_SHOT_JS
+        // 脚本的返回值打到 stdout，方便断言
+        const out = js ? await win.webContents.executeJavaScript(js) : undefined
+        if (out !== undefined) console.log('[PI_SHOT]', out)
+      }
       setTimeout(async () => {
         const img = await win?.webContents.capturePage()
-        if (img) (await import('node:fs')).writeFileSync(process.env.PI_SHOT!, img.toPNG())
+        if (img) writeFileSync(process.env.PI_SHOT!, img.toPNG())
       }, Number(process.env.PI_SHOT_DELAY ?? 3000))
     }, Number(process.env.PI_SHOT_AT ?? 12000))
   }

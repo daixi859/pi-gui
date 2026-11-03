@@ -21,6 +21,7 @@ export function StartPage({
       </h1>
       <div className="w-full max-w-[672px]">
         <ComposerCard
+          scope="new"
           snapshot={agent.snapshot}
           models={agent.models}
           streaming={agent.streaming}

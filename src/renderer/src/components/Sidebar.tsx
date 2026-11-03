@@ -280,6 +280,7 @@ export function Sidebar({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
+                e.preventDefault()
                 setQuery('')
                 setSearching(false)
               }
@@ -472,7 +473,10 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.key === 'Enter') commit()
-              if (e.key === 'Escape') setEditing(false)
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setEditing(false)
+              }
             }}
             onBlur={commit}
             className="min-w-0 flex-1 rounded-sm border border-edge bg-panel px-1 outline-none"

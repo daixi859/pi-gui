@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
+import { setDraftImages, setDraftText, useDraft } from '../drafts'
 import { MenuItem, MenuLabel, MenuPanel, MenuScrim } from './Menu'
-import { IconArrowUp, IconBranch, IconChevronDown, IconFolder, IconHand, IconImage, IconPlus } from './icons'
+import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from './icons'
+import { Tip } from './Tip'
 
 const LEVEL_LABEL: Record<string, string> = {
   off: '关闭',
@@ -89,14 +91,25 @@ function Toolbar({
             />
           )}
         </div>
-        <button
-          type="button"
-          aria-label={streaming ? '停止' : '发送'}
-          onClick={streaming ? onAbort : onSend}
-          className="grid size-7 place-items-center rounded-full bg-muted text-white transition-colors hover:bg-muted/85"
-        >
-          {streaming ? <span className="size-2 rounded-sm bg-white" /> : <IconArrowUp className="size-4" />}
-        </button>
+        {/* 视觉 26，外圈 28 保住可点热区 */}
+        <div className="group relative">
+          <button
+            type="button"
+            aria-label={streaming ? '停止生成' : '发送'}
+            onClick={streaming ? onAbort : onSend}
+            className="grid size-7 place-items-center rounded-full"
+          >
+            <span
+              className={
+                'grid size-6.5 place-items-center rounded-full transition-colors ' +
+                (streaming ? 'bg-sunken text-fg hover:bg-select' : 'bg-fg text-surface hover:bg-fg/85')
+              }
+            >
+              {streaming ? <div className="size-2.5 rounded-sm bg-current" /> : <IconArrowUp className="size-4" />}
+            </span>
+          </button>
+          <Tip text={streaming ? '停止生成' : '发送'} kbd={streaming ? 'Esc' : 'Enter'} />
+        </div>
       </div>
     </div>
   )
@@ -105,6 +118,7 @@ function Toolbar({
 function InputCard({
   placeholder,
   big,
+  scope,
   snapshot,
   models,
   streaming,
@@ -119,6 +133,8 @@ function InputCard({
 }: {
   placeholder: string
   big?: boolean
+  /** 草稿键：会话 id，起始页用 'new' */
+  scope: string
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean
@@ -131,9 +147,26 @@ function InputCard({
   commands: CommandInfo[]
   onAccess: () => void
 }): ReactNode {
-  const [text, setText] = useState('')
-  const [images, setImages] = useState<PromptImage[]>([])
+  // 切会话/回起始页再回来草稿还在；输入框卸载后由 store 兜着
+  const { text, images } = useDraft(scope)
+  const setText = (next: string): void => setDraftText(scope, next)
+  const setImages = (fn: (prev: PromptImage[]) => PromptImage[]): void =>
+    setDraftImages(scope, fn)
   const ta = useRef<HTMLTextAreaElement>(null)
+  const [zoom, setZoom] = useState<PromptImage | null>(null)
+
+  useEffect(() => {
+    if (!zoom) return
+    // 捕获阶段截下 Esc：只关预览，不再冒到 App 变成「停止生成」
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopPropagation()
+      setZoom(null)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [zoom])
 
   // @ 提及：光标前最后一段是 @xxx 就拉候选
   const mention = /(?:^|\s)@([^\s@]*)$/.exec(text)?.[1]
@@ -151,7 +184,7 @@ function InputCard({
   }, [mention, typing, onQueryFiles])
 
   const insert = (path: string): void => {
-    setText((t) => t.replace(/@[^\s@]*$/, `@${path} `))
+    setText(text.replace(/@[^\s@]*$/, `@${path} `))
     ta.current?.focus()
   }
 
@@ -168,7 +201,7 @@ function InputCard({
     if ((!value && !images.length) || streaming) return
     setText('')
     const pics = images
-    setImages([])
+    setImages(() => [])
     onSubmit(value, pics.length ? pics : undefined)
   }
 
@@ -230,24 +263,48 @@ function InputCard({
         </div>
       )}
       {images.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-4 pt-2">
-          {images.map((_, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 rounded-sm bg-sunken px-2 py-1 text-xs text-muted"
-            >
-              <IconImage className="size-3.5" />
-              图片 {i + 1}
+        <div className="flex flex-wrap gap-2 px-4 pt-2">
+          {images.map((img, i) => (
+            <div key={i} className="group relative">
               <button
                 type="button"
-                aria-label="移除图片"
-                onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                className="ml-0.5 hover:text-fg"
+                aria-label={`查看图片 ${i + 1}`}
+                onClick={() => setZoom(img)}
+                className="block size-10 overflow-hidden rounded-sm border border-edge"
               >
-                ×
+                <img
+                  src={`data:${img.mimeType};base64,${img.data}`}
+                  alt={`图片 ${i + 1}`}
+                  className="size-full object-cover"
+                />
               </button>
-            </span>
+              <button
+                type="button"
+                aria-label={`移除图片 ${i + 1}`}
+                onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              >
+                <span className="grid size-3.5 place-items-center rounded-full bg-fg text-surface">
+                  <IconClose className="size-2" />
+                </span>
+              </button>
+            </div>
           ))}
+        </div>
+      )}
+      {zoom && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="图片预览"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-fg/70 p-8"
+          onClick={() => setZoom(null)}
+        >
+          <img
+            src={`data:${zoom.mimeType};base64,${zoom.data}`}
+            alt="图片预览"
+            className="max-h-full max-w-full rounded-md object-contain"
+          />
         </div>
       )}
       <div
@@ -304,7 +361,7 @@ function InputCard({
             }
             if (rest.length) {
               const refs = rest.map((p) => `@${p}`).join(' ')
-              setText((t) => (t ? `${t} ${refs}` : refs))
+              setText(text ? `${text} ${refs}` : refs)
             }
             ta.current?.focus()
           })
@@ -315,6 +372,8 @@ function InputCard({
 }
 
 export interface ComposerProps {
+  /** 草稿键：会话 id，起始页用 'new' */
+  scope: string
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean

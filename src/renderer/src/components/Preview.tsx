@@ -256,6 +256,7 @@ function InputsDemo(): ReactNode {
       </Section>
       <Section title="输入卡（起始页大卡）">
         <ComposerCard
+          scope="preview"
           snapshot={snapshot}
           models={MOCK_MODELS}
           streaming={false}

@@ -8,6 +8,7 @@ release/
 # 本地调试脚本（内含本机绝对路径，不可复用）
 dev.cmd
 shot.ps1
+shot.js
 
 # 日志与临时文件
 dev.log

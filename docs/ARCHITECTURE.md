@@ -106,7 +106,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
  ├─ tsconfig.json             项目引用：node 与 web 两套
  ├─ tsconfig.node.json        main + preload + shared。TS7 无 baseUrl，paths 必须写 "./src/..."
  ├─ tsconfig.web.json         renderer + shared + preload/index.d.ts
- ├─ package.json              scripts: dev / build / start / typecheck
+ ├─ package.json              scripts: dev / build / start / release / typecheck
  ├─ AGENTS.md                 硬约束（preload CJS、sandbox 不可关、npm install 会损坏原生模块）
  ├─ GLOSSARY.md               术语表：只定义语言，不记实现
  │
@@ -132,6 +132,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ main.tsx            createRoot
         ├─ App.tsx            路由（start / chat / gallery）+ 布局 + ChatView 自动贴底
         ├─ useAgent.ts        引擎状态唯一入口：发命令、收事件、ui 槽位与回填
+        ├─ drafts.ts          输入框草稿 store（按会话键，仅内存）
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
         ├─ mock.ts            画廊样本数据（仅 Gallery 使用，不参与运行时）
         ├─ util.ts            formatDuration

@@ -1,9 +1,16 @@
 import type { ReactNode } from 'react'
 import { IconCheck } from './icons'
 
-/** 浮层遮罩：点击空白关闭 */
+/** 浮层遮罩：点击空白关闭。调用方可能位于窗口拖拽区，必须显式 no-drag 才能收到点击 */
 export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
-  return <button type="button" aria-label="关闭" className="fixed inset-0 z-40 cursor-default" onClick={onClose} />
+  return (
+    <button
+      type="button"
+      aria-label="关闭"
+      className="fixed inset-0 z-40 cursor-default [-webkit-app-region:no-drag]"
+      onClick={onClose}
+    />
+  )
 }
 
 /** 公共下拉框容器 */
@@ -11,7 +18,7 @@ export function MenuPanel({ className = '', children }: { className?: string; ch
   return (
     <div
       className={
-        'pi-menu ' + className
+        'pi-menu [-webkit-app-region:no-drag] ' + className
       }
     >
       {children}

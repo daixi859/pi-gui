@@ -58,6 +58,6 @@ npm run typecheck  # 三端类型检查，改完必跑
 
 ## 调试
 
-主进程支持 `PI_SHOT=<png路径>` + `PI_SHOT_JS=<页面脚本>` + `PI_SHOT_AT=<触发ms>` + `PI_SHOT_DELAY=<截图前ms>`，用于无头截图验证。改代码后重启 dev（热更新对 main/host 不生效）。
+主进程支持 `PI_SHOT=<png路径>` + `PI_SHOT_JS=<页面脚本>`（或 `PI_SHOT_JS_FILE=<脚本路径>`，脚本返回值会打到 stdout）+ `PI_SHOT_AT=<触发ms>` + `PI_SHOT_DELAY=<截图前ms>`，用于无头截图验证。改代码后重启 dev（热更新对 main/host 不生效）。
 
-**纯样式调试（类名/令牌/圆角/间距/颜色）不需要启动客户端截图确认**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 行为、布局逻辑或跨进程改动时才需要启动验证。
+**纯样式调试和可以操作的js逻辑（类名/令牌/圆角/间距/颜色/点击弹窗）等不需要启动客户端截图确认**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、布局逻辑或跨进程改动时才需要启动验证。
