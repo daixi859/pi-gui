@@ -1,20 +1,85 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-canvas: #ececee;
-  --color-panel: #f8f8f8;
-  --color-surface: #ffffff;
-  --color-sunken: #f2f1ef;
-  /* 侧栏行 hover / 选中：比 canvas 深一档 */
-  --color-select: #e1e1e3;
-  --color-edge: #e0e0e0;
-  --color-fg: #26241f;
-  --color-muted: #8b8781;
-  --color-faint: #b6b2ab;
-  --color-link: #2f6feb;
-  --color-add: #1f8a4c;
-  --color-del: #c0392b;
-  --color-warn: #b7791f;
+  /* 主题种子：换配色只改这 5 个值，下面的色阶与语义 token 会自动跟着变 */
+  --seed-neutral: #26241f;
+  --seed-primary: #2f6feb;
+  --seed-success: #1f8a4c;
+  --seed-warning: #b7791f;
+  --seed-danger: #c0392b;
+
+  /* 色阶：1 最浅 → 10 最深。中性色 1 是纯白、10 是种子；强调色 6 是种子，
+     1–5 往白里调（背景/边框），7–10 往黑里调（悬停/按压/文字） */
+  --color-neutral-1: #fff;
+  --color-neutral-2: color-mix(in oklab, var(--seed-neutral) 4%, white);
+  --color-neutral-3: color-mix(in oklab, var(--seed-neutral) 8%, white);
+  --color-neutral-4: color-mix(in oklab, var(--seed-neutral) 12%, white);
+  --color-neutral-5: color-mix(in oklab, var(--seed-neutral) 17%, white);
+  --color-neutral-6: color-mix(in oklab, var(--seed-neutral) 34%, white);
+  --color-neutral-7: color-mix(in oklab, var(--seed-neutral) 45%, white);
+  --color-neutral-8: color-mix(in oklab, var(--seed-neutral) 62%, white);
+  --color-neutral-9: color-mix(in oklab, var(--seed-neutral) 78%, white);
+  --color-neutral-10: var(--seed-neutral);
+
+  --color-primary-1: color-mix(in oklab, var(--seed-primary) 6%, white);
+  --color-primary-2: color-mix(in oklab, var(--seed-primary) 14%, white);
+  --color-primary-3: color-mix(in oklab, var(--seed-primary) 26%, white);
+  --color-primary-4: color-mix(in oklab, var(--seed-primary) 42%, white);
+  --color-primary-5: color-mix(in oklab, var(--seed-primary) 66%, white);
+  --color-primary-6: var(--seed-primary);
+  --color-primary-7: color-mix(in oklab, var(--seed-primary) 86%, black);
+  --color-primary-8: color-mix(in oklab, var(--seed-primary) 70%, black);
+  --color-primary-9: color-mix(in oklab, var(--seed-primary) 55%, black);
+  --color-primary-10: color-mix(in oklab, var(--seed-primary) 40%, black);
+
+  --color-success-1: color-mix(in oklab, var(--seed-success) 6%, white);
+  --color-success-2: color-mix(in oklab, var(--seed-success) 14%, white);
+  --color-success-3: color-mix(in oklab, var(--seed-success) 26%, white);
+  --color-success-4: color-mix(in oklab, var(--seed-success) 42%, white);
+  --color-success-5: color-mix(in oklab, var(--seed-success) 66%, white);
+  --color-success-6: var(--seed-success);
+  --color-success-7: color-mix(in oklab, var(--seed-success) 86%, black);
+  --color-success-8: color-mix(in oklab, var(--seed-success) 70%, black);
+  --color-success-9: color-mix(in oklab, var(--seed-success) 55%, black);
+  --color-success-10: color-mix(in oklab, var(--seed-success) 40%, black);
+
+  --color-warning-1: color-mix(in oklab, var(--seed-warning) 6%, white);
+  --color-warning-2: color-mix(in oklab, var(--seed-warning) 14%, white);
+  --color-warning-3: color-mix(in oklab, var(--seed-warning) 26%, white);
+  --color-warning-4: color-mix(in oklab, var(--seed-warning) 42%, white);
+  --color-warning-5: color-mix(in oklab, var(--seed-warning) 66%, white);
+  --color-warning-6: var(--seed-warning);
+  --color-warning-7: color-mix(in oklab, var(--seed-warning) 86%, black);
+  --color-warning-8: color-mix(in oklab, var(--seed-warning) 70%, black);
+  --color-warning-9: color-mix(in oklab, var(--seed-warning) 55%, black);
+  --color-warning-10: color-mix(in oklab, var(--seed-warning) 40%, black);
+
+  --color-danger-1: color-mix(in oklab, var(--seed-danger) 6%, white);
+  --color-danger-2: color-mix(in oklab, var(--seed-danger) 14%, white);
+  --color-danger-3: color-mix(in oklab, var(--seed-danger) 26%, white);
+  --color-danger-4: color-mix(in oklab, var(--seed-danger) 42%, white);
+  --color-danger-5: color-mix(in oklab, var(--seed-danger) 66%, white);
+  --color-danger-6: var(--seed-danger);
+  --color-danger-7: color-mix(in oklab, var(--seed-danger) 86%, black);
+  --color-danger-8: color-mix(in oklab, var(--seed-danger) 70%, black);
+  --color-danger-9: color-mix(in oklab, var(--seed-danger) 55%, black);
+  --color-danger-10: color-mix(in oklab, var(--seed-danger) 40%, black);
+
+  /* 语义 token：组件只用这一层，值全部指向色阶 */
+  --color-canvas: var(--color-neutral-4);
+  --color-panel: var(--color-neutral-2);
+  --color-surface: var(--color-neutral-1);
+  --color-sunken: var(--color-neutral-3);
+  /* 侧栏行 hover / 选中 */
+  --color-select: var(--color-neutral-5);
+  --color-edge: var(--color-neutral-5);
+  --color-fg: var(--color-neutral-10);
+  --color-muted: var(--color-neutral-8);
+  --color-faint: var(--color-neutral-6);
+  --color-link: var(--color-primary-6);
+  --color-add: var(--color-success-6);
+  --color-del: var(--color-danger-6);
+  --color-warn: var(--color-warning-6);
 
   /* 透明黑蒙层：hover 用 tint，按压/常驻态用 tint-strong */
   --color-tint: rgb(0 0 0 / 0.04);
@@ -24,7 +89,8 @@
     -apple-system, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
   --font-mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
 
-  /* 字号刻度：正文/标题 14，代码与小字 12；--text-2xl 是展示字号特例（问候/品牌大字）。整体改字号只动这里 */
+  /* 字号刻度：正文/标题 14，代码与小字 12，最小 11（时间戳、悬停提示）；--text-2xl 是展示字号特例（问候/品牌大字）。整体改字号只动这里 */
+  --text-2xs: 11px;
   --text-xs: 12px;
   --text-sm: 14px;
   --text-2xl: 28px;
@@ -84,7 +150,7 @@ body {
 }
 
 ::selection {
-  background: #d9d6d0;
+  background: var(--color-select);
 }
 
 /* 细滚动条，跟随主题 */

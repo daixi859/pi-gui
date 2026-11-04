@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 
 const TONE: Record<string, string> = {
   info: 'border-edge text-fg',
-  warning: 'border-warn/40 text-warn',
-  error: 'border-del/40 text-del'
+  warning: 'border-warning-3 text-warn',
+  error: 'border-danger-3 text-del'
 }
 
 /** 扩展 notify 的轻量提示：右下角堆叠，3.5s 自动消失（消失由 useAgent 计时） */

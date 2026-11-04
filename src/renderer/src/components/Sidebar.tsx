@@ -475,7 +475,7 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
         ) : (
           <Marquee text={session.title} />
         )}
-        <span className="ml-auto shrink-0 text-xs text-faint">{session.ageLabel}</span>
+        <span className="ml-auto shrink-0 text-2xs text-faint">{session.ageLabel}</span>
       </button>
       {menu && (
         <>

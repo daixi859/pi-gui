@@ -115,7 +115,7 @@ function ToolBlock({
 function FileBlock({ name, meta, path }: { name: string; meta: string; path?: string }): ReactNode {
   return (
     <div className="flex items-center gap-2 rounded-sm border border-edge px-4 py-2">
-      <div className="grid size-9 shrink-0 place-items-center rounded-sm bg-link/8 text-link">
+      <div className="grid size-9 shrink-0 place-items-center rounded-sm bg-primary-1 text-link">
         <IconFile className="size-[18px]" />
       </div>
       <div className="min-w-0">

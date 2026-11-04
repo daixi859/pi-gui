@@ -100,6 +100,7 @@ function Toolbar({
   snapshot,
   models,
   streaming,
+  empty,
   onModel,
   onLevel,
   onSend,
@@ -110,6 +111,8 @@ function Toolbar({
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean
+  /** 没文字也没图片：发送按钮置灰 */
+  empty: boolean
   onModel: (id: string) => void
   onLevel: (level: string) => void
   onSend: () => void
@@ -135,7 +138,7 @@ function Toolbar({
       <div className="ml-auto flex items-center gap-1">
         <div className="relative">
           <button type="button" onClick={() => setMenu((v) => !v)} className={ghost}>
-            <span className="size-[13px] rounded-full border-2 border-add/30" />
+            <span className="size-[13px] rounded-full border-2 border-success-3" />
             <span className="font-medium text-fg">{snapshot.model}</span>
             <span className="text-muted">{snapshot.thinkingLevel}</span>
             <IconChevronDown className="size-3 text-muted" />
@@ -170,14 +173,21 @@ function Toolbar({
             <button
               type="button"
               aria-label="发送"
+              disabled={empty}
               onClick={onSend}
               className="grid size-7 place-items-center rounded-full"
             >
-              <span className="grid size-6.5 place-items-center rounded-full bg-fg text-surface transition-colors hover:bg-fg/85">
+              <span
+                className={
+                  'grid size-6.5 place-items-center rounded-full transition-colors ' +
+                  (empty ? 'bg-sunken text-faint' : 'bg-fg text-surface hover:bg-fg/85')
+                }
+              >
                 <IconArrowUp className="size-4" />
               </span>
             </button>
-            <Tip text="发送" kbd="Enter" />
+            {/* 没内容就不发，也就不提示 */}
+            {!empty && <Tip text="发送" kbd="Enter" />}
           </div>
         )}
       </div>
@@ -416,6 +426,7 @@ function InputCard({
         snapshot={snapshot}
         models={models}
         streaming={streaming}
+        empty={!text.trim() && images.length === 0}
         onModel={onModel}
         onLevel={onLevel}
         onSend={submit}

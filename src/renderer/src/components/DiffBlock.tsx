@@ -76,7 +76,7 @@ export function DiffBlock({
                 key={i}
                 className={
                   'flex gap-2 px-4 ' +
-                  (l.type === 'add' ? 'bg-add/6' : l.type === 'del' ? 'bg-del/6' : '')
+                  (l.type === 'add' ? 'bg-success-1' : l.type === 'del' ? 'bg-danger-1' : '')
                 }
               >
                 <span className="w-8 shrink-0 text-right text-faint select-none">{l.no ?? ''}</span>
@@ -88,7 +88,7 @@ export function DiffBlock({
                 >
                   {l.type === 'add' ? '+' : l.type === 'del' ? '−' : '.'}
                 </span>
-                <span className={l.type === 'del' ? 'whitespace-pre-wrap text-del/85' : 'whitespace-pre-wrap'}>
+                <span className={l.type === 'del' ? 'whitespace-pre-wrap text-del' : 'whitespace-pre-wrap'}>
                   {l.text}
                 </span>
               </div>

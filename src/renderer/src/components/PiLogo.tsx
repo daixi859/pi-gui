@@ -29,7 +29,7 @@ export function PiWatermark({ size = 390 }: { size?: number }) {
       aria-hidden="true"
       focusable="false"
     >
-      <g fill="none" stroke="#e5e5e7" strokeWidth="4.5" transform="skewX(-25)">
+      <g className="stroke-edge" fill="none" strokeWidth="4.5" transform="skewX(-25)">
         <path d="M165.29 165.29H517.36V400H400V282.65H165.29Z" />
         <path d="M165.29 282.65H282.65V400H400V517.36H282.65V634.72H165.29Z" />
         <path d="M517.36 400H634.72V634.72H517.36Z" />

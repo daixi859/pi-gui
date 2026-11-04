@@ -66,7 +66,7 @@ export function TitleBar({
         </>
       )}
       {error && (
-        <div className="ml-2 flex min-w-0 items-center gap-1 rounded-md bg-del/8 px-2 py-1 text-xs text-del [-webkit-app-region:no-drag]">
+        <div className="ml-2 flex min-w-0 items-center gap-1 rounded-md bg-danger-1 px-2 py-1 text-xs text-del [-webkit-app-region:no-drag]">
           <span className="truncate">{error}</span>
           <button type="button" aria-label="关闭提示" onClick={onClearError} className="shrink-0 opacity-70 hover:opacity-100">
             <IconClose className="size-3.5" />
