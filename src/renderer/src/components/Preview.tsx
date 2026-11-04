@@ -267,6 +267,8 @@ function InputsDemo(): ReactNode {
           onQueryFiles={() => undefined}
           commands={[]}
           onAccess={() => undefined}
+          onSwitchWorkspace={() => undefined}
+          workspaces={[]}
         />
       </Section>
       <Section title="提问卡">

@@ -30,6 +30,7 @@ export function MenuPanel({ className = '', children }: { className?: string; ch
 export function MenuItem({
   icon,
   label,
+  title,
   selected,
   trailing,
   danger,
@@ -37,6 +38,8 @@ export function MenuItem({
 }: {
   icon?: ReactNode
   label: string
+  /** 悬停提示：文案被截断时给完整版 */
+  title?: string
   selected?: boolean
   trailing?: ReactNode
   danger?: boolean
@@ -46,6 +49,7 @@ export function MenuItem({
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={
         'pi-menu-item ' +
         (danger ? 'text-del ' : '') +

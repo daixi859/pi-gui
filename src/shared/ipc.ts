@@ -57,6 +57,8 @@ export interface HostBridge {
   saveText: (defaultName: string, text: string) => void
   /** 弹文件选择框，返回选中的绝对路径；取消时为空数组 */
   pickFiles: () => Promise<string[]>
+  /** 弹目录选择框（切换工作区），取消时为 null */
+  pickDirectory: () => Promise<string | null>
   /** 打开 ~/.pi/agent/settings.json（设置 / 插件入口） */
   openAgentConfig: () => void
   /** 读图片为 base64（渲染层跨不了 file://），失败返回 null */
@@ -94,6 +96,8 @@ export type AgentCommand =
   | { type: 'prompt'; text: string; images?: PromptImage[] }
   | { type: 'abort' }
   | { type: 'newSession' }
+  /** 换工作区：以后新会话都建在这个目录下 */
+  | { type: 'workspace'; path: string }
   | { type: 'openSession'; path: string }
   /** 重命名会话：往它的 JSONL 追加 session_info */
   | { type: 'renameSession'; path: string; title: string }
@@ -112,6 +116,8 @@ export type AgentEvent =
       type: 'sessions'
       sessions: SessionMeta[]
       projects: ProjectMeta[]
+      /** 工作区菜单：会话出现过的目录（绝对路径），当前目录在首位 */
+      workspaces: string[]
       models: ModelOption[]
       /** 会话目录还在扫，列表会继续增长 */
       loading?: boolean

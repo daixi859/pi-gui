@@ -1,24 +1,32 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { HighlighterCore } from 'shiki/core'
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
+import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
+import githubDark from 'shiki/themes/github-dark.mjs'
+import githubLight from 'shiki/themes/github-light.mjs'
+import bash from 'shiki/langs/bash.mjs'
+import css from 'shiki/langs/css.mjs'
+import go from 'shiki/langs/go.mjs'
+import html from 'shiki/langs/html.mjs'
+import js from 'shiki/langs/js.mjs'
+import json from 'shiki/langs/json.mjs'
+import jsx from 'shiki/langs/jsx.mjs'
+import md from 'shiki/langs/md.mjs'
+import python from 'shiki/langs/python.mjs'
+import rust from 'shiki/langs/rust.mjs'
+import sql from 'shiki/langs/sql.mjs'
+import ts from 'shiki/langs/ts.mjs'
+import tsx from 'shiki/langs/tsx.mjs'
 import { IconCheck, IconChevronDown, IconChevronRight, IconStop } from './icons'
 
-const LANGS = ['ts', 'tsx', 'js', 'jsx', 'json', 'bash', 'python', 'css', 'html', 'md', 'sql', 'go', 'rust']
+/** 语法包写死成静态 import：模板字符串的动态 import Vite 分析不了，打包后根本加载不到 */
+const LANGS = { ts, tsx, js, jsx, json, bash, python, css, html, md, sql, go, rust }
 let hl: Promise<HighlighterCore> | null = null
 function highlighter(): Promise<HighlighterCore> {
-  hl ??= (async () => {
-    const [{ createHighlighterCore }, { createJavaScriptRegexEngine }, ...mods] = await Promise.all([
-      import('shiki/core'),
-      import('shiki/engine/javascript'),
-      import('shiki/themes/github-light.mjs'),
-      import('shiki/themes/github-dark.mjs'),
-      ...LANGS.map((l) => import(`shiki/langs/${l}.mjs`))
-    ])
-    return createHighlighterCore({
-      themes: [mods[0].default, mods[1].default],
-      langs: mods.slice(2).map((m) => m.default),
-      engine: createJavaScriptRegexEngine()
-    })
-  })()
+  hl ??= createHighlighterCore({
+    themes: [githubLight, githubDark],
+    langs: Object.values(LANGS).flat(),
+    engine: createJavaScriptRegexEngine()
+  })
   return hl
 }
 
@@ -34,7 +42,7 @@ export function CodeBlock({ code, lang }: { code: string; lang: string }): React
     let alive = true
     void highlighter()
       .then((h) => {
-        const norm = LANGS.includes(lang) ? lang : 'text'
+        const norm = lang in LANGS ? lang : 'text'
         const out = h.codeToHtml(code, {
           lang: norm,
           themes: { light: 'github-light', dark: 'github-dark' },

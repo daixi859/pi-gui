@@ -57,6 +57,8 @@ export interface Snapshot {
   model: string
   thinkingLevel: string
   cwd: string
+  /** 当前工作目录的绝对路径，工作区菜单据此打勾 */
+  workspace: string
   branch: string
   access: string
   /** access 的机器可读版本：true = 完全访问，工具不再逐次确认 */

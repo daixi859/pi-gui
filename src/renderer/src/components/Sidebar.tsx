@@ -181,8 +181,6 @@ export interface SidebarProps {
   onNavigate: Nav
   projects: ProjectMeta[]
   sessions: SessionMeta[]
-  /** 会话目录还在扫，侧栏显示 loading */
-  sessionsLoading: boolean
   activeId: string | null
   /** 后台跑完、未再打开的会话文件（蓝点） */
   unread: string[]
@@ -201,7 +199,6 @@ export function Sidebar({
   onNavigate,
   projects,
   sessions,
-  sessionsLoading,
   activeId,
   unread,
   onOpenSession,
@@ -339,12 +336,6 @@ export function Sidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pl-2 pb-2">
-        {sessionsLoading && (
-          <div className="flex items-center gap-2 px-2 py-1 text-xs text-faint">
-            <IconSpinner className="size-3.5" />
-            正在加载任务…
-          </div>
-        )}
         {sort === 'project' &&
           grouped.map((p) => {
             const shown = p.sessions.slice(0, limit[p.name] ?? 5)

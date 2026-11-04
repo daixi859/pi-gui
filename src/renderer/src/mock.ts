@@ -4,6 +4,7 @@ export const snapshot: Snapshot = {
   model: 'GLM-5.3',
   thinkingLevel: '最高',
   cwd: 'ai-berkshire',
+  workspace: 'D:\\workspace\\ai-berkshire',
   branch: 'main',
   access: '变更前确认',
   accessFull: false

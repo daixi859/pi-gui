@@ -100,7 +100,6 @@ export default function App(): ReactNode {
           onNavigate={(r) => go({ route: r, id: null })}
           projects={agent.projects}
           sessions={agent.sessions}
-          sessionsLoading={agent.sessionsLoading}
           activeId={activeId}
           unread={agent.unread}
           onOpenSession={openSession}
@@ -228,6 +227,8 @@ function ChatView({
           onQueryFiles={agent.queryFiles}
           commands={agent.commands}
           onAccess={agent.toggleAccess}
+          onSwitchWorkspace={agent.switchWorkspace}
+          workspaces={agent.workspaces}
         />
       </div>
     </div>

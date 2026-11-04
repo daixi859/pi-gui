@@ -17,6 +17,11 @@ function readBounds(): Partial<Electron.Rectangle> {
   }
 }
 
+/** 关窗后宿主还在收尾（exit/message 回调），窗口已销毁，不能直接发 */
+function emit(msg: AgentEvent): void {
+  if (win && !win.isDestroyed()) win.webContents.send('agent:event', msg)
+}
+
 /** 引擎宿主：pi SDK 只在子进程里加载，主进程只做转发 */
 function spawnHost(): void {
   host = utilityProcess.fork(join(import.meta.dirname, 'agent-host.js'), [], {
@@ -27,10 +32,10 @@ function spawnHost(): void {
   })
   host.stdout?.on('data', (d: Buffer) => console.log('[agent]', String(d).trim()))
   host.stderr?.on('data', (d: Buffer) => console.error('[agent]', String(d).trim()))
-  host.on('message', (msg: AgentEvent) => win?.webContents.send('agent:event', msg))
+  host.on('message', (msg: AgentEvent) => emit(msg))
   host.on('exit', (code) => {
     host = null
-    win?.webContents.send('agent:event', { type: 'error', message: `引擎进程退出（${code}）` } satisfies AgentEvent)
+    emit({ type: 'error', message: `引擎进程退出（${code}）` } satisfies AgentEvent)
   })
 }
 
@@ -57,6 +62,9 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => win?.show())
+  win.on('closed', () => {
+    win = null
+  })
   // F12 / Ctrl+Shift+I 开关开发者工具
   win.webContents.on('before-input-event', (_e, input) => {
     const key = input.key.toLowerCase()
@@ -115,6 +123,12 @@ ipcMain.handle('host:pickFiles', async () => {
     properties: ['openFile', 'multiSelections']
   })
   return canceled ? [] : filePaths
+})
+
+ipcMain.handle('host:pickDir', async () => {
+  if (!win) return null
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
+  return canceled ? null : (filePaths[0] ?? null)
 })
 
 ipcMain.handle('host:readImage', async (_e, path: string) => {

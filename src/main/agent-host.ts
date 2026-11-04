@@ -204,6 +204,7 @@ function snapshot(): Snapshot {
     model: current?.session.model?.name ?? '未选择模型',
     thinkingLevel: LEVEL_LABEL[current?.session.thinkingLevel ?? 'high'] ?? '高',
     cwd: basename(cwd),
+    workspace: cwd,
     branch: branch(),
     access: access === 'full' ? '完全访问' : '变更前确认',
     accessFull: access === 'full'
@@ -338,7 +339,9 @@ function publishSessions(list: readonly SessionInfo[], loading = false): void {
     byProject.set(project, bucket)
   }
   const projects: ProjectMeta[] = [...byProject].map(([name, s]) => ({ name, sessions: s }))
-  send({ type: 'sessions', sessions, projects, models, loading, commands: commands() })
+  // 工作区菜单 = 会话出现过的目录，当前目录排最前（刚加的空目录也要能选）
+  const workspaces = [...new Set([cwd, ...list.map((i) => i.cwd).filter(Boolean)])]
+  send({ type: 'sessions', sessions, projects, workspaces, models, loading, commands: commands() })
 }
 
 /** 斜杠命令列表：只取扩展注册的命令，每次读最新的 runner */
@@ -851,6 +854,10 @@ async function handle(cmd: AgentCommand): Promise<void> {
         break
       case 'newSession':
         await switchTo(() => start())
+        break
+      // 换工作区就是在新目录下开一个会话；旧会话留在后台继续跑
+      case 'workspace':
+        await switchTo(() => start(cmd.path))
         break
       case 'openSession':
         await switchTo(() => open(cmd.path))

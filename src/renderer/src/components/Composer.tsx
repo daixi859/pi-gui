@@ -18,21 +18,80 @@ const LEVEL_LABEL: Record<string, string> = {
 
 const ghost = 'flex items-center gap-1 rounded-md px-1 py-1 text-sm hover:bg-sunken'
 
+/** 工作区名取目录名；Windows 反斜杠也要认 */
+const basename = (p: string): string => p.split(/[\\/]/).filter(Boolean).pop() ?? p
+
 /** 输入卡顶部的项目 / 分支条 */
-function WorkspaceBar({ snapshot }: { snapshot: Snapshot }): ReactNode {
+function WorkspaceBar({
+  snapshot,
+  workspaces,
+  onSwitch
+}: {
+  snapshot: Snapshot
+  workspaces: string[]
+  onSwitch: (path: string) => void
+}): ReactNode {
+  const [menu, setMenu] = useState(false)
+  const [query, setQuery] = useState('')
+  const hits = workspaces.filter((p) => p.toLowerCase().includes(query.trim().toLowerCase()))
+  const choose = (path: string): void => {
+    setMenu(false)
+    setQuery('')
+    if (path !== snapshot.workspace) onSwitch(path)
+  }
+  const add = (): void => {
+    setMenu(false)
+    setQuery('')
+    void window.pi?.host.pickDirectory().then((path) => {
+      if (path) choose(path)
+    })
+  }
   return (
-    <div className="flex items-center gap-0.5 rounded-t-lg bg-sunken px-2 py-1 text-xs text-muted">
-      <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
+    <div className="relative flex items-center gap-0.5 rounded-t-lg bg-sunken px-2 py-1 text-xs text-muted">
+      <button
+        type="button"
+        onClick={() => setMenu((v) => !v)}
+        title="切换工作区"
+        className="flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-black/5 hover:text-fg"
+      >
         <IconFolder className="size-[14px]" />
         {snapshot.cwd}
-      </span>
+        <IconChevronDown className="size-3" />
+      </button>
       <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconBranch className="size-[14px]" />
         {snapshot.branch}
       </span>
-      <button type="button" aria-label="添加工作区" className="grid size-6 place-items-center rounded-sm hover:bg-black/5">
-        <IconPlus className="size-[14px]" />
-      </button>
+      {menu && (
+        <>
+          <MenuScrim onClose={() => setMenu(false)} />
+          <MenuPanel className="bottom-full left-0 mb-1 w-[240px]">
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜索工作区"
+              aria-label="搜索工作区"
+              className="pi-input mb-1 w-full"
+            />
+            <div className="max-h-[280px] overflow-y-auto">
+              {hits.map((path) => (
+                <MenuItem
+                  key={path}
+                  label={basename(path)}
+                  title={path}
+                  selected={path === snapshot.workspace}
+                  onClick={() => choose(path)}
+                />
+              ))}
+              {hits.length === 0 && <div className="px-2 py-1 text-xs text-faint">没有匹配的工作区</div>}
+            </div>
+            <div className="mt-1 border-t border-edge pt-1">
+              <MenuItem label="添加工作区…" onClick={add} />
+            </div>
+          </MenuPanel>
+        </>
+      )}
     </div>
   )
 }
@@ -92,24 +151,35 @@ function Toolbar({
           )}
         </div>
         {/* 视觉 26，外圈 28 保住可点热区 */}
-        <div className="group relative">
-          <button
-            type="button"
-            aria-label={streaming ? '停止生成' : '发送'}
-            onClick={streaming ? onAbort : onSend}
-            className="grid size-7 place-items-center rounded-full"
-          >
-            <span
-              className={
-                'grid size-6.5 place-items-center rounded-full transition-colors ' +
-                (streaming ? 'bg-sunken text-fg hover:bg-select' : 'bg-fg text-surface hover:bg-fg/85')
-              }
+        {streaming ? (
+          <div className="group relative">
+            <button
+              type="button"
+              aria-label="停止生成"
+              onClick={onAbort}
+              className="grid size-7 place-items-center rounded-full"
             >
-              {streaming ? <div className="size-2.5 rounded-sm bg-current" /> : <IconArrowUp className="size-4" />}
-            </span>
-          </button>
-          <Tip text={streaming ? '停止生成' : '发送'} kbd={streaming ? 'Esc' : 'Enter'} />
-        </div>
+              <span className="grid size-6.5 place-items-center rounded-full bg-sunken text-fg transition-colors hover:bg-select">
+                <div className="size-3 rounded-xs bg-current" />
+              </span>
+            </button>
+            <Tip text="停止生成" kbd="Esc" />
+          </div>
+        ) : (
+          <div className="group relative">
+            <button
+              type="button"
+              aria-label="发送"
+              onClick={onSend}
+              className="grid size-7 place-items-center rounded-full"
+            >
+              <span className="grid size-6.5 place-items-center rounded-full bg-fg text-surface transition-colors hover:bg-fg/85">
+                <IconArrowUp className="size-4" />
+              </span>
+            </button>
+            <Tip text="发送" kbd="Enter" />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -129,7 +199,9 @@ function InputCard({
   files,
   onQueryFiles,
   commands,
-  onAccess
+  onAccess,
+  onSwitchWorkspace,
+  workspaces
 }: {
   placeholder: string
   big?: boolean
@@ -146,6 +218,9 @@ function InputCard({
   onQueryFiles: (query: string) => void
   commands: CommandInfo[]
   onAccess: () => void
+  /** 换工作区：选目录后宿主在新目录开一个会话 */
+  onSwitchWorkspace: (path: string) => void
+  workspaces: string[]
 }): ReactNode {
   // 切会话/回起始页再回来草稿还在；输入框卸载后由 store 兜着
   const { text, images } = useDraft(scope)
@@ -227,7 +302,7 @@ function InputCard({
           : 'shadow-hairline')
       }
     >
-      {big && <WorkspaceBar snapshot={snapshot} />}
+      {big && <WorkspaceBar snapshot={snapshot} workspaces={workspaces} onSwitch={onSwitchWorkspace} />}
       {cmdHits.length > 0 && (
         <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-pop">
           {cmdHits.map((c) => (
@@ -385,6 +460,8 @@ export interface ComposerProps {
   onQueryFiles: (query: string) => void
   commands: CommandInfo[]
   onAccess: () => void
+  onSwitchWorkspace: (path: string) => void
+  workspaces: string[]
 }
 
 /** 起始页的大输入卡 */

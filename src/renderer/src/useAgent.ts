@@ -29,9 +29,9 @@ export interface AgentState {
   viewPath: string | null
   /** 后台跑完、还没再打开过的会话文件，侧栏用蓝点标出 */
   unread: string[]
-  /** 会话目录还在扫，列表会继续增长 */
-  sessionsLoading: boolean
   projects: ProjectMeta[]
+  /** 工作区菜单：会话出现过的目录，当前目录在首位 */
+  workspaces: string[]
   models: ModelOption[]
   snapshot: Snapshot
   streaming: boolean
@@ -55,13 +55,14 @@ const initial: AgentState = {
   sessions: [],
   viewPath: null,
   unread: [],
-  sessionsLoading: true,
   projects: [],
+  workspaces: [],
   models: [],
   snapshot: {
     model: '加载中…',
     thinkingLevel: '高',
     cwd: '—',
+    workspace: '',
     branch: '—',
     access: '变更前确认',
     accessFull: false
@@ -103,6 +104,7 @@ export function useAgent(): AgentState & {
   prompt: (text: string, images?: PromptImage[]) => void
   abort: () => void
   newSession: () => void
+  switchWorkspace: (path: string) => void
   openSession: (path: string) => void
   renameSession: (path: string, title: string) => void
   deleteSession: (path: string) => void
@@ -199,9 +201,9 @@ export function useAgent(): AgentState & {
               ...s,
               sessions: ev.sessions,
               projects: ev.projects,
+              workspaces: ev.workspaces,
               models: ev.models,
-              commands: ev.commands,
-              sessionsLoading: ev.loading === true
+              commands: ev.commands
             }
           case 'files':
             return { ...s, files: ev.items }
@@ -258,6 +260,10 @@ export function useAgent(): AgentState & {
     newSession: () => {
       setState((s) => enter(s, null))
       sendCmd({ type: 'newSession' })
+    },
+    switchWorkspace: (path) => {
+      setState((s) => enter(s, null))
+      sendCmd({ type: 'workspace', path })
     },
     openSession: (path) => {
       setState((s) => enter(s, path))
