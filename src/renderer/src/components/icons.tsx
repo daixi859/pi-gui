@@ -346,3 +346,37 @@ export const IconHand = (p: P) => (
     <path d="M5.6 8.2V4.4a1 1 0 0 1 2 0v3.2M7.6 7.4V3.6a1 1 0 0 1 2 0v3.8M9.6 7.6V4.6a1 1 0 0 1 2 0v4.6c0 2.4-1.5 4-3.8 4-1.6 0-2.4-.7-3.2-1.8L2.8 9.2a1 1 0 0 1 1.6-1.2l1.2 1.3" />
   </svg>
 )
+
+/** 思考：圆圈里三个点 */
+export const IconThinking = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="8" cy="8" r="5.6" />
+    <circle cx="5.6" cy="8" r="0.75" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="0.75" fill="currentColor" stroke="none" />
+    <circle cx="10.4" cy="8" r="0.75" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+/** 终端：窗口 + 提示符 */
+export const IconTerminal = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="2.2" y="3.2" width="11.6" height="9.6" rx="1.6" />
+    <path d="M4.9 6.4 6.7 8l-1.8 1.6" />
+    <path d="M8.4 9.9h2.7" />
+  </svg>
+)
+
+/** 阅读：眼睛 */
+export const IconEye = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M1.9 8S4.2 4.2 8 4.2 14.1 8 14.1 8 11.8 11.8 8 11.8 1.9 8 1.9 8Z" />
+    <circle cx="8" cy="8" r="1.7" />
+  </svg>
+)
+
+/** 暂停：两根竖条 */
+export const IconPause = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M6.2 4.2v7.6M9.8 4.2v7.6" strokeWidth="1.8" />
+  </svg>
+)

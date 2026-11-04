@@ -1,24 +1,30 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Sidebar, CollapsedHeaderBar } from './components/Sidebar'
+import { Projects } from './components/Projects'
 import { TitleBar } from './components/TitleBar'
 import { StartPage } from './components/StartPage'
 import { ChatComposer } from './components/Composer'
-import { MessageActions, TranscriptStack, lastText } from './components/blocks'
+import { MessageActions, lastText } from './components/blocks'
+import { Transcript, WorkingDots } from './components/transcript/Transcript'
 import { Preview } from './components/Preview'
 import { AskCard } from './components/AskCard'
 import { UiPrompt } from './components/UiPrompt'
 import { Toasts } from './components/Toasts'
-import { IconSpinner } from './components/icons'
+import { IconArrowDown, IconSpinner } from './components/icons'
 import { toMarkdown } from './exportMarkdown'
 import { useAgent } from './useAgent'
+import { useScrollRail } from './useScrollRail'
 
-type Route = 'start' | 'chat' | 'gallery'
+type Route = 'start' | 'chat' | 'gallery' | 'projects'
 
 /** 导航历史：后退/前进按栈走，切会话不重复压栈 */
-interface Place {
+type Place = {
   route: Route
   id: string | null
 }
+
+/** 离底余量：只有它一处判断，滚动与跟随共用 */
+const bottomGap = (el: HTMLElement): number => el.scrollHeight - el.scrollTop - el.clientHeight
 
 export default function App(): ReactNode {
   const agent = useAgent()
@@ -107,6 +113,11 @@ export default function App(): ReactNode {
             agent.newSession()
             go({ route: 'start', id: null })
           }}
+          onNewSessionIn={(path) => {
+            agent.switchWorkspace(path)
+            go({ route: 'start', id: null })
+          }}
+          onRemoveProject={agent.removeProject}
           onRename={agent.renameSession}
           onDelete={(path) => {
             agent.deleteSession(path)
@@ -146,6 +157,14 @@ export default function App(): ReactNode {
           <main className="min-h-0 flex-1 overflow-hidden">
             {route === 'start' && <StartPage agent={agent} onSubmit={send} />}
             {route === 'gallery' && <Preview />}
+            {route === 'projects' && (
+              <Projects
+                rows={agent.projectRows}
+                onRemove={agent.removeProject}
+                onRestore={agent.restoreProject}
+                onDelete={agent.deleteProject}
+              />
+            )}
             {route === 'chat' && <ChatView agent={agent} answerText={answerText} scope={activeId ?? 'new'} />}
           </main>
         </div>
@@ -166,17 +185,33 @@ function ChatView({
   scope: string
 }): ReactNode {
   const scroller = useRef<HTMLDivElement>(null)
-  // 流式时跟到底部，用户往上翻就松手
+  const rail = useScrollRail()
+  // 离底部超过这个余量才给回到最新，避免小波动一直闪
+  const AWAY = 120
+  const [away, setAway] = useState(false)
+  // 流式时跟到底部，用户往上翻就松手。合到一帧里，增量再多也只碰一次布局
   useEffect(() => {
     const el = scroller.current
     if (!el) return
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160
-    if (nearBottom) el.scrollTop = el.scrollHeight
+    const frame = requestAnimationFrame(() => {
+      if (bottomGap(el) >= AWAY) return
+      el.scrollTop = el.scrollHeight
+      setAway(false)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [agent.blocks])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scroller}
+          className="rail-scroll h-full overflow-y-auto"
+          onScroll={(e) => {
+            setAway(bottomGap(e.currentTarget) > AWAY)
+          }}
+          {...rail}
+        >
         <div className="pi-page">
           {agent.blocks.length === 0 ? (
             <p className="pt-10 text-center text-xs text-faint">
@@ -184,7 +219,8 @@ function ChatView({
             </p>
           ) : (
             <>
-              <TranscriptStack blocks={agent.blocks} />
+              <Transcript blocks={agent.blocks} streaming={agent.streaming} />
+              {(agent.streaming || agent.busy) && <WorkingDots />}
               {!agent.streaming && (
                 <div className="mt-2 pl-1">
                   <MessageActions
@@ -196,6 +232,18 @@ function ChatView({
             </>
           )}
         </div>
+      </div>
+        {away && (
+          <button
+            type="button"
+            onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
+            aria-label="回到最新"
+            title="回到最新"
+            className="absolute bottom-4 left-1/2 grid size-7 -translate-x-1/2 place-items-center rounded-pill border border-edge bg-panel text-muted shadow-pop hover:text-fg"
+          >
+            <IconArrowDown className="size-4" />
+          </button>
+        )}
       </div>
       <div className="mx-auto w-full max-w-[820px] px-8 pb-4">
         {agent.busy && (

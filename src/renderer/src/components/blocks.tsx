@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Block, ToolState } from '@shared/blocks'
-import { formatDuration } from '../util'
+import { workTime } from '../util'
 import { MarkdownView } from './MarkdownView'
 import { DiffBlock } from './DiffBlock'
 import {
@@ -162,7 +162,7 @@ function TurnBlock({
       >
         {open ? <IconChevronDown /> : <IconChevronRight />}
         <span>{aborted ? '已中断' : '已完成'}</span>
-        <span className="text-faint">· {formatDuration(durationMs)}</span>
+        <span className="text-faint">· {workTime(durationMs)}</span>
       </button>
       {open && (
         <div className="space-y-3 border-t border-edge/70 px-2 py-2">

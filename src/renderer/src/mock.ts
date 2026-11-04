@@ -13,18 +13,20 @@ export const snapshot: Snapshot = {
 export const projects: ProjectMeta[] = [
   {
     name: 'plmv21',
+    path: 'D:\\workspace\\plmv21',
     sessions: []
   },
   {
     name: 'github-trending',
+    path: 'D:\\workspace\\github-trending',
     sessions: []
   },
-  { name: 'pi', sessions: [] },
-  { name: 'ai-berkshire', sessions: [] },
-  { name: 'inteplm-formdesign…', sessions: [] },
-  { name: 'daixi-cli', sessions: [] },
-  { name: 'IntePLM-Vue', sessions: [] },
-  { name: 'financialreport', sessions: [] }
+  { name: 'pi', path: 'D:\\workspace\\pi', sessions: [] },
+  { name: 'ai-berkshire', path: 'D:\\workspace\\ai-berkshire', sessions: [] },
+  { name: 'inteplm-formdesign…', path: 'D:\\workspace\\inteplm-formdesign', sessions: [] },
+  { name: 'daixi-cli', path: 'D:\\workspace\\daixi-cli', sessions: [] },
+  { name: 'IntePLM-Vue', path: 'D:\\workspace\\IntePLM-Vue', sessions: [] },
+  { name: 'financialreport', path: 'D:\\workspace\\financialreport', sessions: [] }
 ]
 
 export const recentSessions = [

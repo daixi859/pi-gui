@@ -98,6 +98,15 @@
 - 「插件市场」与「设置」打开 `~/.pi/agent/settings.json`（pi 的插件/模型/扩展都配在这）。「帮助」打开 pi 仓库。
 - 菜单项支持 `danger` 红色样式。
 
+## 13. 2026-11-04 渲染重写（ADR-0011 P0）与项目页
+
+- 正文改由 `components/transcript/` 渲染：每个块 `memo`，流式只重渲染受影响的块。
+- 流式代码块先渲染纯文本，收尾后一次性着色（ADR-0011 P0-2）。
+- 滚动跟随合到 rAF 一帧内；`TurnBlock` 折叠态仍按块 id 存 localStorage。
+- **P2** 旧 `DiffBlock` 的「打开 diff」「撤销」在新正文里没有入口（`DiffBlock.tsx` 已无运行时引用），需要时在 `transcript/Step.tsx` 的 diff 行补。
+- **P3** `transcript/MockStage.tsx` + `mockTimeline.ts`（假流 + perf HUD）只挂在预览页，不参与运行时；ADR-0011 §五要求的一次性体检脚本未进仓库。
+- **P3** 后台会话切换：`useAgent` 用 `ev.path === viewPath` 过滤增量，`enter()` 期间 `viewPath` 为 null，靠宿主首个 `full` 事件补种；新建会话路径未定前到达的增量会被丢弃（未实测）。
+
 ## 建议的下一刀
 
 1. `docs/screenshots/` 里的 03-model-menu / 05-gallery-diff 还是旧版，其余已按真实引擎重截。

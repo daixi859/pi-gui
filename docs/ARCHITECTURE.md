@@ -132,25 +132,29 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ main.tsx            createRoot
         ├─ App.tsx            路由（start / chat / gallery）+ 布局 + ChatView 自动贴底
         ├─ useAgent.ts        引擎状态唯一入口：发命令、收事件、ui 槽位与回填
+        ├─ useScrollRail.ts   滚动条贴到右边缘才露出滑块（WebKit 没有轨道 hover）
         ├─ drafts.ts          输入框草稿 store（按会话键，仅内存）
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
         ├─ mock.ts            画廊样本数据（仅 Gallery 使用，不参与运行时）
-        ├─ util.ts            formatDuration
+        ├─ mockTimeline.ts    假流时间线数据（仅 transcript/MockStage 使用）
+        ├─ util.ts            workTime 时长文案
         ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角 + .md 排版 + 流式光标
         └─ components/
             ├─ TitleBar.tsx        无框拖拽条 + 窗口按钮 + 收起态布局
             ├─ Sidebar.tsx         268px 侧栏：导航、任务列表(搜索/排序)、项目分组
+            ├─ Projects.tsx        项目页：从会话扫描派生的项目表 + 软移除/恢复/真删
             ├─ StartPage.tsx       起始页：水印 + 问候 + 大输入卡 + 建议胶囊
             ├─ Composer.tsx        WorkspaceBar / InputCard / ChatComposer / 模型弹窗
-            ├─ blocks.tsx          Block 分派：User/Assistant/Thinking/Tool/File/Turn/System
+            ├─ transcript/         会话正文（运行时）：Transcript / TurnView / Step / tool 展开体
+            ├─ blocks.tsx          旧 Block 分派：仅供组件预览对照
             ├─ MarkdownView.tsx    react-markdown + gfm，围栏代码转 CodeBlock
-            ├─ CodeBlock.tsx       shiki 懒加载高亮（15 种语言，双主题 CSS 变量）
+            ├─ CodeBlock.tsx       shiki 懒加载高亮（流式中先渲染纯文本）
             ├─ DiffBlock.tsx       文件变更折叠行 + 行号着色
             ├─ AskCard.tsx         问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
             ├─ UiPrompt.tsx        裸 UI 请求的原生弹窗（confirm/select/input/editor）
             ├─ Toasts.tsx          扩展 notify 的右下角提示
             ├─ Menu.tsx            公共下拉：遮罩 + 面板 + 条目 + 分组标题
-            ├─ Gallery.tsx         组件画廊（#gallery）
+            ├─ Preview.tsx         组件预览（#gallery）+ 令牌面板
             ├─ PiLogo.tsx          三色 logo + 描边水印
             └─ icons.tsx           自绘 SVG 图标集
 ```

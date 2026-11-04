@@ -12,7 +12,7 @@ export function MarkdownView({ text, streaming }: { text: string; streaming?: bo
           code: ({ className, children }) => {
             const lang = /language-(\w+)/.exec(className ?? '')?.[1]
             if (!lang) return <code>{children}</code>
-            return <CodeBlock code={String(children).replace(/\n$/, '')} lang={lang} />
+            return <CodeBlock code={String(children).replace(/\n$/, '')} lang={lang} streaming={streaming} />
           },
           pre: ({ children }) => <>{children}</>
         }}

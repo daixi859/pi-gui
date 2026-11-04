@@ -10,11 +10,11 @@ import { readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { readdir } from 'node:fs/promises'
-import { basename, join, relative } from 'node:path'
+import { basename, join, relative, resolve } from 'node:path'
 import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from '@earendil-works/pi-coding-agent'
 import type { ExtensionAPI, SessionInfo } from '@earendil-works/pi-coding-agent'
 import type { AccessMode, AgentCommand, AgentEvent, CommandInfo, ModelOption, UiReply, UiRequest } from '@shared/ipc'
-import type { Block, DiffLine, ProjectMeta, SessionMeta, Snapshot } from '@shared/blocks'
+import type { Block, DiffLine, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
 type Turn = Extract<Block, { kind: 'turn' }>
@@ -135,11 +135,46 @@ function flushBlocks(rec: Mounted): void {
     for (const id of rec.sent.keys()) if (!live.has(id)) rec.sent.delete(id)
   }
   rec.sentOrder = order
-  send({ type: 'blocks', delta: { full: rec.forceFull, order, items } })
+  send({ type: 'blocks', delta: { full: rec.forceFull, order, items }, path: rec.manager.getSessionFile() ?? null })
   rec.forceFull = false
 }
 function all(rec: Mounted): Block[] {
-  return rec.turn ? [...rec.history, ...rec.round, rec.turn] : [...rec.history, ...rec.round]
+  return [...rec.history, ...liveBlocks(rec)]
+}
+
+/** 一组块拆成 [用户气泡, 过程块, 最后的回答]。回答只在回合确实以它收尾时才提到外面；
+ * 回答后面还跟着工具时，它只是过程里的一句说明 */
+function splitAnswer(items: Block[]): { users: Block[]; inner: Block[]; answer: Block[] } {
+  const users = items.filter((b) => b.kind === 'user')
+  const rest = items.filter((b) => b.kind !== 'user')
+  let last = -1
+  rest.forEach((b, i) => {
+    if (b.kind === 'assistant') last = i
+  })
+  const tail = last >= 0 && last === rest.length - 1
+  return { users, inner: tail ? rest.slice(0, -1) : rest, answer: tail ? [rest[last]] : [] }
+}
+
+/**
+ * 流式中的回合：过程块收进 turn，最后一条回答提到外面——和结束态同一个形状。
+ * 不这么做的话渲染层看到的是一排散块，既没有「进行中 · N 秒」，行距也会被撑开。
+ */
+function liveBlocks(rec: Mounted): Block[] {
+  const { users, inner, answer } = splitAnswer(rec.round)
+  if (!inner.length) {
+    rec.turn = null
+    return [...users, ...answer]
+  }
+  // 时长按秒取整：流式期间每秒才换一次引用，turn 不必逐帧重推
+  const durationMs = Math.round((Date.now() - rec.turnStart) / 1000) * 1000
+  const prev = rec.turn
+  const same =
+    prev !== null &&
+    prev.durationMs === durationMs &&
+    prev.children.length === inner.length &&
+    prev.children.every((c, i) => c === inner[i])
+  if (!same) rec.turn = { kind: 'turn', id: 't-live', durationMs, children: inner }
+  return [...users, rec.turn as Turn, ...answer]
 }
 
 function textOf(content: unknown): string {
@@ -317,11 +352,91 @@ let scanAgain = false
 /** 最近一次扫描结果，用于重发（模型列表变了但不必重扫盘） */
 let lastList: readonly SessionInfo[] = []
 
+/* ---------------- 项目覆盖层 ----------------
+ * 项目本身不落盘：全部从会话扫描派生。PiGui 只记自己的一层状态（软移除的项目 → 时间）。
+ * 不存项目名 / 会话数 / 最近活动，那些每次都重算，免得和 pi 的会话文件脱节。
+ */
+
+/** 路径规范化只用于做 key：Windows 下盘符与分隔符写法不一，不统一会出现重复项目 */
+const projectKey = (p: string): string => resolve(p).replace(/\\/g, '/').toLowerCase()
+
+/** 会话目录名：照搬 pi 的编码（去掉开头分隔符，把 / \ : 换成 -），只用来跳过已移除的项目 */
+const sessionDirName = (cwd: string): string =>
+  ('--' + resolve(cwd).replace(/^[/\\]/, '').replace(/[/\\:]/g, '-') + '--').toLowerCase()
+
+const projectsFile = (): string => join(process.env.PI_USER_DATA ?? tmpdir(), 'projects.json')
+
+/** 已移除的项目：规范化路径 → 移除时的快照（路径 / 名 / 会话数 / 时间）。
+ * 会话不再扫，所以行数据只能靠这份快照；恢复时再重扫拿真值。 */
+interface RemovedProject {
+  path: string
+  name: string
+  sessions: number
+  at: number
+}
+let removed = new Map<string, RemovedProject>()
+
+function loadProjects(): void {
+  try {
+    const raw = JSON.parse(readFileSync(projectsFile(), 'utf8')) as {
+      // 旧版存的是时间戳，兼容一下
+      removed?: Record<string, number | RemovedProject>
+    }
+    removed = new Map(
+      Object.entries(raw.removed ?? {}).map(([key, v]) =>
+        typeof v === 'number'
+          ? [key, { path: key, name: basename(key), sessions: 0, at: v }]
+          : [key, v]
+      )
+    )
+  } catch {
+    removed = new Map()
+  }
+}
+
+function saveProjects(): void {
+  try {
+    writeFileSync(
+      projectsFile(),
+      JSON.stringify({ version: 2, removed: Object.fromEntries(removed) }, null, 2)
+    )
+  } catch (err) {
+    console.error('[agent-host] 写 projects.json 失败', err)
+  }
+}
+
+/** 扫描结果 + 覆盖层 → 项目行；已移除的用快照补上（它们已经不在扫描结果里了） */
+function projectRows(list: readonly SessionInfo[]): ProjectRow[] {
+  const rows = new Map<string, ProjectRow>()
+  for (const info of list) {
+    if (!info.cwd) continue
+    const key = projectKey(info.cwd)
+    const row = rows.get(key) ?? {
+      path: info.cwd,
+      // 盘符根目录的 basename 是空串（D:\），退回用原路径
+      name: basename(info.cwd) || info.cwd,
+      sessionCount: 0,
+      lastActiveAt: 0
+    }
+    row.sessionCount++
+    row.lastActiveAt = Math.max(row.lastActiveAt, info.modified.getTime())
+    rows.set(key, row)
+  }
+  for (const [key, r] of removed) {
+    if (rows.has(key)) continue
+    rows.set(key, { path: r.path, name: r.name, sessionCount: r.sessions, lastActiveAt: r.at, removedAt: r.at })
+  }
+  return [...rows.values()].sort((a, b) => b.lastActiveAt - a.lastActiveAt)
+}
+
 /** 把一次扫描结果发给渲染层；partial 时列表还在增长，先发已扫到的 */
 function publishSessions(list: readonly SessionInfo[], loading = false): void {
-  const byProject = new Map<string, SessionMeta[]>()
+  const byProject = new Map<string, ProjectMeta>()
   const sessions: SessionMeta[] = []
+  const hide = (p: string | undefined): boolean => !!p && removed.has(projectKey(p))
   for (const info of list) {
+    // 已移除项目的会话整组不发给侧栏；文件一个都没动，恢复就回来
+    if (hide(info.cwd)) continue
     const project = info.cwd ? basename(info.cwd) : '未分组'
     const meta: SessionMeta = {
       id: info.id,
@@ -334,14 +449,69 @@ function publishSessions(list: readonly SessionInfo[], loading = false): void {
       running: mounted.get(info.path)?.session.isStreaming === true
     }
     sessions.push(meta)
-    const bucket = byProject.get(project) ?? []
-    bucket.push(meta)
-    byProject.set(project, bucket)
+    // 按路径分组：不同目录可能同名（tmp / tmp），侧栏仍然只按名字展示
+    const key = info.cwd ? projectKey(info.cwd) : ''
+    const bucket = byProject.get(key) ?? { name: project, path: info.cwd ?? '', sessions: [] }
+    bucket.sessions.push(meta)
+    byProject.set(key, bucket)
   }
-  const projects: ProjectMeta[] = [...byProject].map(([name, s]) => ({ name, sessions: s }))
-  // 工作区菜单 = 会话出现过的目录，当前目录排最前（刚加的空目录也要能选）
-  const workspaces = [...new Set([cwd, ...list.map((i) => i.cwd).filter(Boolean)])]
-  send({ type: 'sessions', sessions, projects, workspaces, models, loading, commands: commands() })
+  const projects: ProjectMeta[] = [...byProject.values()]
+  const rows = projectRows(list)
+  // 工作区菜单 = 未移除的目录，当前目录排最前
+  const workspaces = [
+    ...new Set([cwd, ...rows.filter((r) => !r.removedAt).map((r) => r.path)])
+  ].filter((p) => !hide(p))
+  send({ type: 'sessions', sessions, projects, projectRows: rows, workspaces, models, loading, commands: commands() })
+}
+
+function removeProject(path: string): void {
+  const key = projectKey(path)
+  // 存移除时的快照：之后该项目不再扫描，行数据全靠它
+  const mine = lastList.filter((i) => !!i.cwd && projectKey(i.cwd) === key)
+  removed.set(key, {
+    path,
+    name: basename(path) || path,
+    sessions: mine.length,
+    at: Date.now()
+  })
+  saveProjects()
+  lastList = lastList.filter((i) => !i.cwd || projectKey(i.cwd) !== key)
+  publishSessions(lastList, scanning)
+}
+
+function restoreProject(path: string): void {
+  if (!removed.delete(projectKey(path))) return
+  saveProjects()
+  // 恢复要把这个项目的会话扫回来，所以走一次重扫（其余项目已被 lastList 缓存）
+  publishSessions(lastList, scanning)
+  void emitSessions()
+}
+
+/** 真删：连同目录下所有会话文件。不可恢复，调用方必须先确认 */
+async function deleteProject(path: string): Promise<void> {
+  const key = projectKey(path)
+  // 已移除的项目不在 lastList 里，所以直接按会话目录取文件；两边都取一遍防漏
+  const dir = join(getAgentDir(), 'sessions', sessionDirName(path))
+  const files = (await readdir(dir).catch(() => [] as string[]))
+    .filter((f) => f.endsWith('.jsonl'))
+    .map((f) => join(dir, f))
+  const fromList = lastList.filter((i) => i.cwd && projectKey(i.cwd) === key).map((i) => i.path)
+  for (const file of new Set([...files, ...fromList])) {
+    const rec = mounted.get(file)
+    if (rec) {
+      mounted.delete(file)
+      if (rec === current) current = null
+      rec.detach()
+      rec.session.dispose()
+    }
+    rmSync(file, { force: true })
+  }
+  lastList = lastList.filter((i) => !i.cwd || projectKey(i.cwd) !== key)
+  removed.delete(key)
+  saveProjects()
+  // 删的可能是当前挂载的会话，没东西可看了就切个新的
+  if (!current) await start()
+  publishSessions(lastList, scanning)
 }
 
 /** 斜杠命令列表：只取扩展注册的命令，每次读最新的 runner */
@@ -386,12 +556,31 @@ async function emitSessions(): Promise<void> {
   // 上一批结果先顶上，免得重扫时侧栏一闪变空
   publishSessions(lastList, true)
   try {
-    // pi 要逐个头读 JSONL 才能拿到首条消息，633 个会话要 ~850ms；分批先发已扫到的
-    const list = await SessionManager.listAll((_loaded, _total, partial) => {
-      if (partial?.length) publishSessions(partial, true)
-    })
-    lastList = list
-    publishSessions(list)
+    // 已移除的项目整个跳过：它们的会话不必再读 JSONL（每个会话要逐个头扫）
+    const root = join(getAgentDir(), 'sessions')
+    const skip = new Set([...removed.values()].map((r) => sessionDirName(r.path)))
+    const dirs = (await readdir(root, { withFileTypes: true }).catch(() => []))
+      .filter((d) => d.isDirectory() && !skip.has(d.name.toLowerCase()))
+      .map((d) => join(root, d.name))
+    // 当前目录排最前：进来先看到自己的会话，其余项目随后陆续填
+    const mine = sessionDirName(cwd)
+    dirs.sort((a, b) => Number(b.toLowerCase().endsWith(mine)) - Number(a.toLowerCase().endsWith(mine)))
+    const all: SessionInfo[] = []
+    for (const dir of dirs) {
+      // pi 要逐个头读 JSONL 才能拿到首条消息，一个项目几十个会话就要上百 ms
+      all.push(
+        ...(await SessionManager.listAll(dir, (_loaded, _total, partial) => {
+          if (partial?.length && !scanAgain) publishSessions([...all, ...partial], true)
+        }))
+      )
+      if (scanAgain) break
+      publishSessions(all, true)
+    }
+    // 扫描中途又被叫了一次（新会话刚落盘）：保留旧的全量，等下面重扫
+    if (!scanAgain) {
+      lastList = all
+      publishSessions(all)
+    }
   } finally {
     scanning = false
     if (scanAgain) {
@@ -604,14 +793,7 @@ function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; me
 
 /** 一组块折成 [用户气泡, 折叠行, 最后一条回答]，不碰全局状态 */
 function settleInto(items: Block[], durationMs = 0): Block[] {
-  const users = items.filter((b) => b.kind === 'user')
-  const rest = items.filter((b) => b.kind !== 'user')
-  let last = -1
-  rest.forEach((b, i) => {
-    if (b.kind === 'assistant') last = i
-  })
-  const answer = last >= 0 ? rest.slice(last) : []
-  const inner = last >= 0 ? rest.slice(0, last) : rest
+  const { users, inner, answer } = splitAnswer(items)
   const wrapped: Block[] =
     inner.length > 0 ? [{ kind: 'turn', id: `t-${++seq}`, durationMs, children: inner }] : []
   return [...users, ...wrapped, ...answer]
@@ -633,9 +815,21 @@ function syncMessage(rec: Mounted, partial: { content?: unknown[]; thinkingLevel
 
 /** 一轮结束：用户气泡与最后一条回答留在正文，其余过程收进折叠行（保持时间顺序） */
 function settleRound(rec: Mounted, aborted: boolean): void {
-  const items = settleInto(rec.round).map((b) =>
-    b.kind === 'turn' ? { ...b, durationMs: Date.now() - rec.turnStart, aborted } : b
-  )
+  const liveTurn = rec.turn
+  const items = settleInto(rec.round).map((b) => {
+    if (b.kind !== 'turn') return b
+    // 内容和流式时的 live turn 一模一样就沿用它的 id，渲染层不用重挂（保住展开状态）
+    const same =
+      liveTurn !== null &&
+      liveTurn.children.length === b.children.length &&
+      liveTurn.children.every((c, i) => c === b.children[i])
+    return {
+      ...b,
+      id: same && liveTurn ? liveTurn.id : b.id,
+      durationMs: Date.now() - rec.turnStart,
+      aborted
+    }
+  })
   rec.history = [...rec.history, ...items]
   rec.round = []
   rec.turn = null
@@ -842,6 +1036,7 @@ async function handle(cmd: AgentCommand): Promise<void> {
   try {
     switch (cmd.type) {
       case 'init':
+        loadProjects()
         // 扫会话列表要 ~850ms，和建会话并行，先用分批结果把侧栏填上
         void emitSessions()
         await start()
@@ -858,6 +1053,15 @@ async function handle(cmd: AgentCommand): Promise<void> {
       // 换工作区就是在新目录下开一个会话；旧会话留在后台继续跑
       case 'workspace':
         await switchTo(() => start(cmd.path))
+        break
+      case 'projectRemove':
+        removeProject(cmd.path)
+        break
+      case 'projectRestore':
+        restoreProject(cmd.path)
+        break
+      case 'projectDelete':
+        await deleteProject(cmd.path)
         break
       case 'openSession':
         await switchTo(() => open(cmd.path))

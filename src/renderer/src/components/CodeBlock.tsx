@@ -32,13 +32,22 @@ function highlighter(): Promise<HighlighterCore> {
 
 const cache = new Map<string, string>()
 
-/** shiki 双主题：输出 --shiki-light / --shiki-dark 变量，配色由 .shiki 的 CSS 决定 */
-export function CodeBlock({ code, lang }: { code: string; lang: string }): ReactNode {
+/** shiki 双主题：输出 --shiki-light / --shiki-dark 变量，配色由 .shiki 的 CSS 决定。
+ * 流式中先渲染纯文本：半截代码每帧都要重新着色，是单条消息里最贵的一步 */
+export function CodeBlock({
+  code,
+  lang,
+  streaming
+}: {
+  code: string
+  lang: string
+  streaming?: boolean
+}): ReactNode {
   const key = `${lang}\u0000${code}`
   const [html, setHtml] = useState<string | null>(cache.get(key) ?? null)
 
   useEffect(() => {
-    if (html !== null) return
+    if (streaming || html !== null) return
     let alive = true
     void highlighter()
       .then((h) => {
@@ -55,17 +64,17 @@ export function CodeBlock({ code, lang }: { code: string; lang: string }): React
     return () => {
       alive = false
     }
-  }, [html, key, lang, code])
+  }, [html, key, lang, code, streaming])
 
   return (
     <figure className="my-4 overflow-hidden rounded-md border border-edge">
       <figcaption className="flex items-center justify-between border-b border-edge bg-sunken px-2 py-1 text-xs text-muted">
         <span className="font-mono">{lang}</span>
       </figcaption>
-      {html ? (
-        <div className="overflow-x-auto px-4 py-2 text-xs leading-[1.7]" dangerouslySetInnerHTML={{ __html: html }} />
+      {html && !streaming ? (
+        <div className="overflow-x-auto px-4 py-2 text-xs leading-code" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <pre className="overflow-x-auto px-4 py-2 font-mono text-xs leading-[1.7]">{code}</pre>
+        <pre className="overflow-x-auto px-4 py-2 font-mono text-xs leading-code">{code}</pre>
       )}
     </figure>
   )

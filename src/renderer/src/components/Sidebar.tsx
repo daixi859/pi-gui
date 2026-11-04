@@ -9,6 +9,7 @@ import {
   IconClock,
   IconChevronDown,
   IconClose,
+  IconDots,
   IconFilter,
   IconFolder,
   IconFolderOpen,
@@ -27,10 +28,13 @@ import {
   IconSpinner,
 } from './icons'
 
-type Nav = (route: 'start' | 'chat' | 'gallery') => void
+type Nav = (route: 'start' | 'chat' | 'gallery' | 'projects') => void
 
 const navRow =
   'flex h-9 w-full items-center gap-2 rounded-sm px-2 text-sm text-fg transition-colors hover:bg-select/60'
+
+/** 项目行三点菜单的宽度：定位与面板共用，改一处就够 */
+const MENU_W = 120
 
 const iconBtn = 'pi-icon-btn'
 
@@ -186,6 +190,9 @@ export interface SidebarProps {
   unread: string[]
   onOpenSession: (id: string, path: string) => void
   onNewSession: () => void
+  /** 在指定项目目录下开新会话 */
+  onNewSessionIn: (path: string) => void
+  onRemoveProject: (path: string) => void
   onRename: (path: string, title: string) => void
   onDelete: (path: string) => void
   canBack: boolean
@@ -203,6 +210,8 @@ export function Sidebar({
   unread,
   onOpenSession,
   onNewSession,
+  onNewSessionIn,
+  onRemoveProject,
   onRename,
   onDelete,
   canBack,
@@ -212,6 +221,8 @@ export function Sidebar({
 }: SidebarProps): ReactNode {
   const [sorting, setSorting] = useState(false)
   const [sort, setSort] = useState('project')
+  /** 项目行三点菜单：项目路径 + 屏幕坐标 */
+  const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null)
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   /** 每个项目展开后显示多少条，默认 5，点「显示更多」每次 +10 */
@@ -223,8 +234,14 @@ export function Sidebar({
   const visible = sessions
     .filter((s) => !q || s.title.toLowerCase().includes(q))
     .sort((a, b) => b.modifiedAt - a.modifiedAt)
+  // 按宿主给的 p.sessions 分组（按目录路径聚的），不能按项目名过滤：不同目录可能同名
   const grouped = projects
-    .map((p) => ({ ...p, sessions: visible.filter((s) => s.project === p.name) }))
+    .map((p) => ({
+      ...p,
+      sessions: p.sessions
+        .filter((s) => !q || s.title.toLowerCase().includes(q))
+        .sort((a, b) => b.modifiedAt - a.modifiedAt)
+    }))
     .filter((p) => p.sessions.length > 0)
   const rowProps = (s: SessionMeta) => ({
     session: s,
@@ -262,6 +279,7 @@ export function Sidebar({
 
       <nav className="px-2 pt-2">
         {navButton('新建任务', IconPlusCircle, 'Ctrl+N', onNewSession)}
+        {navButton('项目', IconFolder, undefined, () => onNavigate('projects'))}
         {navButton('组件预览', IconSliders, undefined, () => onNavigate('gallery'))}
         {navButton('插件市场', IconBlocks, undefined, () => window.pi?.host.openAgentConfig())}
       </nav>
@@ -338,31 +356,63 @@ export function Sidebar({
       <div className="min-h-0 flex-1 overflow-y-auto pl-2 pb-2">
         {sort === 'project' &&
           grouped.map((p) => {
-            const shown = p.sessions.slice(0, limit[p.name] ?? 5)
+            const key = p.path || p.name
+            const shown = p.sessions.slice(0, limit[key] ?? 5)
             const rest = p.sessions.length - shown.length
-            const isFolded = folded[p.name]
+            const isFolded = folded[key]
             return (
-              <div key={p.name}>
-                <button
-                  type="button"
-                  aria-expanded={!isFolded}
-                  onClick={() => setFolded((m) => ({ ...m, [p.name]: !m[p.name] }))}
-                  className="mb-0.5 flex h-7 w-full items-center gap-1 rounded-sm px-2 text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
-                >
-                  {/* 收起/展开用文件夹开合表示：闭合 = 折叠，翻开 = 展开 */}
-                  {isFolded ? (
-                    <IconFolder className="size-4 shrink-0" />
-                  ) : (
-                    <IconFolderOpen className="size-4 shrink-0" />
+              <div key={key}>
+                <div className="group mb-0.5 flex h-7 items-center rounded-sm pr-1 hover:bg-select/60">
+                  <button
+                    type="button"
+                    aria-expanded={!isFolded}
+                    onClick={() => setFolded((m) => ({ ...m, [key]: !m[key] }))}
+                    className="flex h-7 min-w-0 flex-1 items-center gap-1 rounded-sm px-2 text-left text-sm text-muted transition-colors hover:text-fg"
+                  >
+                    {/* 收起/展开用文件夹开合表示：闭合 = 折叠，翻开 = 展开 */}
+                    {isFolded ? (
+                      <IconFolder className="size-4 shrink-0" />
+                    ) : (
+                      <IconFolderOpen className="size-4 shrink-0" />
+                    )}
+                    <span className="truncate">{p.name || '未分组'}</span>
+                  </button>
+                  {/* 悬停才露出的两个动作：更多菜单 / 新建任务（后者最右） */}
+                  {p.path && (
+                    <div className="flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        aria-label="更多"
+                        aria-expanded={menu?.path === p.path}
+                        onClick={(e) => {
+                          // 坐标要在事件里取：setState 的 updater 渲染时才跑，那时 currentTarget 已经是 null
+                          const r = e.currentTarget.getBoundingClientRect()
+                          setMenu((v) =>
+                            v?.path === p.path ? null : { path: p.path, x: r.right - MENU_W, y: r.bottom + 4 }
+                          )
+                        }}
+                        className="pi-icon-btn opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
+                      >
+                        <IconDots className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`在 ${p.name} 新建任务`}
+                        title="新建任务"
+                        onClick={() => onNewSessionIn(p.path)}
+                        className="pi-icon-btn opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      >
+                        <IconPlusCircle className="size-3.5" />
+                      </button>
+                    </div>
                   )}
-                  <span className="truncate">{p.name || '未分组'}</span>
-                </button>
+                </div>
                 {!isFolded && shown.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
                 {!isFolded && rest > 0 && (
                   <button
                     type="button"
-                    onClick={() => setLimit((m) => ({ ...m, [p.name]: (m[p.name] ?? 5) + 10 }))}
-                    className="mb-0.5 h-7 w-full rounded-sm pl-[30px] text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
+                    onClick={() => setLimit((m) => ({ ...m, [key]: (m[key] ?? 5) + 10 }))}
+                    className="mb-0.5 h-7 w-full rounded-sm pl-8 text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
                   >
                     显示更多{rest > 10 ? `（还有 ${rest} 条）` : ''}
                   </button>
@@ -389,6 +439,23 @@ export function Sidebar({
             .sort((a, b) => Number(unread.includes(b.path)) - Number(unread.includes(a.path)))
             .map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
       </div>
+
+      {menu && (
+        <>
+          <MenuScrim onClose={() => setMenu(null)} />
+          <div className="fixed z-50" style={{ left: menu.x, top: menu.y }}>
+            <MenuPanel className="top-0 left-0">
+              <MenuItem
+                label="移除"
+                onClick={() => {
+                  onRemoveProject(menu.path)
+                  setMenu(null)
+                }}
+              />
+            </MenuPanel>
+          </div>
+        </>
+      )}
 
       <div className="border-t border-edge" />
       <div className="flex items-center gap-2 px-4 py-2">

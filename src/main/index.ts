@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, utilityProcess } from 'electron'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import type { AgentCommand, AgentEvent } from '@shared/ipc'
@@ -28,7 +28,7 @@ function spawnHost(): void {
     serviceName: 'pi-agent-host',
     stdio: 'pipe',
     // 会话按这个目录归档，和 CLI 的 ~/.pi/agent/sessions 一致
-    env: { ...process.env, PI_AGENT_CWD: process.cwd() }
+    env: { ...process.env, PI_AGENT_CWD: process.cwd(), PI_USER_DATA: app.getPath('userData') }
   })
   host.stdout?.on('data', (d: Buffer) => console.log('[agent]', String(d).trim()))
   host.stderr?.on('data', (d: Buffer) => console.error('[agent]', String(d).trim()))
@@ -138,6 +138,27 @@ ipcMain.handle('host:readImage', async (_e, path: string) => {
     const mimeType =
       ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/png'
     return { data: buf.toString('base64'), mimeType }
+  } catch {
+    return null
+  }
+})
+
+ipcMain.handle('host:readText', async (_e, path: string) => {
+  try {
+    const fs = await import('node:fs/promises')
+    // 相对路径按引擎的工作目录解析（PI_AGENT_CWD 也是它）
+    const abs = isAbsolute(path) ? path : join(process.cwd(), path)
+    const handle = await fs.open(abs, 'r')
+    try {
+      const size = (await handle.stat()).size
+      if (!size && size !== 0) return null
+      const len = Math.min(size, 512 * 1024)
+      const buf = Buffer.alloc(len)
+      await handle.read(buf, 0, len, 0)
+      return { text: buf.toString('utf8'), truncated: size > len }
+    } finally {
+      await handle.close()
+    }
   } catch {
     return null
   }

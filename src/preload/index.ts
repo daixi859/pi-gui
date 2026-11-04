@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('pi', {
     pickDirectory: () => ipcRenderer.invoke('host:pickDir') as Promise<string | null>,
     readImage: (path: string) =>
       ipcRenderer.invoke('host:readImage', path) as Promise<{ data: string; mimeType: string } | null>,
+    readText: (path: string) =>
+      ipcRenderer.invoke('host:readText', path) as Promise<{ text: string; truncated: boolean } | null>,
     openAgentConfig: () => ipcRenderer.send('host:openAgentConfig'),
     revealPath: (path: string) => ipcRenderer.send('host:revealPath', path)
   }

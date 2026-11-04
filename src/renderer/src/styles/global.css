@@ -95,6 +95,10 @@
   --text-sm: 14px;
   --text-2xl: 28px;
 
+  /* 行高：正文 1.6（default）、代码 1.7、思考/说明文 1.8 */
+  --leading-prose: 1.8;
+  --leading-code: 1.7;
+
   /* 圆角刻度：2/3/4/5/6 → sm；7/10 → md；14 → lg */
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -168,6 +172,24 @@ body {
 }
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* 会话正文：滚动条只占位不画，鼠标贴到右边缘的轨道上才露出滑块。
+   轨道 hover 在 WebKit 里选不到，由 useScrollRail 判位置给 .rail-on。
+   ::-webkit-scrollbar 只在 scrollbar-width/color 为 auto 时生效，所以这里显式复位 */
+.rail-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+.rail-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.rail-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-md);
+}
+.rail-scroll.rail-on::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
 }
 
 /* markdown 排版：只保留品牌所需的间距与层级 */
@@ -265,6 +287,34 @@ body {
     opacity: 0;
   }
 }
+/* 三点呼吸：等模型/加载会话时的常驻指示 */
+.breathe {
+  animation: breathe 1.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* 键盘焦点：一处兜底，按钮与可点行不再逐个写环 */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--color-muted);
+  outline-offset: 2px;
+}
+
 /* 侧栏标题超长时鼠标移入的走马灯，--over 由组件算出 */
 @keyframes marquee {
   0%,

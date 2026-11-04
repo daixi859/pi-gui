@@ -2,7 +2,7 @@
  * utilityProcess(引擎) 与渲染层之间的精简协议。
  * 渲染层只发命令，引擎只发事件；两边都不依赖 pi 的 SDK 类型。
  */
-import type { Block, ProjectMeta, SessionMeta, Snapshot } from './blocks'
+import type { Block, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from './blocks'
 
 /** 可用模型：levels 为该模型支持的思考强度，已按 pi 的 ThinkingLevel 收敛 */
 export interface ModelOption {
@@ -63,6 +63,8 @@ export interface HostBridge {
   openAgentConfig: () => void
   /** 读图片为 base64（渲染层跨不了 file://），失败返回 null */
   readImage: (path: string) => Promise<{ data: string; mimeType: string } | null>
+  /** 读文本文件（相对路径按引擎的工作目录解析），超过上限只给前一段 */
+  readText: (path: string) => Promise<{ text: string; truncated: boolean } | null>
   /** 在资源管理器里定位文件 */
   revealPath: (path: string) => void
 }
@@ -98,6 +100,11 @@ export type AgentCommand =
   | { type: 'newSession' }
   /** 换工作区：以后新会话都建在这个目录下 */
   | { type: 'workspace'; path: string }
+  /** 软移除项目：只从 PiGui 的列表里藏起来，可恢复，不动会话文件 */
+  | { type: 'projectRemove'; path: string }
+  | { type: 'projectRestore'; path: string }
+  /** 真删项目：连同它下面所有会话文件一起删，pi 的原始数据会没 */
+  | { type: 'projectDelete'; path: string }
   | { type: 'openSession'; path: string }
   /** 重命名会话：往它的 JSONL 追加 session_info */
   | { type: 'renameSession'; path: string; title: string }
@@ -116,14 +123,17 @@ export type AgentEvent =
       type: 'sessions'
       sessions: SessionMeta[]
       projects: ProjectMeta[]
-      /** 工作区菜单：会话出现过的目录（绝对路径），当前目录在首位 */
+      /** 项目管理页的所有项目（含已移除的，按 removedAt 区分） */
+      projectRows: ProjectRow[]
+      /** 工作区菜单：会话出现过的目录（绝对路径），当前目录在首位，已移除的不在内 */
       workspaces: string[]
       models: ModelOption[]
       /** 会话目录还在扫，列表会继续增长 */
       loading?: boolean
       commands: CommandInfo[]
     }
-  | { type: 'blocks'; delta: BlockDelta }
+  /** path：这些块属于哪个会话文件；full 时渲染层据此认定「现在看的是哪个会话」 */
+  | { type: 'blocks'; delta: BlockDelta; path: string | null }
   /** path：当前挂载的会话文件，渲染层据此判断哪个侧栏条目在运行 */
   | { type: 'status'; snapshot: Snapshot; streaming: boolean; path: string | null }
   /** path：这轮结束的会话文件；不是当前在看的会话时渲染层标成未读 */

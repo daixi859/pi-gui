@@ -12,7 +12,15 @@ export type SystemTone = 'info' | 'warn' | 'error'
 export type Block =
   | { kind: 'user'; id: string; text: string; images?: number }
   | { kind: 'assistant'; id: string; text: string; streaming?: boolean }
-  | { kind: 'thinking'; id: string; text: string; level?: string; streaming?: boolean }
+  | {
+      kind: 'thinking'
+      id: string
+      text: string
+      level?: string
+      streaming?: boolean
+      /** 思考耗时；宿主还没接入，先由 mock 供给 */
+      durationMs?: number
+    }
   | { kind: 'tool'; id: string; name: string; args: string; state: ToolState; output?: string }
   | {
       kind: 'diff'
@@ -50,7 +58,22 @@ export interface SessionMeta {
 
 export interface ProjectMeta {
   name: string
+  /** 项目目录绝对路径（新建任务 / 移除都要用它，不能靠 name 反推） */
+  path: string
   sessions: SessionMeta[]
+}
+
+/** 项目管理页的一行：全从会话扫描派生，唯一的外部状态是 removedAt（PiGui 自己的软移除） */
+export interface ProjectRow {
+  /** 绝对路径，唯一标识一个项目 */
+  path: string
+  name: string
+  /** 该目录下的会话数 */
+  sessionCount: number
+  /** 最近活动时间（毫秒），0 = 从未使用 */
+  lastActiveAt: number
+  /** 软移除时间；有值说明在「已移除」区，会话文件一个都没动 */
+  removedAt?: number
 }
 
 export interface Snapshot {

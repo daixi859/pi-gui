@@ -9,7 +9,7 @@ import type {
   PromptImage,
   UiRequest
 } from '@shared/ipc'
-import type { Block, ProjectMeta, SessionMeta, Snapshot } from '@shared/blocks'
+import type { Block, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 import { multiReply, questionsOf, selectReply } from './interactions'
 
 export interface Ask {
@@ -30,6 +30,8 @@ export interface AgentState {
   /** 后台跑完、还没再打开过的会话文件，侧栏用蓝点标出 */
   unread: string[]
   projects: ProjectMeta[]
+  /** 项目管理页：所有项目（含已移除的，看 removedAt） */
+  projectRows: ProjectRow[]
   /** 工作区菜单：会话出现过的目录，当前目录在首位 */
   workspaces: string[]
   models: ModelOption[]
@@ -56,6 +58,7 @@ const initial: AgentState = {
   viewPath: null,
   unread: [],
   projects: [],
+  projectRows: [],
   workspaces: [],
   models: [],
   snapshot: {
@@ -81,7 +84,15 @@ const initial: AgentState = {
  * 留在后台继续跑，跑完才标未读。
  */
 function enter(s: AgentState, path: string | null): AgentState {
-  return { ...s, viewPath: path, unread: s.unread.filter((p) => p !== path) }
+  // 顺带清掉上一段会话的瞬时状态，免得停止按钮 / 结束时间 / 正文串到新会话上
+  return {
+    ...s,
+    viewPath: path,
+    blocks: [],
+    streaming: false,
+    settledAt: null,
+    unread: s.unread.filter((p) => p !== path)
+  }
 }
 
 /** 一个工具调用里挂起的 ui 请求：rpiv 逐题 await，所以同一时刻最多一个在等 */
@@ -108,6 +119,9 @@ export function useAgent(): AgentState & {
   openSession: (path: string) => void
   renameSession: (path: string, title: string) => void
   deleteSession: (path: string) => void
+  removeProject: (path: string) => void
+  restoreProject: (path: string) => void
+  deleteProject: (path: string) => void
   clearError: () => void
   setModel: (id: string) => void
   setThinkingLevel: (level: string) => void
@@ -201,6 +215,7 @@ export function useAgent(): AgentState & {
               ...s,
               sessions: ev.sessions,
               projects: ev.projects,
+              projectRows: ev.projectRows,
               workspaces: ev.workspaces,
               models: ev.models,
               commands: ev.commands
@@ -209,6 +224,8 @@ export function useAgent(): AgentState & {
             return { ...s, files: ev.items }
           case 'blocks': {
             const { full, order, items } = ev.delta
+            // 全量 = 切到了这个会话；增量只属于当前会话，切换途中旧会话的增量直接丢掉
+            if (!full && ev.path !== s.viewPath) return s
             // 全量时丢掉缓存，否则只覆盖变了的块；没变的块沿用旧引用，React 不会重渲染它们
             const next = full ? new Map<string, Block>() : cache.current
             for (const b of items) next.set(b.id, b)
@@ -218,18 +235,15 @@ export function useAgent(): AgentState & {
               const b = next.get(id)
               if (b) blocks.push(b)
             }
-            return { ...s, blocks }
+            return { ...s, blocks, viewPath: full ? ev.path : s.viewPath }
           }
           case 'busy':
             return { ...s, busy: ev.active ? (ev.label ?? '处理中…') : undefined }
           case 'status':
-            return {
-              ...s,
-              snapshot: ev.snapshot,
-              streaming: ev.streaming,
-              // 切换挂载期间旧会话仍会推 status，别把已经切过去的目标路径拉回来
-              viewPath: s.viewPath ?? ev.path
-            }
+            // 只认当前会话的状态：切换期间旧会话还在推 status，别让它改掉界面
+            return ev.path === s.viewPath
+              ? { ...s, snapshot: ev.snapshot, streaming: ev.streaming }
+              : s
           case 'error':
             return { ...s, error: ev.message }
           case 'settled': {
@@ -278,6 +292,13 @@ export function useAgent(): AgentState & {
       sendCmd({ type: 'deleteSession', path })
     },
     clearError: () => setState((s) => ({ ...s, error: undefined })),
+    removeProject: (path) => sendCmd({ type: 'projectRemove', path }),
+    restoreProject: (path) => sendCmd({ type: 'projectRestore', path }),
+    deleteProject: (path) => {
+      // 项目下的会话会被整批删掉，正在看的那条可能在里面，宿主会切到新会话
+      setState((s) => ({ ...s, viewPath: null, streaming: false }))
+      sendCmd({ type: 'projectDelete', path })
+    },
     setModel: (modelId) => sendCmd({ type: 'setModel', modelId }),
     setThinkingLevel: (level) => sendCmd({ type: 'setThinkingLevel', level }),
     toggleAccess: () => sendCmd({ type: 'setAccess', mode: state.snapshot.accessFull ? 'confirm' : 'full' }),

@@ -39,6 +39,7 @@ npm run typecheck  # 三端类型检查，改完必跑
 | `src/renderer/src/useAgent.ts` | 引擎状态唯一入口，view 只读它 |
 | `src/renderer/src/interactions/` | 扩展 UI 请求 → 具体控件的适配器 |
 | `src/renderer/src/components/` | 纯展示组件，props 驱动 |
+| `src/renderer/src/components/transcript/` | 会话正文渲染（运行时路径，blocks.tsx 只留给预览页） |
 | `docs/ARCHITECTURE.md` | 分层图 + 数据流 + 逐文件职责 |
 | `docs/STYLE.md` | 样式规范：令牌、刻度、语义类、新增流程 |
 | `docs/BACKLOG.md` | 待办与已证伪的误判，动手前先看 |
@@ -60,4 +61,4 @@ npm run typecheck  # 三端类型检查，改完必跑
 
 主进程支持 `PI_SHOT=<png路径>` + `PI_SHOT_JS=<页面脚本>`（或 `PI_SHOT_JS_FILE=<脚本路径>`，脚本返回值会打到 stdout）+ `PI_SHOT_AT=<触发ms>` + `PI_SHOT_DELAY=<截图前ms>`，用于无头截图验证。改代码后重启 dev（热更新对 main/host 不生效）。
 
-**纯样式调试和可以操作的js逻辑（类名/令牌/圆角/间距/颜色/点击弹窗）等不需要启动客户端截图确认**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、布局逻辑或跨进程改动时才需要启动验证。
+**原则上用户可以直接查看的不用启动无头浏览器截图验证**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、用户无法判断的或跨进程改动时才需要启动验证。
