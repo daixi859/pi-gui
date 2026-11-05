@@ -104,7 +104,7 @@ className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
 
 ## 6.1 图标
 
-全部手绘在 `src/renderer/src/components/icons.tsx`，16 网格、1.5 描边、只落 0.25 网格坐标。新增或改图标按这四条：
+全部手绘在 `src/renderer/src/components/base/icons.tsx`，16 网格、1.5 描边、只落 0.25 网格坐标。新增或改图标按这四条：
 
 - **尺寸三档**，按墨迹外接框（含描边半宽 0.75）算：`S` 10.5（方向、符号：chevron/arrow/check/close/plus/pause/dots/stop/undo）、`M` 12.5（常规物件）、`L` 14.5（容器满框：圆圈类、panel、terminal、eye、sparkle、blocks、settings）。尺寸差控制在 1.4 倍内。
 - **重心必须在 (8,8)**，左右上下各偏不超过 0.1。非对称图形（folder 的标签、hand 的手腕）先按整体平移再验。
@@ -123,9 +123,10 @@ className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
 
 ## 8. 新增样式的流程
 
+0. 控件外观（按钮/菜单/列表行/卡片的底色、边框、圆角、阴影、hover 态）先看 `components/base/` 有没有现成变体能盖住；没有就给基础组件加 variant。业务组件不写控件外观（ADR-0012）。
 1. 先在刻度表里找现成值；没有再谈新增。
 2. 需要新颜色/新阴影：加 `@theme` 变量，命名按角色（`--color-<role>`、`--shadow-<role>`），并在本文件补一行说明。
-3. 同一组合出现第 3 次：提 `pi-` 类。
+3. 同一组合出现第 3 次：提 `pi-` 类；控件型组合优先落成基础组件而不是 `pi-` 类。
 4. 用「组件预览」页验证：改令牌实时看效果，「复制为 CSS」把最终值贴回 `@theme`。预览面板里改过的令牌会写进 `:root` 并存 localStorage，启动时（`main.tsx` 的 `initTokens()`）回放，所以改了就全局一直生效，不进预览页也一样；没改过的键不写内联，继续跟 `@theme` 走。想恢复默认点面板里的「重置」。
 5. 跑 `npm run typecheck`，截图确认视觉无回归（含焦点态、窄窗口）。
 

@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
-import { Menu, MenuItem } from './Menu'
-import { Button } from './Button'
-import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from './icons'
-import { useScrollRail } from '../useScrollRail'
+import { Menu, MenuItem } from '../base/Menu'
+import { Button } from '../base/Button'
+import { ListRow } from '../base/ListRow'
+import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from '../base/icons'
+import { useScrollRail } from '../../useScrollRail'
 
 /** 相对时间：和会话列表的口径一致，但这里是明细页，给到「分钟/小时/天」 */
 function ago(ms: number): string {
@@ -74,15 +75,14 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
             />
           </div>
           <div className="relative shrink-0">
-            <button
-              type="button"
+            <Button
               aria-expanded={sorting}
+              variant="secondary"
               onClick={() => setSorting((v) => !v)}
-              className="flex h-8 items-center gap-1 rounded-sm border border-edge px-2 text-sm text-muted hover:text-fg"
             >
               {SORTS.find((s) => s.key === sort)?.label}
               <IconChevronDown className="size-3" />
-            </button>
+            </Button>
             <Menu
               open={sorting}
               onClose={() => setSorting(false)}
@@ -118,16 +118,15 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
 
         {gone.length > 0 && (
           <div className="mt-4">
-            <button
-              type="button"
+            <ListRow
               aria-expanded={showRemoved}
+              tone="quiet"
+              className="h-8 gap-1"
+              icon={showRemoved ? <IconChevronDown className="size-3" /> : <IconChevronRight className="size-3" />}
+              label="已移除的项目"
+              hint={`${gone.length} 个项目`}
               onClick={() => setShowRemoved((v) => !v)}
-              className="flex h-8 w-full items-center gap-1 text-sm text-muted hover:text-fg"
-            >
-              {showRemoved ? <IconChevronDown className="size-3" /> : <IconChevronRight className="size-3" />}
-              已移除的项目
-              <span className="ml-auto text-xs text-faint">{gone.length} 个项目</span>
-            </button>
+            />
             {showRemoved && (
               <div className="overflow-hidden rounded-md border border-edge">
                 {gone.map((r) => (
@@ -140,13 +139,9 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
                       <div className="truncate text-xs text-faint">{r.path}</div>
                     </div>
                     <span className="shrink-0 text-xs text-faint">{ago(r.removedAt ?? 0)}移除</span>
-                    <button
-                      type="button"
-                      onClick={() => onRestore(r.path)}
-                      className="flex h-7 shrink-0 items-center rounded-sm border border-edge px-2 text-xs text-muted hover:text-fg"
-                    >
+                    <Button variant="secondary" size="sm" onClick={() => onRestore(r.path)}>
                       恢复
-                    </button>
+                    </Button>
                     <Button
                       aria-label="删除项目"
                       title="连同会话文件一起删除"
@@ -186,13 +181,14 @@ function ProjectLine({ row, onRemove }: { row: ProjectRow; onRemove: () => void 
       <div className={clsx(cell, 'w-28 justify-end text-xs text-muted')}>{ago(row.lastActiveAt)}</div>
       {/* 未移除的项目只给一个移除动作；真删只在已移除区里露出 */}
       <div className="flex w-16 shrink-0 justify-end pr-2">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           onClick={onRemove}
-          className="h-7 rounded-sm px-2 text-xs text-muted opacity-0 transition-colors group-hover:opacity-100 hover:bg-sunken hover:text-fg focus-visible:opacity-100"
         >
           移除
-        </button>
+        </Button>
       </div>
     </div>
   )

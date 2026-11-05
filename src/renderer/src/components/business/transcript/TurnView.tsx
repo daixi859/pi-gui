@@ -1,9 +1,9 @@
 import { memo, useState, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
-import { IconChevronDown, IconChevronRight, IconSpinner } from '../icons'
-import { MarkdownView } from '../MarkdownView'
+import { IconChevronDown, IconChevronRight, IconSpinner } from '../../base/icons'
+import { MarkdownView } from '../../base/MarkdownView'
 import { Step } from './Step'
-import { workTime } from '../../util'
+import { workTime } from '../../../util'
 
 type Turn = Extract<Block, { kind: 'turn' }>
 

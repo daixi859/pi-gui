@@ -1,9 +1,9 @@
 import { memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { Block } from '@shared/blocks'
-import { IconEdit, IconFile, IconSparkle, IconThinking } from '../icons'
+import { IconEdit, IconFile, IconSparkle, IconThinking } from '../../base/icons'
 import { DiffLines } from './tool/bodies'
-import { workTime } from '../../util'
+import { workTime } from '../../../util'
 import { StepRow } from './tool/StepRow'
 import { toolView } from './tool/tools'
 

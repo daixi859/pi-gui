@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { Block, ToolState } from '@shared/blocks'
-import { workTime } from '../util'
-import { MarkdownView } from './MarkdownView'
+import { workTime } from '../../util'
+import { MarkdownView } from '../base/MarkdownView'
 import { DiffBlock } from './DiffBlock'
-import { Button } from './Button'
+import { Button } from '../base/Button'
 import {
   IconChevronDown,
   IconChevronRight,
@@ -15,7 +15,7 @@ import {
   IconSparkle,
   IconThumbDown,
   IconThumbUp
-} from './icons'
+} from '../base/icons'
 
 /** 渲染层不能直接用 shell / clipboard，全部过 preload 的主进程桥 */
 const host = (): Window['pi']['host'] | undefined => window.pi?.host

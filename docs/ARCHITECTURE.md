@@ -140,24 +140,28 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ util.ts            workTime 时长文案
         ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角 + .md 排版 + 流式光标
         └─ components/
-            ├─ TitleBar.tsx        无框拖拽条 + 窗口按钮 + 品牌/收起按钮（浮动工具条在 App）
-            ├─ Sidebar.tsx         268px 侧栏：导航、任务列表(搜索/排序)、项目分组
-            ├─ Projects.tsx        项目页：从会话扫描派生的项目表 + 软移除/恢复/真删
-            ├─ StartPage.tsx       起始页：水印 + 问候 + 大输入卡 + 建议胶囊
-            ├─ Composer.tsx        WorkspaceBar / InputCard / ChatComposer / 模型弹窗
-            ├─ transcript/         会话正文（运行时）：Transcript / TurnView / Step / tool 展开体
-            ├─ blocks.tsx          旧 Block 分派：仅供组件预览对照
-            ├─ MarkdownView.tsx    react-markdown + gfm，围栏代码转 CodeBlock
-            ├─ CodeBlock.tsx       shiki 懒加载高亮（流式中先渲染纯文本）
-            ├─ DiffBlock.tsx       文件变更折叠行 + 行号着色
-            ├─ AskCard.tsx         问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
-            ├─ UiPrompt.tsx        裸 UI 请求的原生弹窗（confirm/select/input/editor）
-            ├─ Button.tsx          全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
-            ├─ Toasts.tsx          扩展 notify 的右下角提示
-            ├─ Menu.tsx            公共下拉：遮罩 + 面板 + 条目 + 分组标题
-            ├─ Preview.tsx         组件预览（#gallery）+ 令牌面板
-            ├─ PiLogo.tsx          三色 logo + 描边水印
-            └─ icons.tsx           自绘 SVG 图标集
+            ├─ base/               基础组件（不知道 pi，控件外观唯一书写地，ADR-0012）
+            │  ├─ Button.tsx       全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
+            │  ├─ Menu.tsx         公共下拉：遮罩 + 面板 + 条目 + 分组标题
+            │  ├─ ListRow.tsx      全宽列表行底座：select/quiet × 两档高度
+            │  ├─ Tip.tsx          悬停提示（靠父级 group 显隐）
+            │  ├─ Toasts.tsx       扩展 notify 的右下角提示
+            │  ├─ MarkdownView.tsx react-markdown + gfm，围栏代码转 CodeBlock
+            │  ├─ CodeBlock.tsx    shiki 懒加载高亮（流式中先渲染纯文本）
+            │  ├─ PiLogo.tsx       三色 logo + 描边水印
+            │  └─ icons.tsx        自绘 SVG 图标集
+            └─ business/           业务组件（知道 pi，由基础组件组合，不写控件外观）
+               ├─ TitleBar.tsx     无框拖拽条 + 窗口按钮 + 品牌/收起按钮（浮动工具条在 App）
+               ├─ Sidebar.tsx      268px 侧栏：导航、任务列表(搜索/排序)、项目分组
+               ├─ Projects.tsx     项目页：从会话扫描派生的项目表 + 软移除/恢复/真删
+               ├─ StartPage.tsx    起始页：水印 + 问候 + 大输入卡 + 建议胶囊
+               ├─ Composer.tsx     WorkspaceBar / InputCard / ChatComposer / 模型弹窗
+               ├─ transcript/      会话正文（运行时）：Transcript / TurnView / Step / tool 展开体
+               ├─ blocks.tsx       旧 Block 分派：仅供组件预览对照
+               ├─ DiffBlock.tsx    文件变更折叠行 + 行号着色
+               ├─ AskCard.tsx      问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
+               ├─ UiPrompt.tsx     裸 UI 请求的原生弹窗（confirm/select/input/editor）
+               └─ Preview.tsx      组件预览（#gallery）+ 令牌面板
 ```
 
 `docs/`：`adr/` 决策记录 · `BACKLOG.md` 未完成项（按模块分级）· `screenshots/` 视觉基线。

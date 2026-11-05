@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
-import { MarkdownView } from '../MarkdownView'
-import { IconImage } from '../icons'
+import { MarkdownView } from '../../base/MarkdownView'
+import { IconImage } from '../../base/icons'
 import { Step } from './Step'
 import { TurnView } from './TurnView'
 

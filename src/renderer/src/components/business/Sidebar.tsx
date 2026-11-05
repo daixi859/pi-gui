@@ -1,8 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectMeta, SessionMeta } from '@shared/blocks'
-import { Button } from './Button'
-import { Menu, MenuItem } from './Menu'
+import { Button } from '../base/Button'
+import { ListRow } from '../base/ListRow'
+import { Menu, MenuItem } from '../base/Menu'
 import {
   IconBlocks,
   IconClock,
@@ -23,12 +24,9 @@ import {
   IconSortList,
   IconSparkle,
   IconSpinner,
-} from './icons'
+} from '../base/icons'
 
 type Nav = (route: 'start' | 'chat' | 'gallery' | 'projects') => void
-
-const navRow =
-  'flex h-9 w-full items-center gap-2 rounded-sm px-2 text-sm text-fg transition-colors hover:bg-select/60'
 
 /** 项目行三点菜单的宽度：定位与面板共用，改一处就够 */
 const MENU_W = 120
@@ -112,11 +110,10 @@ function Marquee({ text }: { text: string }): ReactNode {
 
 function navButton(label: string, Ico: typeof IconPlus, hint?: string, onClick?: () => void): ReactNode {
   return (
-    <button type="button" className={navRow} onClick={onClick}>
+    <ListRow hint={hint} size="lg" onClick={onClick}>
       <Ico className="shrink-0 text-fg/75" />
       <span>{label}</span>
-      {hint && <span className="ml-auto text-xs text-faint">{hint}</span>}
-    </button>
+    </ListRow>
   )
 }
 
@@ -278,16 +275,16 @@ export function Sidebar({
 
       {/* 分组标题行：项目下拉（排序）+ 排序 / 新建 */}
       <div className="flex h-8 shrink-0 items-center gap-1 px-4">
-        <button
-          type="button"
+        <Button
           aria-label="切换排序"
           aria-expanded={sorting}
+          variant="ghost"
+          size="sm"
           onClick={() => setSorting((v) => !v)}
-          className="flex items-center gap-1 text-sm text-faint transition-colors hover:text-muted"
         >
           {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
           <IconChevronDown className="size-3" />
-        </button>
+        </Button>
         <div className="ml-auto flex items-center gap-1">
           <Button aria-label="排序" variant="ghost" icon={<IconSortList />} />
           <Button aria-label="新建项目" variant="ghost" icon={<IconPlus />} />
@@ -303,12 +300,12 @@ export function Sidebar({
             const isFolded = folded[key]
             return (
               <div key={key}>
-                <div className="group mb-0.5 flex h-7 items-center rounded-sm pr-1 hover:bg-select/60">
-                  <button
-                    type="button"
+                <div className="group mb-0.5 flex h-7 items-center">
+                  <ListRow
                     aria-expanded={!isFolded}
+                    tone="quiet"
+                    className="w-auto min-w-0 flex-1 gap-1"
                     onClick={() => setFolded((m) => ({ ...m, [key]: !m[key] }))}
-                    className="flex h-7 min-w-0 flex-1 items-center gap-1 rounded-sm px-2 text-left text-sm text-muted transition-colors hover:text-fg"
                   >
                     {/* 收起/展开用文件夹开合表示：闭合 = 折叠，翻开 = 展开 */}
                     {isFolded ? (
@@ -317,7 +314,7 @@ export function Sidebar({
                       <IconFolderOpen className="size-4 shrink-0" />
                     )}
                     <span className="truncate">{p.name || '未分组'}</span>
-                  </button>
+                  </ListRow>
                   {/* 悬停才露出的两个动作：更多菜单 / 新建任务（后者最右） */}
                   {p.path && (
                     <div className="flex shrink-0 items-center">
@@ -350,13 +347,13 @@ export function Sidebar({
                 </div>
                 {!isFolded && shown.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
                 {!isFolded && rest > 0 && (
-                  <button
-                    type="button"
+                  <ListRow
+                    tone="select"
+                    className="mb-0.5 pl-8 text-muted hover:text-fg"
                     onClick={() => setLimit((m) => ({ ...m, [key]: (m[key] ?? 5) + 10 }))}
-                    className="mb-0.5 h-7 w-full rounded-sm pl-8 text-left text-sm text-muted transition-colors hover:bg-select/60 hover:text-fg"
                   >
                     显示更多{rest > 10 ? `（还有 ${rest} 条）` : ''}
-                  </button>
+                  </ListRow>
                 )}
               </div>
             )
@@ -439,18 +436,14 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
 
   return (
     <>
-      <button
-        type="button"
+      <ListRow
+        active={active}
+        className="mb-0.5"
         onClick={onClick}
         onContextMenu={(e) => {
           e.preventDefault()
           setMenu({ x: e.clientX, y: e.clientY })
         }}
-        className={clsx(
-          // 激活态用 bg-select 的实色，和 hover 区分开；左右内边距与普通行相同，标题不左右跳
-          'mb-0.5 flex h-7 w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors',
-          active ? 'bg-select font-medium' : 'hover:bg-select'
-        )}
       >
         <span className="grid size-3.5 shrink-0 place-items-center">
           {running ? (
@@ -481,7 +474,7 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
           <Marquee text={session.title} />
         )}
         <span className="ml-auto shrink-0 text-2xs text-faint">{session.ageLabel}</span>
-      </button>
+      </ListRow>
       <Menu
         open={menu !== null}
         onClose={() => setMenu(null)}

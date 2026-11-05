@@ -1,7 +1,7 @@
 import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
 import { clsx } from 'clsx'
 import type { ToolState } from '@shared/blocks'
-import { IconSpinner } from '../../icons'
+import { IconSpinner } from '../../../base/icons'
 
 export type Ico = ComponentType<SVGProps<SVGSVGElement>>
 

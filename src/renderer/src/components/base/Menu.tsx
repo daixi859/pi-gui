@@ -94,16 +94,20 @@ export function MenuItem({
   selected,
   trailing,
   danger,
-  onClick
+  onClick,
+  children
 }: {
   icon?: ReactNode
-  label: string
+  /** 与 children 二选一：没给 children 时才渲染 label */
+  label?: string
   /** 悬停提示：文案被截断时给完整版 */
   title?: string
   selected?: boolean
   trailing?: ReactNode
   danger?: boolean
   onClick?: () => void
+  /** 覆盖 label 区放富内容（命令提示的名称 + 描述两段） */
+  children?: ReactNode
 }): ReactNode {
   return (
     <button
@@ -113,7 +117,7 @@ export function MenuItem({
       className={clsx('pi-menu-item', danger && 'text-del', selected && 'font-medium')}
     >
       {icon}
-      <span className="truncate">{label}</span>
+      {children ?? (label != null && <span className="truncate">{label}</span>)}
       {trailing}
       {selected && <IconCheck className="ml-auto size-[15px] shrink-0 text-muted" />}
     </button>

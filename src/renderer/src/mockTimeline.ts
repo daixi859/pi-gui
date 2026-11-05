@@ -192,9 +192,9 @@ class Script {
       'glob',
       '{"pattern":"src/renderer/**/*.tsx"}',
       700,
-      'src/renderer/src/App.tsx\nsrc/renderer/src/components/blocks.tsx\nsrc/renderer/src/components/transcript/Step.tsx\nsrc/renderer/src/components/transcript/TurnView.tsx'
+      'src/renderer/src/App.tsx\nsrc/renderer/src/components/business/blocks.tsx\nsrc/renderer/src/components/business/transcript/Step.tsx\nsrc/renderer/src/components/business/transcript/TurnView.tsx'
     )
-    this.tool('read', '{"path":"src/renderer/src/components/blocks.tsx","limit":80}', 850, 'export function BlockView…')
+    this.tool('read', '{"path":"src/renderer/src/components/business/blocks.tsx","limit":80}', 850, 'export function BlockView…')
     this.tool(
       'grep',
       '{"pattern":"setState","path":"src/renderer/src"}',
@@ -208,15 +208,15 @@ class Script {
       2200,
       '> pi@0.1.0 typecheck\n> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json'
     )
-    this.tool('edit', '{"path":"src/renderer/src/components/blocks.tsx","edits":[{"oldText":"…"}]}', 700, 'applied 1 edit')
-    this.diff('src/renderer/src/components/blocks.tsx', CODE_DIFF, 900)
+    this.tool('edit', '{"path":"src/renderer/src/components/business/blocks.tsx","edits":[{"oldText":"…"}]}', 700, 'applied 1 edit')
+    this.diff('src/renderer/src/components/business/blocks.tsx', CODE_DIFF, 900)
     this.tool(
       'write',
-      '{"path":"src/renderer/src/components/transcript/TurnView.tsx","content":"…"}',
+      '{"path":"src/renderer/src/components/business/transcript/TurnView.tsx","content":"…"}',
       760,
       'wrote 52 lines'
     )
-    this.diff('src/renderer/src/components/transcript/TurnView.tsx', WRITE_DIFF, 700)
+    this.diff('src/renderer/src/components/business/transcript/TurnView.tsx', WRITE_DIFF, 700)
     this.say(ANSWER_A, 3200)
     this.endTurn()
 

@@ -2,11 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { clsx } from 'clsx'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
-import { setDraftImages, setDraftText, useDraft } from '../drafts'
-import { Menu, MenuItem, MenuLabel } from './Menu'
-import { Button } from './Button'
-import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from './icons'
-import { Tip } from './Tip'
+import { setDraftImages, setDraftText, useDraft } from '../../drafts'
+import { Menu, MenuItem, MenuLabel, MenuPanel } from '../base/Menu'
+import { Button } from '../base/Button'
+import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from '../base/icons'
+import { Tip } from '../base/Tip'
 
 const LEVEL_LABEL: Record<string, string> = {
   off: '关闭',
@@ -17,8 +17,6 @@ const LEVEL_LABEL: Record<string, string> = {
   xhigh: '很高',
   max: '最高'
 }
-
-const ghost = 'flex items-center gap-1 rounded-md px-1 py-1 text-sm hover:bg-sunken'
 
 /** 工作区名取目录名；Windows 反斜杠也要认 */
 const basename = (p: string): string => p.split(/[\\/]/).filter(Boolean).pop() ?? p
@@ -49,17 +47,12 @@ function WorkspaceBar({
     })
   }
   return (
-    <div className="relative flex items-center gap-0.5 rounded-t-lg bg-sunken px-2 py-1 text-xs text-muted">
-      <button
-        type="button"
-        onClick={() => setMenu((v) => !v)}
-        title="切换工作区"
-        className="flex items-center gap-1 rounded-sm px-1 py-0.5 hover:bg-black/5 hover:text-fg"
-      >
+    <div className="relative flex items-center gap-0.5 rounded-t-lg bg-tint px-2 py-1 text-xs text-muted">
+      <Button variant="ghost" size="sm" onClick={() => setMenu((v) => !v)} title="切换工作区">
         <IconFolder className="size-[14px]" />
         {snapshot.cwd}
         <IconChevronDown className="size-3" />
-      </button>
+      </Button>
       <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconBranch className="size-[14px]" />
         {snapshot.branch}
@@ -127,18 +120,18 @@ function Toolbar({
         onClick={onAttach}
         icon={<IconPlus />}
       />
-      <button type="button" onClick={onAccess} className={ghost} title="切换变更前确认 / 完全访问">
+      <Button variant="ghost" onClick={onAccess} title="切换变更前确认 / 完全访问">
         <IconHand className="size-3.5" />
         {snapshot.access}
-      </button>
+      </Button>
       <div className="ml-auto flex items-center gap-1">
         <div className="relative">
-          <button type="button" onClick={() => setMenu((v) => !v)} className={ghost}>
+          <Button variant="ghost" onClick={() => setMenu((v) => !v)}>
             <span className="size-[13px] rounded-full border-2 border-success-3" />
             <span className="font-medium text-fg">{snapshot.model}</span>
             <span className="text-muted">{snapshot.thinkingLevel}</span>
             <IconChevronDown className="size-3 text-muted" />
-          </button>
+          </Button>
           <ModelMenu
             open={menu}
             snapshot={snapshot}
@@ -304,38 +297,29 @@ function InputCard({
     <div className={clsx('relative rounded-lg border border-edge/80 bg-surface', big ? 'shadow-card' : 'shadow-hairline')}>
       {big && <WorkspaceBar snapshot={snapshot} workspaces={workspaces} onSwitch={onSwitchWorkspace} />}
       {cmdHits.length > 0 && (
-        <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-pop">
+        <MenuPanel className="bottom-full left-0 mb-1 w-[420px] overflow-hidden">
           {cmdHits.map((c) => (
-            <button
+            <MenuItem
               key={c.name}
-              type="button"
               onClick={() => {
                 setText(`/${c.name} `)
                 ta.current?.focus()
               }}
-              className="flex w-full items-baseline gap-2 rounded-md px-2 py-1 text-left hover:bg-sunken"
             >
               <span className="font-mono text-xs">/{c.name}</span>
-              {c.description && (
-                <span className="truncate text-xs text-muted">{c.description}</span>
-              )}
-            </button>
+              {c.description && <span className="truncate text-xs text-muted">{c.description}</span>}
+            </MenuItem>
           ))}
-        </div>
+        </MenuPanel>
       )}
       {typing && files.length > 0 && (
-        <div className="absolute bottom-full mb-1 left-0 max-h-[220px] w-[360px] overflow-y-auto rounded-md border border-edge bg-panel p-1 shadow-pop">
+        <MenuPanel className="bottom-full left-0 mb-1 max-h-[220px] w-[360px] overflow-y-auto">
           {files.slice(0, 12).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => insert(f)}
-              className="block w-full truncate rounded-md px-2 py-1 text-left font-mono text-xs text-muted hover:bg-sunken hover:text-fg"
-            >
-              {f}
-            </button>
+            <MenuItem key={f} title={f} onClick={() => insert(f)}>
+              <span className="truncate font-mono text-xs text-muted">{f}</span>
+            </MenuItem>
           ))}
-        </div>
+        </MenuPanel>
       )}
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2 px-4 pt-2">
@@ -488,15 +472,10 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
   return (
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
       {['周报总结', '报错修复', 'PPT 制作', '闲时任务'].map((label) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => onPick(label)}
-          className="flex items-center gap-1 rounded-md border border-edge bg-panel px-2 py-1 text-sm text-muted transition-colors hover:bg-sunken hover:text-fg"
-        >
+        <Button key={label} variant="secondary" onClick={() => onPick(label)}>
           <span className="size-3 rounded-sm border border-faint" />
           {label}
-        </button>
+        </Button>
       ))}
     </div>
   )

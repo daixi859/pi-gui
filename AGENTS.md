@@ -38,8 +38,9 @@ npm run typecheck  # 三端类型检查，改完必跑
 | `src/preload/` | `window.pi` 的唯一出口 |
 | `src/renderer/src/useAgent.ts` | 引擎状态唯一入口，view 只读它 |
 | `src/renderer/src/interactions/` | 扩展 UI 请求 → 具体控件的适配器 |
-| `src/renderer/src/components/` | 纯展示组件，props 驱动 |
-| `src/renderer/src/components/transcript/` | 会话正文渲染（运行时路径，blocks.tsx 只留给预览页） |
+| `src/renderer/src/components/base/` | 基础组件：不知道 pi 的通用控件，控件外观唯一书写地（ADR-0012） |
+| `src/renderer/src/components/business/` | 业务组件：知道 pi，由基础组件组合，不写控件外观 |
+| `src/renderer/src/components/business/transcript/` | 会话正文渲染（运行时路径，blocks.tsx 只留给预览页） |
 | `docs/ARCHITECTURE.md` | 分层图 + 数据流 + 逐文件职责 |
 | `docs/STYLE.md` | 样式规范：令牌、刻度、语义类、新增流程 |
 | `docs/BACKLOG.md` | 待办与已证伪的误判，动手前先看 |
@@ -51,11 +52,12 @@ npm run typecheck  # 三端类型检查，改完必跑
 **动手前先读 `docs/STYLE.md`**，那里是完整规范。四条硬规则：
 
 - 只写令牌类名，不写任意值：`bg-panel`、`text-muted`、`text-xs`、`rounded-md`、`p-2`、`shadow-card`；禁止 `text-[13px]`、`bg-[#f0f0f0]`、`shadow-[...]`。
+- 业务组件不写控件外观（底色/边框/圆角/阴影/hover 拼控件），控件外观只来自 `components/base/` 或 `pi-` 语义类；布局与文本类自由。详见 ADR-0012。
 - 刻度：间距 2/4/8/16、圆角 4/8/16、字号 12/14（正文/标题 14，代码与小字 12），展示字号特例 `text-2xl` 28px 仅用于问候/品牌大字。刻度外的值按「就近、平局偏小」归入；新代码不得引入刻度外的值。
 - 重复 3 次以上的类组合提成 `pi-` 语义类（`pi-panel`、`pi-card`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`），定义在 `global.css` 的 `@utility`。
 - 可访问性底线：可点区域 ≥24px、键盘焦点可见、正文对比 ≥4.5:1；动效尊重 `prefers-reduced-motion`。
 
-令牌调整走「组件预览」页（`components/Preview.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `@theme`。图标全是手绘 SVG，在 `components/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
+令牌调整走「组件预览」页（`components/business/Preview.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `@theme`。图标全是手绘 SVG，在 `components/base/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
 
 ## 调试
 

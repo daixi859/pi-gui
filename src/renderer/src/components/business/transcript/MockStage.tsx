@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { clsx } from 'clsx'
-import { buildTimeline, type Frame } from '../../mockTimeline'
-import { IconPause } from '../icons'
+import { buildTimeline, type Frame } from '../../../mockTimeline'
+import { IconPause } from '../../base/icons'
 import { Transcript } from './Transcript'
 
 /** 虚拟时钟：按 speed 推进，播完自动停 */

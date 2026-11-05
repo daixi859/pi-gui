@@ -1,15 +1,15 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
-import { galleryBlocks, gallerySections, snapshot, type GallerySection } from '../mock'
+import { galleryBlocks, gallerySections, snapshot, type GallerySection } from '../../mock'
 import { TranscriptStack } from './blocks'
 import { MockStage } from './transcript/MockStage'
 import { ComposerCard } from './Composer'
 import { AskCard } from './AskCard'
 import { UiPrompt } from './UiPrompt'
-import { Toasts } from './Toasts'
-import { MenuItem, MenuPanel } from './Menu'
-import { Button } from './Button'
-import * as icons from './icons'
+import { Toasts } from '../base/Toasts'
+import { MenuItem, MenuPanel } from '../base/Menu'
+import { Button } from '../base/Button'
+import * as icons from '../base/icons'
 
 /** 开发期组件预览：分类看组件，右侧面板实时改全局令牌 */
 

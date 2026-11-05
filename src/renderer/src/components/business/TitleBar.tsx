@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import clsx from 'clsx'
-import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from './icons'
+import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from '../base/icons'
 import { WindowControls } from './Sidebar'
-import { Button } from './Button'
-import { PiLogo } from './PiLogo'
-import { Menu, MenuItem } from './Menu'
+import { Button } from '../base/Button'
+import { PiLogo } from '../base/PiLogo'
+import { Menu, MenuItem } from '../base/Menu'
 
 /** 品牌按钮：展开收起共用这一颗，hover 才换箭头，尺寸位置不变所以不抖 */
 export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {

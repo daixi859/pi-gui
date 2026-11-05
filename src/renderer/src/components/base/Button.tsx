@@ -72,7 +72,12 @@ export function Button({
       )}
     >
       {loading ? <IconSpinner /> : icon}
-      {iconOnly ? null : <span className="truncate">{children}</span>}
+      {/* preflight 把 svg 设成 block，children 里的图标会各占一行，拉回 inline 并沿用 gap-1 的 4px 间距 */}
+      {iconOnly ? null : (
+        <span className="truncate [&>svg]:mx-1 [&>svg]:inline">
+          {children}
+        </span>
+      )}
     </button>
   )
 }

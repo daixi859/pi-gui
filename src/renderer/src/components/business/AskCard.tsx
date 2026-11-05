@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { AskAnswer, AskQuestion } from '@shared/ipc'
-import { IconArrowLeft, IconArrowRight, IconCheck } from './icons'
-import { Button } from './Button'
+import { IconArrowLeft, IconArrowRight, IconCheck } from '../base/icons'
+import { Button } from '../base/Button'
 
 /** 一道题的本地编辑态；custom 与 option/selected 互斥由提交时决定 */
 interface Draft {

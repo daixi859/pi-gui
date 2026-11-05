@@ -6,7 +6,7 @@ import {
   IconSearch,
   IconTerminal,
   IconWrench
-} from '../../icons'
+} from '../../../base/icons'
 import { DiffLines, FilePeek, Output, TerminalBody } from './bodies'
 import type { StepProps } from './StepRow'
 

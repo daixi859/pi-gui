@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import type { useAgent } from '../useAgent'
-import { PiWatermark } from './PiLogo'
+import type { useAgent } from '../../useAgent'
+import { PiWatermark } from '../base/PiLogo'
 import { ComposerCard, SuggestionRow } from './Composer'
 
 /** 起始页：水印 + 问候 + 大输入卡 + 建议胶囊（设计稿第二张） */

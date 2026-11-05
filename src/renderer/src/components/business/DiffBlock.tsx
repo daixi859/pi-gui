@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { DiffLine } from '@shared/blocks'
-import { IconChevronDown, IconChevronRight, IconUndo } from './icons'
+import { IconChevronDown, IconChevronRight, IconUndo } from '../base/icons'
 
 export function DiffBlock({
   file,
