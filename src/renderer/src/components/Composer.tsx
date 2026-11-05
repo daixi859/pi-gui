@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../drafts'
@@ -132,7 +133,7 @@ function Toolbar({
         icon={<IconPlus />}
       />
       <button type="button" onClick={onAccess} className={ghost} title="切换变更前确认 / 完全访问">
-        <IconHand className="size-[14px]" />
+        <IconHand className="size-3.5" />
         {snapshot.access}
       </button>
       <div className="ml-auto flex items-center gap-1">
@@ -179,10 +180,10 @@ function Toolbar({
               onClick={onSend}
               icon={
                 <span
-                  className={
-                    'grid size-6.5 place-items-center rounded-pill transition-colors ' +
-                    (empty ? 'bg-sunken text-faint' : 'bg-fg text-surface hover:bg-fg/85')
-                  }
+                  className={clsx(
+                    'grid size-6.5 place-items-center rounded-pill transition-colors',
+                    empty ? 'bg-sunken text-faint' : 'bg-fg text-surface hover:bg-fg/85'
+                  )}
                 >
                   <IconArrowUp className="size-4" />
                 </span>
@@ -306,14 +307,7 @@ function InputCard({
   }
 
   return (
-    <div
-      className={
-        'relative rounded-lg border border-edge/80 bg-surface ' +
-        (big
-          ? 'shadow-card'
-          : 'shadow-hairline')
-      }
-    >
+    <div className={clsx('relative rounded-lg border border-edge/80 bg-surface', big ? 'shadow-card' : 'shadow-hairline')}>
       {big && <WorkspaceBar snapshot={snapshot} workspaces={workspaces} onSwitch={onSwitchWorkspace} />}
       {cmdHits.length > 0 && (
         <div className="absolute bottom-full mb-1 left-0 w-[420px] overflow-hidden rounded-md border border-edge bg-panel p-1 shadow-pop">

@@ -815,21 +815,11 @@ function syncMessage(rec: Mounted, partial: { content?: unknown[]; thinkingLevel
 
 /** 一轮结束：用户气泡与最后一条回答留在正文，其余过程收进折叠行（保持时间顺序） */
 function settleRound(rec: Mounted, aborted: boolean): void {
-  const liveTurn = rec.turn
-  const items = settleInto(rec.round).map((b) => {
-    if (b.kind !== 'turn') return b
-    // 内容和流式时的 live turn 一模一样就沿用它的 id，渲染层不用重挂（保住展开状态）
-    const same =
-      liveTurn !== null &&
-      liveTurn.children.length === b.children.length &&
-      liveTurn.children.every((c, i) => c === b.children[i])
-    return {
-      ...b,
-      id: same && liveTurn ? liveTurn.id : b.id,
-      durationMs: Date.now() - rec.turnStart,
-      aborted
-    }
-  })
+  // 结算必须换成新 id：`t-live` 只属于正在跑的回合。历史里若留着同 id 的 turn，
+  // 渲染层按 id 缓存，下一轮 order 里同一 id 出现两次，正文就会画出两份「进行中」
+  const items = settleInto(rec.round, Date.now() - rec.turnStart).map((b) =>
+    b.kind === 'turn' ? { ...b, aborted } : b
+  )
   rec.history = [...rec.history, ...items]
   rec.round = []
   rec.turn = null

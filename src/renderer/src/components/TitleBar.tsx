@@ -1,21 +1,48 @@
 import { useState, type ReactNode } from 'react'
-import { IconDots, IconFolder, IconClose } from './icons'
+import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from './icons'
 import { WindowControls } from './Sidebar'
 import { Button } from './Button'
+import { PiLogo } from './PiLogo'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
 
-/** 面板顶部：左槽（收起侧栏时的工具条）+ 会话标题 + 窗口控件。 */
+/** 品牌按钮：展开收起共用这一颗，hover 才换箭头，尺寸位置不变所以不抖 */
+export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
+        onClick={onClick}
+        className="relative grid size-7 place-items-center rounded-sm text-fg transition-colors hover:bg-tint-strong"
+      >
+        <PiLogo size={20} className="group-hover:opacity-0" />
+        {collapsed ? (
+          <IconPanelExpand className="absolute size-4.5 opacity-0 group-hover:opacity-100" />
+        ) : (
+          <IconPanelCollapse className="absolute size-4.5 opacity-0 group-hover:opacity-100" />
+        )}
+      </button>
+      <span className="pointer-events-none absolute top-full mt-1 left-0 z-50 hidden whitespace-nowrap rounded-sm border border-edge bg-panel px-2 py-0.5 text-2xs text-muted shadow-pop group-hover:flex">
+        {collapsed ? '展开侧栏' : '收起侧栏'}
+        <kbd className="ml-2 rounded-sm border border-edge px-1 text-2xs text-faint">Ctrl+B</kbd>
+      </span>
+    </div>
+  )
+}
+
+/** 面板顶部：会话标题 + 窗口控件。左侧 reserveLeft 给浮动的品牌/历史按钮让位。 */
 export function TitleBar({
-  leading,
   title,
   showTitle,
+  reserveLeft,
   sessionPath,
   onExport,
   error,
   onClearError
 }: {
-  leading?: ReactNode
   title?: string
+  /** 侧栏收起时给最上层的浮动按钮留出宽度 */
+  reserveLeft: boolean
   showTitle: boolean
   sessionPath?: string
   onExport: () => void
@@ -24,8 +51,9 @@ export function TitleBar({
 }): ReactNode {
   const [menu, setMenu] = useState(false)
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 px-2 [-webkit-app-region:drag]">
-      {leading}
+    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-edge px-2 [-webkit-app-region:drag]">
+      {/* 尺寸对齐 App 里的浮动工具条：left-2 + 3 个 28px 按钮 + 2 个 gap-1 = 100px */}
+      {reserveLeft && <span className="w-24 shrink-0" />}
       {showTitle && title && (
         <>
           <IconFolder className="shrink-0 text-muted" />

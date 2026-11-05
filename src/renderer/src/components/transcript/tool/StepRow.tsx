@@ -1,4 +1,5 @@
 import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
+import { clsx } from 'clsx'
 import type { ToolState } from '@shared/blocks'
 import { IconSpinner } from '../../icons'
 
@@ -40,7 +41,7 @@ export function StepRow({
       </span>
       <span className="shrink-0 text-sm font-medium text-muted">{label}</span>
       {detail ? (
-        <span className={'truncate text-xs text-muted ' + (mono ? 'font-mono' : '')}>{detail}</span>
+        <span className={clsx('truncate text-xs text-muted', mono && 'font-mono')}>{detail}</span>
       ) : null}
       <span className="ml-auto flex shrink-0 items-center gap-2 pl-2 text-xs text-faint">
         {extra}

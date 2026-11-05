@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { IconSpinner } from './icons'
 
@@ -61,16 +62,14 @@ export function Button({
       aria-busy={loading || undefined}
       {...rest}
       disabled={rest.disabled || loading}
-      className={[
+      className={clsx(
         BASE,
         VARIANT[variant],
         iconOnly ? SQUARE[size] : SIZE[size],
         /* 二选一，不能两个都给：CSS 里 rounded-sm 排在 rounded-pill 后面，同时出现时圆角永远是 4px */
         shape === 'circle' ? 'rounded-pill' : 'rounded-sm',
         className
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      )}
     >
       {loading ? <IconSpinner /> : icon}
       {iconOnly ? null : <span className="truncate">{children}</span>}

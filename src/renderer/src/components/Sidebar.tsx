@@ -1,11 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { ProjectMeta, SessionMeta } from '@shared/blocks'
-import { PiLogo } from './PiLogo'
 import { Button } from './Button'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
 import {
-  IconArrowLeft,
-  IconArrowRight,
   IconBlocks,
   IconClock,
   IconChevronDown,
@@ -17,8 +15,6 @@ import {
   IconHelp,
   IconMaximize,
   IconMinimize,
-  IconPanelCollapse,
-  IconPanelExpand,
   IconPlus,
   IconPlusCircle,
   IconSearch,
@@ -36,37 +32,6 @@ const navRow =
 
 /** 项目行三点菜单的宽度：定位与面板共用，改一处就够 */
 const MENU_W = 120
-
-/** 折叠按钮：展开态显示品牌 logo，hover 变收起图标；收起态显示展开图标。两者垂直/水平位置重合。 */
-function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        aria-label={collapsed ? '展开侧栏' : '收起侧栏'}
-        onClick={onClick}
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className={
-          'relative grid size-7 place-items-center rounded-sm text-fg transition-colors ' +
-          (collapsed ? 'bg-tint-strong' : 'hover:bg-tint-strong')
-        }
-      >
-        {collapsed ? (
-          <IconPanelExpand className="size-[18px]" />
-        ) : (
-          <>
-            <PiLogo size={20} className="group-hover:opacity-0" />
-            <IconPanelCollapse className="absolute size-[18px] opacity-0 group-hover:opacity-100" />
-          </>
-        )}
-      </button>
-      <span className="pointer-events-none absolute top-full mt-1 left-0 z-50 hidden whitespace-nowrap rounded-sm border border-edge bg-panel px-2 py-0.5 text-xs text-muted shadow-pop group-hover:flex">
-        {collapsed ? '展开侧栏' : '收起侧栏'}
-        <kbd className="ml-2 rounded-sm border border-edge px-1 text-xs text-faint">Ctrl+B</kbd>
-      </span>
-    </div>
-  )
-}
 
 const SORTS = [
   { key: 'project', label: '项目', icon: <IconFolder className="size-[15px] text-muted" /> },
@@ -180,7 +145,6 @@ function useStored<T>(key: string, init: T): [T, (next: T | ((prev: T) => T)) =>
 }
 
 export interface SidebarProps {
-  onCollapse: () => void
   onNavigate: Nav
   projects: ProjectMeta[]
   sessions: SessionMeta[]
@@ -194,14 +158,9 @@ export interface SidebarProps {
   onRemoveProject: (path: string) => void
   onRename: (path: string, title: string) => void
   onDelete: (path: string) => void
-  canBack: boolean
-  canForward: boolean
-  onBack: () => void
-  onForward: () => void
 }
 
 export function Sidebar({
-  onCollapse,
   onNavigate,
   projects,
   sessions,
@@ -212,11 +171,7 @@ export function Sidebar({
   onNewSessionIn,
   onRemoveProject,
   onRename,
-  onDelete,
-  canBack,
-  canForward,
-  onBack,
-  onForward
+  onDelete
 }: SidebarProps): ReactNode {
   const [sorting, setSorting] = useState(false)
   const [sort, setSort] = useState('project')
@@ -254,17 +209,9 @@ export function Sidebar({
 
   return (
     <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-2">
-      <div className="flex h-11 shrink-0 items-center gap-1 pl-2 [-webkit-app-region:drag]">
-        <CollapseButton collapsed={false} onClick={onCollapse} />
-        <Button aria-label="后退" variant="ghost" disabled={!canBack} onClick={onBack} icon={<IconArrowLeft />} />
-        <Button
-          aria-label="前进"
-          variant="ghost"
-          disabled={!canForward}
-          onClick={onForward}
-          icon={<IconArrowRight />}
-        />
-      </div>
+      {/* 顶部 h-11 只留位：品牌与前进后退由 App 的浮动工具条画在最上层。
+          这里刻意不设 drag：Windows 的拖拽矩形按几何算、不看 z 序，加了会吞掉上层的按钮点击 */}
+      <div className="h-11 shrink-0" />
 
       <nav className="px-2 pt-2">
         {navButton('新建任务', IconPlusCircle, 'Ctrl+N', onNewSession)}
@@ -276,7 +223,7 @@ export function Sidebar({
       <div className="my-2 border-t border-edge" />
 
       {/* 固定行高：搜索时「任务列表」标题让位，输入框从左侧边缘铺开，整行高度不变所以列表不位移 */}
-      <div className={'relative flex h-9 shrink-0 items-center gap-2 ' + (searching ? 'px-2' : 'px-4')}>
+      <div className={clsx('relative flex h-9 shrink-0 items-center gap-2', searching ? 'px-2' : 'px-4')}>
         {searching ? (
           <input
             autoFocus
@@ -336,7 +283,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pl-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto pl-2 pb-2 pr-0.5">
         {sort === 'project' &&
           grouped.map((p) => {
             const key = p.path || p.name
@@ -489,11 +436,11 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
           e.preventDefault()
           setMenu({ x: e.clientX, y: e.clientY })
         }}
-        className={
-          // 激活态只换底色/字重，左右内边距与普通行相同，标题不左右跳
-          'mb-0.5 flex h-7 w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors ' +
-          (active ? 'bg-select font-medium' : 'hover:bg-select/60')
-        }
+        className={clsx(
+          // 激活态用 bg-select 的实色，和 hover 区分开；左右内边距与普通行相同，标题不左右跳
+          'mb-0.5 flex h-7 w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors',
+          active ? 'bg-select font-medium' : 'hover:bg-select'
+        )}
       >
         <span className="grid size-3.5 shrink-0 place-items-center">
           {running ? (
@@ -558,35 +505,6 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
         </>
       )}
     </>
-  )
-}
-
-/** 收起侧栏后顶部工具条：logo / 前进后退 / 展开。放在 TitleBar 的左槽里，不能绝对定位叠在拖拽区上 */
-export function CollapsedHeaderBar({
-  onExpand,
-  canBack,
-  canForward,
-  onBack,
-  onForward
-}: {
-  onExpand: () => void
-  canBack: boolean
-  canForward: boolean
-  onBack: () => void
-  onForward: () => void
-}): ReactNode {
-  return (
-    <div className="-ml-2 flex items-center gap-1 [-webkit-app-region:drag]">
-      <CollapseButton collapsed onClick={onExpand} />
-      <Button aria-label="后退" variant="ghost" disabled={!canBack} onClick={onBack} icon={<IconArrowLeft />} />
-      <Button
-        aria-label="前进"
-        variant="ghost"
-        disabled={!canForward}
-        onClick={onForward}
-        icon={<IconArrowRight />}
-      />
-    </div>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
 import { Button } from './Button'
@@ -105,9 +106,9 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
 
         <div className="overflow-hidden rounded-md border border-edge">
           <div className="flex h-8 items-center border-b border-edge bg-sunken text-xs text-muted">
-            <div className={cell + ' min-w-0 flex-1'}>项目</div>
-            <div className={cell + ' w-20 justify-end'}>会话</div>
-            <div className={cell + ' w-28 justify-end'}>最近活动</div>
+            <div className={clsx(cell, 'min-w-0 flex-1')}>项目</div>
+            <div className={clsx(cell, 'w-20 justify-end')}>会话</div>
+            <div className={clsx(cell, 'w-28 justify-end')}>最近活动</div>
             <div className="w-16 shrink-0" />
           </div>
           {live.length === 0 && <p className="px-2 py-6 text-center text-xs text-faint">没有匹配的项目</p>}
@@ -170,7 +171,7 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
 function ProjectLine({ row, onRemove }: { row: ProjectRow; onRemove: () => void }): ReactNode {
   return (
     <div className="group flex h-12 items-center border-b border-edge last:border-b-0 hover:bg-select/40">
-      <div className={cell + ' min-w-0 flex-1 text-left'}>
+      <div className={clsx(cell, 'min-w-0 flex-1 text-left')}>
         <IconFolder className="size-4 shrink-0 text-muted" />
         <span className="min-w-0">
           <span className="flex items-center gap-2">
@@ -182,8 +183,8 @@ function ProjectLine({ row, onRemove }: { row: ProjectRow; onRemove: () => void 
           <span className="block truncate text-xs text-faint">{row.path}</span>
         </span>
       </div>
-      <div className={cell + ' w-20 justify-end text-sm text-muted'}>{row.sessionCount}</div>
-      <div className={cell + ' w-28 justify-end text-xs text-muted'}>{ago(row.lastActiveAt)}</div>
+      <div className={clsx(cell, 'w-20 justify-end text-sm text-muted')}>{row.sessionCount}</div>
+      <div className={clsx(cell, 'w-28 justify-end text-xs text-muted')}>{ago(row.lastActiveAt)}</div>
       {/* 未移除的项目只给一个移除动作；真删只在已移除区里露出 */}
       <div className="flex w-16 shrink-0 justify-end pr-2">
         <button

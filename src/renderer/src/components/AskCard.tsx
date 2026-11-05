@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { AskAnswer, AskQuestion } from '@shared/ipc'
 import { IconArrowLeft, IconArrowRight, IconCheck } from './icons'
 import { Button } from './Button'
@@ -12,7 +13,6 @@ interface Draft {
 }
 
 const emptyDraft = (): Draft => ({ selected: [], custom: '', typing: false })
-const px = (n: number): { width: number; height: number } => ({ width: n, height: n })
 
 /**
  * 问答卡：rpiv 扩展逐题 await select/input，宿主把整份问卷一次性交给这里，
@@ -66,7 +66,7 @@ export function AskCard({
             size="sm"
             disabled={step === 0}
             onClick={() => setStep((s) => s - 1)}
-            icon={<IconArrowLeft {...px(12)} />}
+            icon={<IconArrowLeft className="size-3" />}
           />
           <span className="tabular-nums">
             {step + 1} / {questions.length}
@@ -77,7 +77,7 @@ export function AskCard({
             size="sm"
             disabled={step === last}
             onClick={() => setStep((s) => s + 1)}
-            icon={<IconArrowRight {...px(12)} />}
+            icon={<IconArrowRight className="size-3" />}
           />
         </div>
       </div>
@@ -96,17 +96,19 @@ export function AskCard({
                     : { option: i, custom: '' }
                 )
               }
-              className={`flex w-full items-start gap-2 rounded-sm px-2 py-2 text-left transition-colors ${
+              className={clsx(
+                'flex w-full items-start gap-2 rounded-sm px-2 py-2 text-left transition-colors',
                 on ? 'bg-tint-strong' : 'hover:bg-tint'
-              }`}
+              )}
             >
               {q.multiSelect ? (
                 <span
-                  className={`mt-0.5 grid h-[15px] w-[15px] shrink-0 place-items-center rounded-sm border ${
+                  className={clsx(
+                    'mt-0.5 grid h-[15px] w-[15px] shrink-0 place-items-center rounded-sm border',
                     on ? 'border-fg bg-fg text-white' : 'border-edge'
-                  }`}
+                  )}
                 >
-                  {on && <IconCheck {...px(10)} />}
+                  {on && <IconCheck className="size-2.5" />}
                 </span>
               ) : (
                 <span className="mt-0.5 w-[16px] shrink-0 text-xs tabular-nums text-faint">{i + 1}.</span>

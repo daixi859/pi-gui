@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
 import { galleryBlocks, gallerySections, snapshot, type GallerySection } from '../mock'
 import { TranscriptStack } from './blocks'
@@ -40,13 +41,15 @@ const DEFAULTS = {
   surface: '#ffffff',
   fg: '#26241f',
   muted: '#8b8781',
-  edge: '#e0e0e0'
+  edge: '#e0e0e0',
+  fontUi: "-apple-system, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif",
+  fontMono: "'Cascadia Mono', 'Consolas', ui-monospace, monospace"
 }
 type Tokens = typeof DEFAULTS
 type TokenKey = keyof Tokens
 
-/** 每个字段对应的 CSS 变量；带 px 的自动补单位 */
-const VARS: Record<TokenKey, [string, 'px' | '']> = {
+/** 每个字段对应的 CSS 变量；px 自动补单位，font 原样写入 */
+const VARS: Record<TokenKey, [string, 'px' | 'font' | '']> = {
   spacing: ['--spacing', 'px'],
   radiusSm: ['--radius-sm', 'px'],
   radiusMd: ['--radius-md', 'px'],
@@ -59,10 +62,13 @@ const VARS: Record<TokenKey, [string, 'px' | '']> = {
   surface: ['--color-surface', ''],
   fg: ['--color-fg', ''],
   muted: ['--color-muted', ''],
-  edge: ['--color-edge', '']
+  edge: ['--color-edge', ''],
+  fontUi: ['--font-ui', 'font'],
+  fontMono: ['--font-mono', 'font']
 }
 const NUM_KEYS: TokenKey[] = ['spacing', 'radiusSm', 'radiusMd', 'radiusLg', 'textXs', 'textSm', 'textXl']
 const COLOR_KEYS: TokenKey[] = ['canvas', 'panel', 'surface', 'fg', 'muted', 'edge']
+const FONT_KEYS: TokenKey[] = ['fontUi', 'fontMono']
 /* 键带版本：默认令牌变化时换版本号，旧的持久化值作废。只存用户改过的键 */
 const STORE = 'pi.preview.tokens.v5'
 
@@ -77,6 +83,10 @@ function readDefaults(): Tokens {
     if (unit === 'px') {
       el.style.width = `var(${name})`
       return parseFloat(getComputedStyle(el).width) || DEFAULTS[k]
+    }
+    if (unit === 'font') {
+      el.style.fontFamily = `var(${name})`
+      return getComputedStyle(el).fontFamily || DEFAULTS[k]
     }
     el.style.backgroundColor = `var(${name})`
     // color-mix 的计算值可能是 color(srgb …)，交给 canvas 归一成 8 位 rgb
@@ -117,7 +127,7 @@ export function initTokens(): void {
   const root = document.documentElement.style
   for (const [k, v] of Object.entries(stored())) {
     const [name, unit] = VARS[k as TokenKey]
-    root.setProperty(name, `${v}${unit}`)
+    root.setProperty(name, unit === 'px' ? `${v}px` : String(v))
   }
 }
 
@@ -134,7 +144,7 @@ function useTokens(): [Tokens, (k: TokenKey, v: number | string) => void, () => 
         root.removeProperty(name)
         continue
       }
-      root.setProperty(name, `${tokens[k]}${unit}`)
+      root.setProperty(name, unit === 'px' ? `${tokens[k]}px` : String(tokens[k]))
       saved[k] = tokens[k]
     }
     localStorage.setItem(STORE, JSON.stringify(saved))
@@ -166,6 +176,7 @@ function TokenPanel({
     '@theme {',
     ...NUM_KEYS.map((k) => `  ${VARS[k][0]}: ${tokens[k]}px;`),
     ...COLOR_KEYS.map((k) => `  ${VARS[k][0]}: ${tokens[k]};`),
+    ...FONT_KEYS.map((k) => `  ${VARS[k][0]}: ${tokens[k]};`),
     '}'
   ].join('\n')
   return (
@@ -205,6 +216,19 @@ function TokenPanel({
         ))}
       </div>
 
+      {FONT_KEYS.map((k) => (
+        <label key={k} className="flex flex-col gap-0.5">
+          <span className="text-xs text-faint">{VARS[k][0]}（逗号分隔多家，前面的没装自动回退）</span>
+          <input
+            type="text"
+            spellCheck={false}
+            value={tokens[k] as string}
+            onChange={(e) => set(k, e.target.value)}
+            className="pi-input w-full px-1 py-0.5"
+          />
+        </label>
+      ))}
+
       <button
         type="button"
         onClick={() => {
@@ -226,11 +250,15 @@ function TokenPanel({
 /* ---------------- 各分类 ---------------- */
 
 const SIZES = [16, 20, 24, 28] as const
+/* 尺寸只走 className（STYLE §6.1），预览页负责验证这条路 */
+const SIZE_CLASS: Record<number, string> = { 16: 'size-4', 20: 'size-5', 24: 'size-6', 28: 'size-7' }
 const ICON_COLORS = ['text-fg', 'text-muted', 'text-faint', 'text-link', 'text-del'] as const
 
 function IconsDemo(): ReactNode {
   const [size, setSize] = useState<number>(20)
   const [color, setColor] = useState<string>('text-fg')
+  // 开外框：图标四周画出色块边界，验证墨迹不越界、三档大小是否一致
+  const [frame, setFrame] = useState(false)
   const list = Object.entries(icons).filter(([name]) => name.startsWith('Icon')) as Array<
     [string, FC<SVGProps<SVGSVGElement>>]
   >
@@ -249,6 +277,9 @@ function IconsDemo(): ReactNode {
             {c.replace('text-', '')}
           </Chip>
         ))}
+        <Chip active={frame} onClick={() => setFrame((v) => !v)}>
+          外框
+        </Chip>
       </div>
       <div className="grid grid-cols-6 gap-1">
         {list.map(([name, Icon]) => (
@@ -257,9 +288,17 @@ function IconsDemo(): ReactNode {
             className="flex flex-col items-center gap-1 rounded-sm border border-edge px-1 py-2"
             title={name}
           >
-            <span className={color}>
-              <Icon width={size} height={size} />
-            </span>
+            {/* 边框常驻只换颜色（透明 → 虚线）：否则开关外框时卡片高度会因多出描边而跳动 */}
+            <div
+              className={clsx(
+                'box-content flex items-center justify-center',
+                SIZE_CLASS[size],
+                color,
+                frame ? 'border border-dashed border-edge' : 'border border-transparent'
+              )}
+            >
+              <Icon className={SIZE_CLASS[size]} />
+            </div>
             <span className="w-full truncate text-center text-xs text-faint">{name.slice(4)}</span>
           </div>
         ))}
@@ -379,7 +418,7 @@ function ButtonsDemo(): ReactNode {
           <Button variant="ghost">末尾</Button>
           <span className="mx-1 h-4 w-px bg-edge" />
           {['1×', '2×', '4×'].map((s, i) => (
-            <Button key={s} variant="ghost" className={i === 0 ? 'bg-select text-fg' : ''}>
+            <Button key={s} variant="ghost" className={clsx(i === 0 && 'bg-select text-fg')}>
               {s}
             </Button>
           ))}
@@ -412,10 +451,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={
-        'rounded-sm border px-2 py-0.5 text-xs transition-colors ' +
-        (active ? 'border-edge bg-select text-fg' : 'border-transparent text-muted hover:bg-sunken')
-      }
+      className={clsx(
+        'rounded-sm border px-2 py-0.5 text-xs transition-colors',
+        active ? 'border-edge bg-select text-fg' : 'border-transparent text-muted hover:bg-sunken'
+      )}
     >
       {children}
     </button>
@@ -574,10 +613,10 @@ export function Preview(): ReactNode {
             key={c.id}
             type="button"
             onClick={() => setActive(c.id)}
-            className={
-              'block w-full px-4 py-1.5 text-left text-xs transition-colors hover:bg-sunken ' +
-              (c.id === active ? 'font-medium text-fg' : 'text-muted')
-            }
+            className={clsx(
+              'block w-full px-4 py-1.5 text-left text-xs transition-colors hover:bg-sunken',
+              c.id === active ? 'font-medium text-fg' : 'text-muted'
+            )}
           >
             {c.label}
           </button>

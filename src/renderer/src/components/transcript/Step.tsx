@@ -1,4 +1,5 @@
 import { memo, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { Block } from '@shared/blocks'
 import { IconEdit, IconFile, IconSparkle, IconThinking } from '../icons'
 import { DiffLines } from './tool/bodies'
@@ -57,10 +58,10 @@ export const Step = memo(function Step({
     case 'system':
       return (
         <div
-          className={
-            'flex h-7 items-center gap-2 px-1 text-xs ' +
-            (block.tone === 'error' ? 'text-del' : block.tone === 'warn' ? 'text-warn' : 'text-muted')
-          }
+          className={clsx(
+            'flex h-7 items-center gap-2 px-1 text-xs',
+            block.tone === 'error' ? 'text-del' : block.tone === 'warn' ? 'text-warn' : 'text-muted'
+          )}
         >
           <IconSparkle className="size-4 shrink-0" />
           <span className="truncate">{block.text}</span>

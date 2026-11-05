@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { DiffLine } from '@shared/blocks'
 
 /** 展开体的四种形态：纯输出、文件预览、终端、diff。都按数据类型复用，与工具名无关 */
@@ -73,21 +74,21 @@ export function DiffLines({ lines }: { lines: DiffLine[] }): ReactNode {
       {shown.map((l, i) => (
         <div
           key={i}
-          className={
-            'flex gap-2 px-2 ' +
-            (l.type === 'add' ? 'bg-success-1' : l.type === 'del' ? 'bg-danger-1' : '')
-          }
+          className={clsx(
+            'flex gap-2 px-2',
+            l.type === 'add' ? 'bg-success-1' : l.type === 'del' ? 'bg-danger-1' : ''
+          )}
         >
           <span className="w-6 shrink-0 text-right text-faint tabular-nums select-none">{l.no ?? ''}</span>
           <span
-            className={
-              'w-2 shrink-0 select-none ' +
-              (l.type === 'add' ? 'text-add' : l.type === 'del' ? 'text-del' : 'text-transparent')
-            }
+            className={clsx(
+              'w-2 shrink-0 select-none',
+              l.type === 'add' ? 'text-add' : l.type === 'del' ? 'text-del' : 'text-transparent'
+            )}
           >
             {l.type === 'add' ? '+' : l.type === 'del' ? '−' : '.'}
           </span>
-          <span className={'min-w-0 flex-1 whitespace-pre-wrap break-all ' + (l.type === 'del' ? 'text-del' : '')}>
+          <span className={clsx('min-w-0 flex-1 whitespace-pre-wrap break-all', l.type === 'del' && 'text-del')}>
             {l.text}
           </span>
         </div>

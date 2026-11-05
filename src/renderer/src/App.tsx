@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Sidebar, CollapsedHeaderBar } from './components/Sidebar'
+import { clsx } from 'clsx'
+import { Sidebar } from './components/Sidebar'
 import { Projects } from './components/Projects'
-import { TitleBar } from './components/TitleBar'
+import { TitleBar, CollapseButton } from './components/TitleBar'
 import { StartPage } from './components/StartPage'
 import { ChatComposer } from './components/Composer'
 import { MessageActions, lastText } from './components/blocks'
@@ -10,7 +11,7 @@ import { Preview } from './components/Preview'
 import { AskCard } from './components/AskCard'
 import { UiPrompt } from './components/UiPrompt'
 import { Toasts } from './components/Toasts'
-import { IconArrowDown, IconSpinner } from './components/icons'
+import { IconArrowDown, IconArrowLeft, IconArrowRight, IconSpinner } from './components/icons'
 import { Button } from './components/Button'
 import { toMarkdown } from './exportMarkdown'
 import { useAgent } from './useAgent'
@@ -100,10 +101,9 @@ export default function App(): ReactNode {
   const answerText = lastText(agent.blocks)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
+    <div className="relative flex h-screen overflow-hidden bg-canvas">
       {!collapsed && (
         <Sidebar
-          onCollapse={toggle}
           onNavigate={(r) => go({ route: r, id: null })}
           projects={agent.projects}
           sessions={agent.sessions}
@@ -125,27 +125,14 @@ export default function App(): ReactNode {
             // 删的若是当前看着的会话，宿主已切到新会话，界面回到起始页
             if (current?.path === path) go({ route: 'start', id: null })
           }}
-          canBack={past.current.length > 0}
-          canForward={future.current.length > 0}
-          onBack={back}
-          onForward={forward}
         />
       )}
+
       {/* 展开时主卡片贴住侧栏右缘，侧栏分隔线与卡片左边框连成一条贯穿线；收起时四边留相等边距 */}
-      <div className={'flex min-w-0 flex-1 flex-col p-1 ' + (collapsed ? '' : 'pl-0')}>
+      <div className={clsx('flex min-w-0 flex-1 flex-col p-1', !collapsed && 'pl-0')}>
         <div className="pi-panel relative flex min-h-0 flex-1 flex-col overflow-hidden shadow-card">
           <TitleBar
-            leading={
-              collapsed && (
-                <CollapsedHeaderBar
-                  onExpand={toggle}
-                  canBack={past.current.length > 0}
-                  canForward={future.current.length > 0}
-                  onBack={back}
-                  onForward={forward}
-                />
-              )
-            }
+            reserveLeft={collapsed}
             title={current?.title}
             showTitle={route === 'chat'}
             sessionPath={current?.path}
@@ -173,6 +160,28 @@ export default function App(): ReactNode {
       {/* 弹窗与提示放在最外层：起始页上的工具确认也要能看到 */}
       {agent.ui[0] && <UiPrompt req={agent.ui[0]} onReply={agent.replyUi} />}
       <Toasts items={agent.toasts} />
+      {/* 品牌 / 前进后退浮在最上层：侧栏展开收起都在同一位置，只换箭头方向，不会因布局变化跳位。
+          DOM 必须排在 TitleBar 之后：Windows 按 DOM 顺序算拖拽区，后来的 no-drag 才能把先前的 drag 挖掉 */}
+      <div
+        className="absolute top-1 left-2 z-30 flex h-11 items-center gap-1"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      >
+        <CollapseButton collapsed={collapsed} onClick={toggle} />
+        <Button
+          aria-label="后退"
+          variant="ghost"
+          disabled={past.current.length === 0}
+          onClick={back}
+          icon={<IconArrowLeft />}
+        />
+        <Button
+          aria-label="前进"
+          variant="ghost"
+          disabled={future.current.length === 0}
+          onClick={forward}
+          icon={<IconArrowRight />}
+        />
+      </div>
     </div>
   )
 }

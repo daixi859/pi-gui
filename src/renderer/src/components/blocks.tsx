@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { Block, ToolState } from '@shared/blocks'
 import { workTime } from '../util'
 import { MarkdownView } from './MarkdownView'
@@ -184,7 +185,7 @@ const TONES = {
 
 function SystemBlock({ tone, text }: { tone: keyof typeof TONES; text: string }): ReactNode {
   return (
-    <div className={'flex items-center gap-2 text-xs ' + TONES[tone]}>
+    <div className={clsx('flex items-center gap-2 text-xs', TONES[tone])}>
       <IconSparkle className="size-3.5 shrink-0" />
       <span>{text}</span>
     </div>
@@ -267,7 +268,7 @@ export function MessageActions({ text, time }: { text: string; time: string }): 
           title={label}
           aria-label={label}
           variant="ghost"
-          className={active ? 'text-fg' : ''}
+          className={clsx(active && 'text-fg')}
           onClick={onClick}
           icon={<Ico className="size-[15px]" />}
         />

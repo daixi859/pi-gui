@@ -140,7 +140,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ util.ts            workTime 时长文案
         ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角 + .md 排版 + 流式光标
         └─ components/
-            ├─ TitleBar.tsx        无框拖拽条 + 窗口按钮 + 收起态布局
+            ├─ TitleBar.tsx        无框拖拽条 + 窗口按钮 + 品牌/收起按钮（浮动工具条在 App）
             ├─ Sidebar.tsx         268px 侧栏：导航、任务列表(搜索/排序)、项目分组
             ├─ Projects.tsx        项目页：从会话扫描派生的项目表 + 软移除/恢复/真删
             ├─ StartPage.tsx       起始页：水印 + 问候 + 大输入卡 + 建议胶囊

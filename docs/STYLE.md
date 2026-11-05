@@ -87,6 +87,12 @@
 
 语义类只装**结构与状态**，不装业务尺寸。业务差异继续用工具类叠加：`className="pi-card p-4 shadow-dialog"`。
 
+条件类一律用 `clsx`（`import { clsx } from 'clsx'`），禁止字符串拼接和模板字符串：
+
+```tsx
+className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
+```
+
 ## 6. 交互与动效
 
 - hover：浅色底用 `bg-tint`，面板内行用 `bg-sunken`，选中行为 `bg-select`。
@@ -95,6 +101,17 @@
 - 动效只回应人的动作（展开、确认、状态变化），时长 120–180ms、ease-out；不做逐段入场、不做常驻漂浮动画。
 - 尊重 `prefers-reduced-motion`：新动效必须在该媒体查询里关闭。
 - 可点区域 ≥24×24（`size-6`）；纯图标按钮必须有 `aria-label`。
+
+## 6.1 图标
+
+全部手绘在 `src/renderer/src/components/icons.tsx`，16 网格、1.5 描边、只落 0.25 网格坐标。新增或改图标按这四条：
+
+- **尺寸三档**，按墨迹外接框（含描边半宽 0.75）算：`S` 10.5（方向、符号：chevron/arrow/check/close/plus/pause/dots/stop/undo）、`M` 12.5（常规物件）、`L` 14.5（容器满框：圆圈类、panel、terminal、eye、sparkle、blocks、settings）。尺寸差控制在 1.4 倍内。
+- **重心必须在 (8,8)**，左右上下各偏不超过 0.1。非对称图形（folder 的标签、hand 的手腕）先按整体平移再验。
+- **实心部分用 `fill="currentColor"` + `stroke="none"`**，禁止用 `fill="var(--color-*)` 做镂空 —— 换底色会露出色块（旧 `IconSliders` 就是这么坏的）。
+- 图标里不写 `size`/`width`/`height` 覆盖，尺寸由调用方的 `className="size-4"` 决定。
+
+验证：预览页「图标」开「外框」，逐档 16/20/24/28 看墨迹是否贴边一致。
 
 ## 7. 文案与术语
 

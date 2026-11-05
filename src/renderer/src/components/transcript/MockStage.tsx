@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { clsx } from 'clsx'
 import { buildTimeline, type Frame } from '../../mockTimeline'
 import { IconPause } from '../icons'
 import { Transcript } from './Transcript'
@@ -136,13 +137,13 @@ export function MockStage(): ReactNode {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-1">
-        <button type="button" onClick={toggle} className={btn + ' pi-icon-btn w-7'} aria-label={playing ? '暂停' : '继续'}>
+        <button type="button" onClick={toggle} className={clsx(btn, 'pi-icon-btn w-7')} aria-label={playing ? '暂停' : '继续'}>
           {playing ? <IconPause /> : <span>▶</span>}
         </button>
-        <button type="button" onClick={restart} className={btn + ' text-muted hover:bg-sunken hover:text-fg'}>
+        <button type="button" onClick={restart} className={clsx(btn, 'text-muted hover:bg-sunken hover:text-fg')}>
           重播
         </button>
-        <button type="button" onClick={end} className={btn + ' text-muted hover:bg-sunken hover:text-fg'}>
+        <button type="button" onClick={end} className={clsx(btn, 'text-muted hover:bg-sunken hover:text-fg')}>
           末尾
         </button>
         <span className="mx-1 h-4 w-px bg-edge" />
@@ -151,7 +152,7 @@ export function MockStage(): ReactNode {
             key={s}
             type="button"
             onClick={() => setSpeed(s)}
-            className={btn + (speed === s ? ' bg-select text-fg' : ' text-muted hover:bg-sunken hover:text-fg')}
+            className={clsx(btn, speed === s ? 'bg-select text-fg' : 'text-muted hover:bg-sunken hover:text-fg')}
           >
             {s}×
           </button>
@@ -165,7 +166,7 @@ export function MockStage(): ReactNode {
               setRounds(r)
               restart()
             }}
-            className={btn + (rounds === r ? ' bg-select text-fg' : ' text-muted hover:bg-sunken hover:text-fg')}
+            className={clsx(btn, rounds === r ? 'bg-select text-fg' : 'text-muted hover:bg-sunken hover:text-fg')}
           >
             {r === 0 ? '无历史' : `${r} 回合`}
           </button>

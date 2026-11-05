@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { clsx } from 'clsx'
 
 const TONE: Record<string, string> = {
   info: 'border-edge text-fg',
@@ -18,7 +19,7 @@ export function Toasts({
       {items.map((t) => (
         <div
           key={t.id}
-          className={`rounded-md border bg-surface px-2 py-2 text-sm leading-[1.5] shadow-pop ${TONE[t.type] ?? TONE.info}`}
+          className={clsx('rounded-md border bg-surface px-2 py-2 text-sm leading-[1.5] shadow-pop', TONE[t.type] ?? TONE.info)}
         >
           {t.message}
         </div>

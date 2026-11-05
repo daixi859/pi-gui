@@ -72,7 +72,8 @@
   --color-sunken: var(--color-neutral-3);
   /* 侧栏行 hover / 选中 */
   --color-select: var(--color-neutral-5);
-  --color-edge: var(--color-neutral-5);
+  /* 边线：全站唯一来源，整体调深浅只改这一行（比 canvas 深一点点才看得出分层） */
+  --color-edge: color-mix(in oklab, var(--seed-neutral) 14%, white);
   --color-fg: var(--color-neutral-10);
   --color-muted: var(--color-neutral-8);
   --color-faint: var(--color-neutral-6);
@@ -191,7 +192,7 @@ body {
 
 /* markdown 排版：只保留品牌所需的间距与层级 */
 .md {
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.85;
   color: var(--color-fg);
 }

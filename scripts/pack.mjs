@@ -1,7 +1,7 @@
 // 打绿色版：release/Pi/ 整个文件夹拷走就能双击 Pi.exe 跑，不依赖本仓库。
 // 用法：npm run release
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -17,8 +17,10 @@ function run(cmd, args) {
 console.log('› 构建')
 run('npx', ['electron-vite', 'build'])
 
+// 只清 out 里的内容，保留 out 目录本身（它可能被占用或是有特殊权限的目录）
 console.log('› 清空', relative(root, out))
-rmSync(out, { recursive: true, force: true })
+mkdirSync(out, { recursive: true })
+for (const name of readdirSync(out)) rmSync(join(out, name), { recursive: true, force: true })
 mkdirSync(app, { recursive: true })
 
 console.log('› 拷贝 Electron 运行时')

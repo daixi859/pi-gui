@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import type { DiffLine } from '@shared/blocks'
 import { IconChevronDown, IconChevronRight, IconUndo } from './icons'
 
@@ -56,10 +57,7 @@ export function DiffBlock({
             e.stopPropagation()
             revert()
           }}
-          className={
-            'ml-auto flex items-center gap-1 text-xs ' +
-            (patch ? 'text-muted hover:text-fg' : 'text-faint')
-          }
+          className={clsx('ml-auto flex items-center gap-1 text-xs', patch ? 'text-muted hover:text-fg' : 'text-faint')}
         >
           <IconUndo className="size-3.5" />
           {reverting ? '撤销中…' : '撤销'}
@@ -74,21 +72,21 @@ export function DiffBlock({
             {(lines.length > 300 ? lines.slice(0, 300) : lines).map((l, i) => (
               <div
                 key={i}
-                className={
-                  'flex gap-2 px-4 ' +
-                  (l.type === 'add' ? 'bg-success-1' : l.type === 'del' ? 'bg-danger-1' : '')
-                }
+                className={clsx(
+                  'flex gap-2 px-4',
+                  l.type === 'add' ? 'bg-success-1' : l.type === 'del' ? 'bg-danger-1' : ''
+                )}
               >
                 <span className="w-8 shrink-0 text-right text-faint select-none">{l.no ?? ''}</span>
                 <span
-                  className={
-                    'w-2 shrink-0 select-none ' +
-                    (l.type === 'add' ? 'text-add' : l.type === 'del' ? 'text-del' : 'text-transparent')
-                  }
+                  className={clsx(
+                    'w-2 shrink-0 select-none',
+                    l.type === 'add' ? 'text-add' : l.type === 'del' ? 'text-del' : 'text-transparent'
+                  )}
                 >
                   {l.type === 'add' ? '+' : l.type === 'del' ? '−' : '.'}
                 </span>
-                <span className={l.type === 'del' ? 'whitespace-pre-wrap text-del' : 'whitespace-pre-wrap'}>
+                <span className={clsx('whitespace-pre-wrap', l.type === 'del' && 'text-del')}>
                   {l.text}
                 </span>
               </div>
