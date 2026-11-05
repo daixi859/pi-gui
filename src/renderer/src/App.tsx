@@ -11,6 +11,7 @@ import { AskCard } from './components/AskCard'
 import { UiPrompt } from './components/UiPrompt'
 import { Toasts } from './components/Toasts'
 import { IconArrowDown, IconSpinner } from './components/icons'
+import { Button } from './components/Button'
 import { toMarkdown } from './exportMarkdown'
 import { useAgent } from './useAgent'
 import { useScrollRail } from './useScrollRail'
@@ -189,17 +190,25 @@ function ChatView({
   // 离底部超过这个余量才给回到最新，避免小波动一直闪
   const AWAY = 120
   const [away, setAway] = useState(false)
-  // 流式时跟到底部，用户往上翻就松手。合到一帧里，增量再多也只碰一次布局
+  // 内容尺寸变化就重算：流式跟底，翻上去就松手，并给「回到最新」。
+  // 用 ResizeObserver 而不是依赖 blocks：markdown / 高亮 / 图片都是异步长高的，没有滚动事件
   useEffect(() => {
     const el = scroller.current
-    if (!el) return
-    const frame = requestAnimationFrame(() => {
-      if (bottomGap(el) >= AWAY) return
-      el.scrollTop = el.scrollHeight
-      setAway(false)
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [agent.blocks])
+    // ChatView 恒渲染 .pi-page 包裹层，首个子元素就是内容根
+    const content = el?.firstElementChild
+    if (!el || !content) return
+    const sync = (): void => {
+      const height = el.scrollHeight // 每次重算只读一次，避免重复强制布局
+      const gap = height - el.scrollTop - el.clientHeight
+      if (gap < AWAY) el.scrollTop = height
+      setAway(gap >= AWAY)
+    }
+    const ro = new ResizeObserver(sync)
+    ro.observe(content)
+    ro.observe(el) // 窗口高度变了也要重算
+    sync()
+    return () => ro.disconnect()
+  }, [])
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -208,7 +217,7 @@ function ChatView({
           ref={scroller}
           className="rail-scroll h-full overflow-y-auto"
           onScroll={(e) => {
-            setAway(bottomGap(e.currentTarget) > AWAY)
+            setAway(bottomGap(e.currentTarget) >= AWAY)
           }}
           {...rail}
         >
@@ -234,15 +243,15 @@ function ChatView({
         </div>
       </div>
         {away && (
-          <button
-            type="button"
-            onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
+          <Button
             aria-label="回到最新"
             title="回到最新"
-            className="absolute bottom-4 left-1/2 grid size-7 -translate-x-1/2 place-items-center rounded-pill border border-edge bg-panel text-muted shadow-pop hover:text-fg"
-          >
-            <IconArrowDown className="size-4" />
-          </button>
+            variant="secondary"
+            shape="circle"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-panel shadow-pop"
+            onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
+            icon={<IconArrowDown />}
+          />
         )}
       </div>
       <div className="mx-auto w-full max-w-[820px] px-8 pb-4">

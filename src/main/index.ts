@@ -43,6 +43,19 @@ function send(cmd: AgentCommand): void {
   host?.postMessage(cmd)
 }
 
+/** 只放行 http(s)；file:// 等一律不在应用窗口里打开 */
+const EXTERNAL = /^https?:\/\//
+
+/** file:// 的 origin 恒为 "null"，只能对 http(s) 判同源；畸形 URL 当外链处理 */
+function sameOrigin(a: string, b: string): boolean {
+  if (!EXTERNAL.test(a)) return false
+  try {
+    return new URL(a).origin === new URL(b).origin
+  } catch {
+    return false
+  }
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1192,
@@ -61,6 +74,17 @@ function createWindow(): void {
     }
   })
 
+  // 渲染层任何导航都交给系统浏览器，不在应用窗口里打开网页
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (EXTERNAL.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (e, url) => {
+    const current = win?.webContents.getURL()
+    if (current && sameOrigin(url, current)) return
+    e.preventDefault()
+    if (EXTERNAL.test(url)) void shell.openExternal(url)
+  })
   win.on('ready-to-show', () => win?.show())
   win.on('closed', () => {
     win = null

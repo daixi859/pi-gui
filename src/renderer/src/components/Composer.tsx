@@ -3,6 +3,7 @@ import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../drafts'
 import { MenuItem, MenuLabel, MenuPanel, MenuScrim } from './Menu'
+import { Button } from './Button'
 import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from './icons'
 import { Tip } from './Tip'
 
@@ -123,14 +124,13 @@ function Toolbar({
   const [menu, setMenu] = useState(false)
   return (
     <div className="flex items-center gap-1 px-2 pt-1 pb-2">
-      <button
-        type="button"
+      <Button
         aria-label="添加附件"
+        variant="ghost"
+        shape="circle"
         onClick={onAttach}
-        className="grid size-7 place-items-center rounded-full text-muted hover:bg-sunken hover:text-fg"
-      >
-        <IconPlus />
-      </button>
+        icon={<IconPlus />}
+      />
       <button type="button" onClick={onAccess} className={ghost} title="切换变更前确认 / 完全访问">
         <IconHand className="size-[14px]" />
         {snapshot.access}
@@ -156,36 +156,38 @@ function Toolbar({
         {/* 视觉 26，外圈 28 保住可点热区 */}
         {streaming ? (
           <div className="group relative">
-            <button
-              type="button"
+            <Button
               aria-label="停止生成"
+              variant="ghost"
+              shape="circle"
               onClick={onAbort}
-              className="grid size-7 place-items-center rounded-full"
-            >
-              <span className="grid size-6.5 place-items-center rounded-full bg-sunken text-fg transition-colors hover:bg-select">
-                <div className="size-3 rounded-xs bg-current" />
-              </span>
-            </button>
+              icon={
+                <span className="grid size-6.5 place-items-center rounded-pill bg-sunken text-fg transition-colors hover:bg-select">
+                  <span className="size-3 rounded-xs bg-current" />
+                </span>
+              }
+            />
             <Tip text="停止生成" kbd="Esc" />
           </div>
         ) : (
           <div className="group relative">
-            <button
-              type="button"
+            <Button
               aria-label="发送"
+              variant="ghost"
+              shape="circle"
               disabled={empty}
               onClick={onSend}
-              className="grid size-7 place-items-center rounded-full"
-            >
-              <span
-                className={
-                  'grid size-6.5 place-items-center rounded-full transition-colors ' +
-                  (empty ? 'bg-sunken text-faint' : 'bg-fg text-surface hover:bg-fg/85')
-                }
-              >
-                <IconArrowUp className="size-4" />
-              </span>
-            </button>
+              icon={
+                <span
+                  className={
+                    'grid size-6.5 place-items-center rounded-pill transition-colors ' +
+                    (empty ? 'bg-sunken text-faint' : 'bg-fg text-surface hover:bg-fg/85')
+                  }
+                >
+                  <IconArrowUp className="size-4" />
+                </span>
+              }
+            />
             {/* 没内容就不发，也就不提示 */}
             {!empty && <Tip text="发送" kbd="Enter" />}
           </div>
@@ -363,16 +365,18 @@ function InputCard({
                   className="size-full object-cover"
                 />
               </button>
-              <button
-                type="button"
+              <Button
                 aria-label={`移除图片 ${i + 1}`}
+                variant="ghost"
+                shape="circle"
+                className="absolute -top-2 -right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                 onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-              >
-                <span className="grid size-3.5 place-items-center rounded-full bg-fg text-surface">
-                  <IconClose className="size-2" />
-                </span>
-              </button>
+                icon={
+                  <span className="grid size-3.5 place-items-center rounded-pill bg-fg text-surface">
+                    <IconClose className="size-2" />
+                  </span>
+                }
+              />
             </div>
           ))}
         </div>

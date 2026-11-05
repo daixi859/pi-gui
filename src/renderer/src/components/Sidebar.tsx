@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import type { ProjectMeta, SessionMeta } from '@shared/blocks'
 import { PiLogo } from './PiLogo'
+import { Button } from './Button'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
 import {
   IconArrowLeft,
@@ -35,8 +36,6 @@ const navRow =
 
 /** 项目行三点菜单的宽度：定位与面板共用，改一处就够 */
 const MENU_W = 120
-
-const iconBtn = 'pi-icon-btn'
 
 /** 折叠按钮：展开态显示品牌 logo，hover 变收起图标；收起态显示展开图标。两者垂直/水平位置重合。 */
 function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
@@ -257,24 +256,14 @@ export function Sidebar({
     <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-2">
       <div className="flex h-11 shrink-0 items-center gap-1 pl-2 [-webkit-app-region:drag]">
         <CollapseButton collapsed={false} onClick={onCollapse} />
-        <button
-          type="button"
-          aria-label="后退"
-          disabled={!canBack}
-          onClick={onBack}
-          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-        >
-          <IconArrowLeft />
-        </button>
-        <button
-          type="button"
+        <Button aria-label="后退" variant="ghost" disabled={!canBack} onClick={onBack} icon={<IconArrowLeft />} />
+        <Button
           aria-label="前进"
+          variant="ghost"
           disabled={!canForward}
           onClick={onForward}
-          className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-        >
-          <IconArrowRight />
-        </button>
+          icon={<IconArrowRight />}
+        />
       </div>
 
       <nav className="px-2 pt-2">
@@ -309,25 +298,23 @@ export function Sidebar({
         ) : (
           <>
             <span className="shrink-0 whitespace-nowrap text-sm text-muted">任务列表</span>
-            <button
-              type="button"
+            <Button
               aria-label="搜索"
+              variant="ghost"
+              className="ml-auto"
               onClick={() => setSearching(true)}
-              className="ml-auto shrink-0 text-muted hover:text-fg"
-            >
-              <IconSearch className="size-[15px]" />
-            </button>
+              icon={<IconSearch />}
+            />
           </>
         )}
-        <button
-          type="button"
+        <Button
           aria-label="筛选"
           aria-expanded={sorting}
+          variant="ghost"
           onClick={() => setSorting((v) => !v)}
-          className={'shrink-0 text-muted hover:text-fg ' + (sorting ? 'text-fg' : '')}
-        >
-          <IconFilter className="size-[15px]" />
-        </button>
+          className={sorting ? 'text-fg' : ''}
+          icon={<IconFilter />}
+        />
         {sorting && <SortMenu value={sort} onClose={() => setSorting(false)} onPick={setSort} />}
       </div>
 
@@ -344,12 +331,8 @@ export function Sidebar({
           <IconChevronDown className="size-3" />
         </button>
         <div className="ml-auto flex items-center gap-1">
-          <button type="button" aria-label="排序" className="text-muted hover:text-fg">
-            <IconSortList className="size-[15px]" />
-          </button>
-          <button type="button" aria-label="新建项目" className="text-muted hover:text-fg">
-            <IconPlus className="size-[15px]" />
-          </button>
+          <Button aria-label="排序" variant="ghost" icon={<IconSortList />} />
+          <Button aria-label="新建项目" variant="ghost" icon={<IconPlus />} />
         </div>
       </div>
 
@@ -380,10 +363,12 @@ export function Sidebar({
                   {/* 悬停才露出的两个动作：更多菜单 / 新建任务（后者最右） */}
                   {p.path && (
                     <div className="flex shrink-0 items-center">
-                      <button
-                        type="button"
+                      <Button
                         aria-label="更多"
                         aria-expanded={menu?.path === p.path}
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
                         onClick={(e) => {
                           // 坐标要在事件里取：setState 的 updater 渲染时才跑，那时 currentTarget 已经是 null
                           const r = e.currentTarget.getBoundingClientRect()
@@ -391,19 +376,17 @@ export function Sidebar({
                             v?.path === p.path ? null : { path: p.path, x: r.right - MENU_W, y: r.bottom + 4 }
                           )
                         }}
-                        className="pi-icon-btn opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
-                      >
-                        <IconDots className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
+                        icon={<IconDots className="size-3.5" />}
+                      />
+                      <Button
                         aria-label={`在 ${p.name} 新建任务`}
                         title="新建任务"
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                         onClick={() => onNewSessionIn(p.path)}
-                        className="pi-icon-btn opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                      >
-                        <IconPlusCircle className="size-3.5" />
-                      </button>
+                        icon={<IconPlusCircle className="size-3.5" />}
+                      />
                     </div>
                   )}
                 </div>
@@ -464,14 +447,12 @@ export function Sidebar({
         </span>
         <span className="truncate text-sm">hwuscrxo</span>
         <div className="ml-auto flex items-center gap-1">
-          <button
-            type="button"
+          <Button
             aria-label="设置"
+            variant="ghost"
             onClick={() => window.pi?.host.openAgentConfig()}
-            className="text-muted hover:text-fg"
-          >
-            <IconSettings className="size-[15px]" />
-          </button>
+            icon={<IconSettings />}
+          />
         </div>
       </div>
     </aside>
@@ -597,24 +578,14 @@ export function CollapsedHeaderBar({
   return (
     <div className="-ml-2 flex items-center gap-1 [-webkit-app-region:drag]">
       <CollapseButton collapsed onClick={onExpand} />
-      <button
-        type="button"
-        aria-label="后退"
-        disabled={!canBack}
-        onClick={onBack}
-        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-      >
-        <IconArrowLeft />
-      </button>
-      <button
-        type="button"
+      <Button aria-label="后退" variant="ghost" disabled={!canBack} onClick={onBack} icon={<IconArrowLeft />} />
+      <Button
         aria-label="前进"
+        variant="ghost"
         disabled={!canForward}
         onClick={onForward}
-        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-      >
-        <IconArrowRight />
-      </button>
+        icon={<IconArrowRight />}
+      />
     </div>
   )
 }
@@ -622,32 +593,27 @@ export function CollapsedHeaderBar({
 export function WindowControls({ sessionPath }: { sessionPath?: string }): ReactNode {
   return (
     <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button
-        type="button"
+      <Button
         aria-label="帮助"
+        variant="ghost"
         onClick={() => window.pi?.host.openExternal('https://github.com/earendil-works/pi')}
-        className={iconBtn}
-      >
-        <IconHelp />
-      </button>
-      <button
-        type="button"
+        icon={<IconHelp />}
+      />
+      <Button
         aria-label="在文件夹中显示会话"
-        onClick={() => sessionPath && window.pi?.host.revealPath(sessionPath)}
+        variant="ghost"
         disabled={!sessionPath}
-        className={iconBtn + ' disabled:opacity-35 disabled:hover:bg-transparent'}
-      >
-        <IconFolder />
-      </button>
-      <button type="button" aria-label="最小化" className={iconBtn} onClick={() => window.pi.window.minimize()}>
-        <IconMinimize />
-      </button>
-      <button type="button" aria-label="最大化" className={iconBtn} onClick={() => window.pi.window.toggleMaximize()}>
-        <IconMaximize />
-      </button>
-      <button type="button" aria-label="关闭" className={iconBtn} onClick={() => window.pi.window.close()}>
-        <IconClose />
-      </button>
+        onClick={() => sessionPath && window.pi?.host.revealPath(sessionPath)}
+        icon={<IconFolder />}
+      />
+      <Button aria-label="最小化" variant="ghost" onClick={() => window.pi.window.minimize()} icon={<IconMinimize />} />
+      <Button
+        aria-label="最大化"
+        variant="ghost"
+        onClick={() => window.pi.window.toggleMaximize()}
+        icon={<IconMaximize />}
+      />
+      <Button aria-label="关闭" variant="ghost" onClick={() => window.pi.window.close()} icon={<IconClose />} />
     </div>
   )
 }

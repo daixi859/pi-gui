@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { AskAnswer, AskQuestion } from '@shared/ipc'
 import { IconArrowLeft, IconArrowRight, IconCheck } from './icons'
+import { Button } from './Button'
 
 /** 一道题的本地编辑态；custom 与 option/selected 互斥由提交时决定 */
 interface Draft {
@@ -59,27 +60,25 @@ export function AskCard({
         )}
         <p className="min-w-0 flex-1 text-sm leading-[1.5] text-fg">{q.question}</p>
         <div className="ml-1 flex shrink-0 items-center gap-1 text-xs text-faint">
-          <button
-            type="button"
+          <Button
+            aria-label="上一题"
+            variant="ghost"
+            size="sm"
             disabled={step === 0}
             onClick={() => setStep((s) => s - 1)}
-            className="grid h-5 w-5 place-items-center rounded-sm hover:bg-tint disabled:opacity-30 disabled:hover:bg-transparent"
-            aria-label="上一题"
-          >
-            <IconArrowLeft {...px(12)} />
-          </button>
+            icon={<IconArrowLeft {...px(12)} />}
+          />
           <span className="tabular-nums">
             {step + 1} / {questions.length}
           </span>
-          <button
-            type="button"
+          <Button
+            aria-label="下一题"
+            variant="ghost"
+            size="sm"
             disabled={step === last}
             onClick={() => setStep((s) => s + 1)}
-            className="grid h-5 w-5 place-items-center rounded-sm hover:bg-tint disabled:opacity-30 disabled:hover:bg-transparent"
-            aria-label="下一题"
-          >
-            <IconArrowRight {...px(12)} />
-          </button>
+            icon={<IconArrowRight {...px(12)} />}
+          />
         </div>
       </div>
 
@@ -148,31 +147,15 @@ export function AskCard({
       <div className="mt-2 flex items-center justify-between border-t border-edge/70 pt-2">
         <span className="text-xs text-faint">ⓘ 使用 Tab / 上下键选择，回车或空格选中</span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onCancel(id)}
-            className="rounded-md border border-edge px-2 py-1 text-sm text-fg hover:bg-tint"
-          >
-            忽略
-          </button>
+          <Button onClick={() => onCancel(id)}>忽略</Button>
           {step < last ? (
-            <button
-              type="button"
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!answered(d)}
-              className="pi-btn disabled:opacity-35"
-            >
+            <Button variant="primary" onClick={() => setStep((s) => s + 1)} disabled={!answered(d)}>
               继续
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!answered(d)}
-              className="pi-btn disabled:opacity-35"
-            >
+            <Button variant="primary" onClick={submit} disabled={!answered(d)}>
               提交
-            </button>
+            </Button>
           )}
         </div>
       </div>

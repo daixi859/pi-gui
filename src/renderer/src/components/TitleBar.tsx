@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { IconDots, IconFolder, IconClose } from './icons'
 import { WindowControls } from './Sidebar'
+import { Button } from './Button'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
-
-const iconBtn = 'pi-icon-btn'
 
 /** 面板顶部：左槽（收起侧栏时的工具条）+ 会话标题 + 窗口控件。 */
 export function TitleBar({
@@ -32,15 +31,14 @@ export function TitleBar({
           <IconFolder className="shrink-0 text-muted" />
           <span className="truncate text-sm">{title}</span>
           <div className="relative">
-            <button
-              type="button"
+            <Button
               aria-label="会话信息"
               aria-expanded={menu}
+              variant="ghost"
               onClick={() => setMenu((v) => !v)}
-              className={iconBtn + ' [-webkit-app-region:no-drag]'}
-            >
-              <IconDots />
-            </button>
+              className="[-webkit-app-region:no-drag]"
+              icon={<IconDots />}
+            />
             {menu && (
               <>
                 <MenuScrim onClose={() => setMenu(false)} />
@@ -68,9 +66,14 @@ export function TitleBar({
       {error && (
         <div className="ml-2 flex min-w-0 items-center gap-1 rounded-md bg-danger-1 px-2 py-1 text-xs text-del [-webkit-app-region:no-drag]">
           <span className="truncate">{error}</span>
-          <button type="button" aria-label="关闭提示" onClick={onClearError} className="shrink-0 opacity-70 hover:opacity-100">
-            <IconClose className="size-3.5" />
-          </button>
+          <Button
+            aria-label="关闭提示"
+            variant="ghost"
+            size="sm"
+            shape="circle"
+            onClick={onClearError}
+            icon={<IconClose />}
+          />
         </div>
       )}
       <div className="ml-auto">

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import type { UiRequest } from '@shared/ipc'
 import { IconClose } from './icons'
+import { Button } from './Button'
 
 /**
  * 裸 UI 请求的原生弹窗：没有交互适配器认领的 select/input/confirm/editor 落到这里，
@@ -26,14 +27,15 @@ export function UiPrompt({
           <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm leading-[1.55] text-fg">
             {title || req.message}
           </p>
-          <button
-            type="button"
-            onClick={close}
+          <Button
             aria-label="关闭"
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-sm text-faint hover:bg-tint"
-          >
-            <IconClose width={12} height={12} />
-          </button>
+            variant="ghost"
+            size="sm"
+            shape="circle"
+            className="shrink-0"
+            onClick={close}
+            icon={<IconClose />}
+          />
         </div>
 
         {req.kind === 'confirm' && req.message && <p className="mt-2 text-sm text-muted">{req.message}</p>}
@@ -65,29 +67,15 @@ export function UiPrompt({
         )}
 
         <div className="mt-2 flex justify-end gap-1">
-          <button
-            type="button"
-            onClick={close}
-            className="rounded-md border border-edge px-2 py-1 text-sm text-fg hover:bg-tint"
-          >
-            取消
-          </button>
+          <Button onClick={close}>取消</Button>
           {req.kind === 'confirm' ? (
-            <button
-              type="button"
-              onClick={() => onReply(req.id, { confirmed: true })}
-              className="pi-btn"
-            >
+            <Button variant="primary" onClick={() => onReply(req.id, { confirmed: true })}>
               确认
-            </button>
+            </Button>
           ) : req.kind === 'select' ? null : (
-            <button
-              type="button"
-              onClick={() => onReply(req.id, { value: text })}
-              className="pi-btn"
-            >
+            <Button variant="primary" onClick={() => onReply(req.id, { value: text })}>
               确定
-            </button>
+            </Button>
           )}
         </div>
       </div>

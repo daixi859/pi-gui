@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { ProjectRow } from '@shared/blocks'
 import { MenuItem, MenuPanel, MenuScrim } from './Menu'
+import { Button } from './Button'
 import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from './icons'
 import { useScrollRail } from '../useScrollRail'
 
@@ -146,14 +147,15 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
                     >
                       恢复
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => confirmDelete(r)}
+                    <Button
+                      aria-label="删除项目"
                       title="连同会话文件一起删除"
-                      className="pi-icon-btn shrink-0 text-del"
-                    >
-                      <IconTrash className="size-4" />
-                    </button>
+                      variant="ghost"
+                      size="sm"
+                      className="text-del"
+                      onClick={() => confirmDelete(r)}
+                      icon={<IconTrash />}
+                    />
                   </div>
                 ))}
               </div>

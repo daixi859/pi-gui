@@ -84,7 +84,6 @@
 | `pi-menu` / `pi-menu-item` | 下拉容器（8px 圆角）/ 下拉项（28px 行高、项间距 2px、hover 4px 圆角） |
 | `pi-page` | 内容页容器（820px 最大宽 + 32px 横向内边距） |
 | `pi-input` | 单行输入框（含 placeholder / focus 描边） |
-| `pi-btn` | 主按钮：`fg` 底 + 白字 + 14px 字号 |
 
 语义类只装**结构与状态**，不装业务尺寸。业务差异继续用工具类叠加：`className="pi-card p-4 shadow-dialog"`。
 
@@ -95,7 +94,7 @@
 - disabled：`opacity-35`，并显式去掉 hover 底色（`disabled:hover:bg-transparent`）。
 - 动效只回应人的动作（展开、确认、状态变化），时长 120–180ms、ease-out；不做逐段入场、不做常驻漂浮动画。
 - 尊重 `prefers-reduced-motion`：新动效必须在该媒体查询里关闭。
-- 可点区域 ≥28×28（`size-7`）；纯图标按钮必须有 `aria-label`。
+- 可点区域 ≥24×24（`size-6`）；纯图标按钮必须有 `aria-label`。
 
 ## 7. 文案与术语
 

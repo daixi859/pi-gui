@@ -3,6 +3,7 @@ import type { Block, ToolState } from '@shared/blocks'
 import { workTime } from '../util'
 import { MarkdownView } from './MarkdownView'
 import { DiffBlock } from './DiffBlock'
+import { Button } from './Button'
 import {
   IconChevronDown,
   IconChevronRight,
@@ -261,19 +262,15 @@ export function MessageActions({ text, time }: { text: string; time: string }): 
   return (
     <div className="flex items-center gap-1 text-faint">
       {items.map(({ key, icon: Ico, label, active, onClick }) => (
-        <button
+        <Button
           key={key}
-          type="button"
           title={label}
           aria-label={label}
+          variant="ghost"
+          className={active ? 'text-fg' : ''}
           onClick={onClick}
-          className={
-            'grid size-7 place-items-center rounded-sm transition-colors hover:bg-sunken hover:text-muted ' +
-            (active ? 'text-fg' : '')
-          }
-        >
-          <Ico className="size-[15px]" />
-        </button>
+          icon={<Ico className="size-[15px]" />}
+        />
       ))}
       <span className="ml-1 text-xs">{time}</span>
     </div>

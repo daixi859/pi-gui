@@ -57,7 +57,7 @@
 
 1. `BlockView` 套 `memo`。`useAgent` 的 `cache` 已保证未变块引用不变，这一处就能把"整段历史重渲染"变成"只重渲染流式块"。
 2. 流式期间不高亮：`MarkdownView` 把 `streaming` 传给 `CodeBlock`，流式中直接渲染 `<pre>` 纯文本，结束再走 shiki。**这是单点收益最大的一行改动。**
-3. 滚动跟随用 rAF 合并，并用 `ResizeObserver` 缓存 `scrollHeight`，不再每帧强制布局。
+3. 滚动跟随用 `ResizeObserver` 合并（markdown / 高亮 / 图片是异步长高的，没有 blocks 信号），每次回调只读一次 `scrollHeight`。
 4. `TurnBlock.children.map` 受 1 的庇护；若宿主每次整块重发 turn 导致 children 数组换引用，把 `memo` 的比较器显式化（按 `id + children.length` 比）。
 
 预期：单帧 commit 从 O(历史) 降到 O(1 个块)。

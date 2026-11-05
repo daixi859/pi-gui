@@ -1,4 +1,4 @@
-import { useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
+import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
 import { galleryBlocks, gallerySections, snapshot, type GallerySection } from '../mock'
 import { TranscriptStack } from './blocks'
 import { MockStage } from './transcript/MockStage'
@@ -7,14 +7,17 @@ import { AskCard } from './AskCard'
 import { UiPrompt } from './UiPrompt'
 import { Toasts } from './Toasts'
 import { MenuItem, MenuPanel } from './Menu'
+import { Button } from './Button'
 import * as icons from './icons'
 
 /** 开发期组件预览：分类看组件，右侧面板实时改全局令牌 */
 
-type Category = 'icons' | 'inputs' | 'display' | 'dialogs' | 'transcript'
+type Category = 'tokens' | 'icons' | 'buttons' | 'inputs' | 'display' | 'dialogs' | 'transcript'
 
 const CATEGORIES: Array<{ id: Category; label: string }> = [
+  { id: 'tokens', label: '外观令牌' },
   { id: 'icons', label: '图标' },
+  { id: 'buttons', label: '按钮' },
   { id: 'inputs', label: '输入' },
   { id: 'display', label: '展示' },
   { id: 'dialogs', label: '弹窗' },
@@ -166,7 +169,7 @@ function TokenPanel({
     '}'
   ].join('\n')
   return (
-    <aside className="flex w-[236px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-edge p-3">
+    <section className="flex w-[460px] max-w-full flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-fg">外观令牌</span>
         <button type="button" onClick={reset} className="text-xs text-muted hover:text-fg">
@@ -216,7 +219,7 @@ function TokenPanel({
       <p className="text-xs leading-[1.5] text-faint">
         改动实时写到 :root 并记住；复制后贴回 global.css 的 @theme 即可固化。
       </p>
-    </aside>
+    </section>
   )
 }
 
@@ -261,6 +264,137 @@ function IconsDemo(): ReactNode {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function ButtonsDemo(): ReactNode {
+  const [hits, setHits] = useState<string[]>([])
+  const hit = (label: string): void => setHits((prev) => [label, ...prev].slice(0, 4))
+  const variants = [
+    ['primary', '主按钮'],
+    ['secondary', '次要'],
+    ['ghost', '幽灵'],
+    ['danger', '危险']
+  ] as const
+  return (
+    <div className="flex flex-col gap-6">
+      <Section title="变体（md，图标按钮见下方）">
+        <div className="flex flex-wrap items-center gap-2">
+          {variants.map(([v, label]) => (
+            <Button key={v} variant={v} onClick={() => hit(label)}>
+              {label}
+            </Button>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="尺寸 24 / 28（默认，日常都用这档） / 32">
+        <div className="flex flex-wrap items-center gap-2">
+          {variants.map(([v, label]) => (
+            <Button key={v} size="sm" variant={v}>
+              {label}
+            </Button>
+          ))}
+          <span className="mx-1 h-4 w-px bg-edge" />
+          {variants.map(([v, label]) => (
+            <Button key={v} variant={v}>
+              {label}
+            </Button>
+          ))}
+          <span className="mx-1 h-4 w-px bg-edge" />
+          {variants.map(([v, label]) => (
+            <Button key={v} size="lg" variant={v}>
+              {label}
+            </Button>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="带前置图标">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button icon={<icons.IconPlus />}>新建会话</Button>
+          <Button icon={<icons.IconUpload />} variant="secondary">
+            导入
+          </Button>
+          <Button icon={<icons.IconTrash />} variant="ghost" size="sm">
+            删除
+          </Button>
+          <Button icon={<icons.IconClose />} variant="danger">
+            放弃修改
+          </Button>
+        </div>
+      </Section>
+
+      <Section title="仅图标（必须给 aria-label，方形热区 24/28/32）">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button aria-label="添加附件" icon={<icons.IconPlus />} variant="ghost" />
+          <Button aria-label="更多" icon={<icons.IconDots />} variant="ghost" size="sm" />
+          <Button aria-label="搜索" icon={<icons.IconSearch />} variant="secondary" size="sm" />
+          <Button aria-label="删除" icon={<icons.IconTrash />} variant="danger" />
+          <Button aria-label="设置" icon={<icons.IconSettings />} variant="primary" size="lg" />
+        </div>
+      </Section>
+
+      <Section title="圆形（shape=&quot;circle&quot;：图标为正圆，带文字为胶囊）">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button shape="circle" aria-label="发送" icon={<icons.IconArrowUp />} variant="primary" />
+          <Button shape="circle" aria-label="添加附件" icon={<icons.IconPlus />} variant="ghost" />
+          <Button shape="circle" aria-label="停止" icon={<icons.IconStop />} variant="ghost" size="sm" />
+          <Button shape="circle" aria-label="关闭" icon={<icons.IconClose />} variant="secondary" size="lg" />
+          <span className="mx-1 h-4 w-px bg-edge" />
+          <Button shape="circle" icon={<icons.IconSparkle />} variant="secondary">
+            胶囊按钮
+          </Button>
+        </div>
+      </Section>
+
+      <Section title="状态矩阵（默认 / 禁用 / 加载）">
+        <div className="inline-grid grid-cols-[80px_repeat(3,minmax(0,1fr))] items-center gap-2">
+          <span />
+          {['默认', '禁用', '加载'].map((h) => (
+            <span key={h} className="text-xs text-faint">
+              {h}
+            </span>
+          ))}
+          {variants.map(([v, label]) => (
+            <Fragment key={v}>
+              <span className="text-xs text-muted">{label}</span>
+              <Button variant={v}>{label}</Button>
+              <Button variant={v} disabled>
+                {label}
+              </Button>
+              <Button variant={v} loading>
+                {label}
+              </Button>
+            </Fragment>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="工具条（次要 + 选中态用 bg-select）">
+        <div className="flex flex-wrap items-center gap-1">
+          <Button aria-label="继续" icon={<icons.IconPause />} variant="ghost" />
+          <Button variant="ghost">重播</Button>
+          <Button variant="ghost">末尾</Button>
+          <span className="mx-1 h-4 w-px bg-edge" />
+          {['1×', '2×', '4×'].map((s, i) => (
+            <Button key={s} variant="ghost" className={i === 0 ? 'bg-select text-fg' : ''}>
+              {s}
+            </Button>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="整行截断（长文案不换行）">
+        <Button className="w-[240px] justify-start" icon={<icons.IconFolder />} variant="secondary">
+          一个很长很长的按钮文案用来验证截断行为
+        </Button>
+      </Section>
+
+      <p className="text-xs text-faint">
+        最近点击：{hits.length > 0 ? hits.join(' / ') : '—'}；hover、按下与焦点环请用鼠标和 Tab 实测。
+      </p>
     </div>
   )
 }
@@ -430,7 +564,7 @@ function Section({ title, children }: { title: string; children: ReactNode }): R
 /* ---------------- 页面 ---------------- */
 
 export function Preview(): ReactNode {
-  const [active, setActive] = useState<Category>('icons')
+  const [active, setActive] = useState<Category>('tokens')
   const [tokens, set, reset] = useTokens()
   return (
     <div className="flex h-full">
@@ -451,14 +585,15 @@ export function Preview(): ReactNode {
       </nav>
       <div className="min-w-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[860px] px-8 py-6">
+          {active === 'tokens' && <TokenPanel tokens={tokens} set={set} reset={reset} />}
           {active === 'icons' && <IconsDemo />}
+          {active === 'buttons' && <ButtonsDemo />}
           {active === 'inputs' && <InputsDemo />}
           {active === 'display' && <DisplayDemo />}
           {active === 'dialogs' && <DialogsDemo />}
           {active === 'transcript' && <TranscriptDemo />}
         </div>
       </div>
-      <TokenPanel tokens={tokens} set={set} reset={reset} />
     </div>
   )
 }

@@ -152,6 +152,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
             ├─ DiffBlock.tsx       文件变更折叠行 + 行号着色
             ├─ AskCard.tsx         问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
             ├─ UiPrompt.tsx        裸 UI 请求的原生弹窗（confirm/select/input/editor）
+            ├─ Button.tsx          全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
             ├─ Toasts.tsx          扩展 notify 的右下角提示
             ├─ Menu.tsx            公共下拉：遮罩 + 面板 + 条目 + 分组标题
             ├─ Preview.tsx         组件预览（#gallery）+ 令牌面板

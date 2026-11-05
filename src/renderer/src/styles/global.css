@@ -134,9 +134,6 @@
 @utility pi-input {
   @apply rounded-sm border border-edge bg-panel/80 px-2 py-1 text-sm text-fg outline-none placeholder:text-faint focus:border-muted;
 }
-@utility pi-btn {
-  @apply rounded-md bg-fg px-2 py-1 text-sm text-white;
-}
 
 html,
 body,
