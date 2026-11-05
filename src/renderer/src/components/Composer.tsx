@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../drafts'
-import { MenuItem, MenuLabel, MenuPanel, MenuScrim } from './Menu'
+import { Menu, MenuItem, MenuLabel } from './Menu'
 import { Button } from './Button'
 import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from './icons'
 import { Tip } from './Tip'
@@ -64,36 +64,31 @@ function WorkspaceBar({
         <IconBranch className="size-[14px]" />
         {snapshot.branch}
       </span>
-      {menu && (
-        <>
-          <MenuScrim onClose={() => setMenu(false)} />
-          <MenuPanel className="bottom-full left-0 mb-1 w-[240px]">
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索工作区"
-              aria-label="搜索工作区"
-              className="pi-input mb-1 w-full"
+      <Menu open={menu} onClose={() => setMenu(false)} className="bottom-full left-0 mb-1 w-[240px]">
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索工作区"
+          aria-label="搜索工作区"
+          className="pi-input mb-1 w-full"
+        />
+        <div className="max-h-[280px] overflow-y-auto">
+          {hits.map((path) => (
+            <MenuItem
+              key={path}
+              label={basename(path)}
+              title={path}
+              selected={path === snapshot.workspace}
+              onClick={() => choose(path)}
             />
-            <div className="max-h-[280px] overflow-y-auto">
-              {hits.map((path) => (
-                <MenuItem
-                  key={path}
-                  label={basename(path)}
-                  title={path}
-                  selected={path === snapshot.workspace}
-                  onClick={() => choose(path)}
-                />
-              ))}
-              {hits.length === 0 && <div className="px-2 py-1 text-xs text-faint">没有匹配的工作区</div>}
-            </div>
-            <div className="mt-1 border-t border-edge pt-1">
-              <MenuItem label="添加工作区…" onClick={add} />
-            </div>
-          </MenuPanel>
-        </>
-      )}
+          ))}
+          {hits.length === 0 && <div className="px-2 py-1 text-xs text-faint">没有匹配的工作区</div>}
+        </div>
+        <div className="mt-1 border-t border-edge pt-1">
+          <MenuItem label="添加工作区…" onClick={add} />
+        </div>
+      </Menu>
     </div>
   )
 }
@@ -144,15 +139,14 @@ function Toolbar({
             <span className="text-muted">{snapshot.thinkingLevel}</span>
             <IconChevronDown className="size-3 text-muted" />
           </button>
-          {menu && (
-            <ModelMenu
-              snapshot={snapshot}
-              models={models}
-              onModel={onModel}
-              onLevel={onLevel}
-              onClose={() => setMenu(false)}
-            />
-          )}
+          <ModelMenu
+            open={menu}
+            snapshot={snapshot}
+            models={models}
+            onModel={onModel}
+            onLevel={onLevel}
+            onClose={() => setMenu(false)}
+          />
         </div>
         {/* 视觉 26，外圈 28 保住可点热区 */}
         {streaming ? (
@@ -510,12 +504,14 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
 
 /** 模型选择浮层：模型列表 + 思考强度滑块，数据全部来自引擎 */
 function ModelMenu({
+  open,
   snapshot,
   models,
   onModel,
   onLevel,
   onClose
 }: {
+  open: boolean
   snapshot: Snapshot
   models: ModelOption[]
   onModel: (id: string) => void
@@ -529,52 +525,49 @@ function ModelMenu({
   const groups = [...new Set(models.map((m) => m.provider))]
 
   return (
-    <>
-      <MenuScrim onClose={onClose} />
-      <MenuPanel className="right-0 bottom-full mb-1 w-[320px]">
-        <div className="max-h-[240px] overflow-y-auto">
-          {groups.map((g) => (
-            <div key={g}>
-              <MenuLabel>{g}</MenuLabel>
-              {models
-                .filter((m) => m.provider === g)
-                .map((m) => (
-                  <MenuItem
-                    key={m.id}
-                    label={m.name}
-                    selected={m.name === snapshot.model}
-                    onClick={() => onModel(m.id)}
-                  />
-                ))}
-            </div>
+    <Menu open={open} onClose={onClose} className="right-0 bottom-full mb-1 w-[320px]">
+      <div className="max-h-[240px] overflow-y-auto">
+        {groups.map((g) => (
+          <div key={g}>
+            <MenuLabel>{g}</MenuLabel>
+            {models
+              .filter((m) => m.provider === g)
+              .map((m) => (
+                <MenuItem
+                  key={m.id}
+                  label={m.name}
+                  selected={m.name === snapshot.model}
+                  onClick={() => onModel(m.id)}
+                />
+              ))}
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex items-center gap-2 border-t border-edge px-2 pt-2 pb-1">
+        <span className="text-xs text-muted">思考强度</span>
+        <span className="text-xs font-medium">{LEVEL_LABEL[currentLevel] ?? snapshot.thinkingLevel}</span>
+        <span className="ml-auto rounded-sm border border-edge px-1 py-0.5 text-xs text-faint">Ctrl+T</span>
+      </div>
+      <div className="px-2 pt-1 pb-2">
+        <input
+          type="range"
+          min={0}
+          max={Math.max(0, levels.length - 1)}
+          step={1}
+          value={Math.max(0, levels.indexOf(currentLevel))}
+          onChange={(e) => onLevel(levels[Number(e.target.value)])}
+          aria-label="思考强度"
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-link [&::-webkit-slider-thumb]:shadow"
+          style={{
+            background: `linear-gradient(to right, var(--color-add), var(--color-link)) 0 / ${pct}% no-repeat, var(--color-edge)`
+          }}
+        />
+        <div className="mt-1 flex justify-between text-xs text-faint">
+          {levels.map((l) => (
+            <span key={l}>{LEVEL_LABEL[l] ?? l}</span>
           ))}
         </div>
-        <div className="mt-1 flex items-center gap-2 border-t border-edge px-2 pt-2 pb-1">
-          <span className="text-xs text-muted">思考强度</span>
-          <span className="text-xs font-medium">{LEVEL_LABEL[currentLevel] ?? snapshot.thinkingLevel}</span>
-          <span className="ml-auto rounded-sm border border-edge px-1 py-0.5 text-xs text-faint">Ctrl+T</span>
-        </div>
-        <div className="px-2 pt-1 pb-2">
-          <input
-            type="range"
-            min={0}
-            max={Math.max(0, levels.length - 1)}
-            step={1}
-            value={Math.max(0, levels.indexOf(currentLevel))}
-            onChange={(e) => onLevel(levels[Number(e.target.value)])}
-            aria-label="思考强度"
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:bg-link [&::-webkit-slider-thumb]:shadow"
-            style={{
-              background: `linear-gradient(to right, var(--color-add), var(--color-link)) 0 / ${pct}% no-repeat, var(--color-edge)`
-            }}
-          />
-          <div className="mt-1 flex justify-between text-xs text-faint">
-            {levels.map((l) => (
-              <span key={l}>{LEVEL_LABEL[l] ?? l}</span>
-            ))}
-          </div>
-        </div>
-      </MenuPanel>
-    </>
+      </div>
+    </Menu>
   )
 }

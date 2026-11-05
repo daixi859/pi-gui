@@ -125,6 +125,21 @@
 }
 @utility pi-menu {
   @apply absolute z-50 flex flex-col gap-0.5 rounded-md border border-edge bg-panel p-1 shadow-pop;
+  /* 显隐过渡：入场靠 @starting-style，退场靠 display 的 allow-discrete 延迟到淡出结束 */
+  transition:
+    opacity 140ms ease-out,
+    transform 140ms ease-out,
+    display 140ms allow-discrete;
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  &[data-open='false'] {
+    display: none;
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+  }
 }
 @utility pi-menu-item {
   @apply flex h-7 w-full items-center gap-2 rounded-sm px-2 text-left text-sm transition-colors hover:bg-sunken;
@@ -324,9 +339,13 @@ a:focus-visible,
     transform: translateX(var(--over));
   }
 }
+/* 新动效在 reduced-motion 下关闭：过渡清零即瞬变 */
 @media (prefers-reduced-motion: reduce) {
   .streaming::after {
     animation: none;
+  }
+  .pi-menu {
+    transition: none;
   }
 }
 

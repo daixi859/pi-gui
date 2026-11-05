@@ -102,9 +102,9 @@ export default function App(): ReactNode {
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-canvas">
-      {!collapsed && (
-        <Sidebar
-          onNavigate={(r) => go({ route: r, id: null })}
+      <Sidebar
+        collapsed={collapsed}
+        onNavigate={(r) => go({ route: r, id: null })}
           projects={agent.projects}
           sessions={agent.sessions}
           activeId={activeId}
@@ -126,10 +126,14 @@ export default function App(): ReactNode {
             if (current?.path === path) go({ route: 'start', id: null })
           }}
         />
-      )}
 
       {/* 展开时主卡片贴住侧栏右缘，侧栏分隔线与卡片左边框连成一条贯穿线；收起时四边留相等边距 */}
-      <div className={clsx('flex min-w-0 flex-1 flex-col p-1', !collapsed && 'pl-0')}>
+      <div
+        className={clsx(
+          'flex min-w-0 flex-1 flex-col p-1 transition-[padding] duration-150 ease-out motion-reduce:transition-none',
+          !collapsed && 'pl-0'
+        )}
+      >
         <div className="pi-panel relative flex min-h-0 flex-1 flex-col overflow-hidden shadow-card">
           <TitleBar
             reserveLeft={collapsed}
@@ -163,7 +167,7 @@ export default function App(): ReactNode {
       {/* 品牌 / 前进后退浮在最上层：侧栏展开收起都在同一位置，只换箭头方向，不会因布局变化跳位。
           DOM 必须排在 TitleBar 之后：Windows 按 DOM 顺序算拖拽区，后来的 no-drag 才能把先前的 drag 挖掉 */}
       <div
-        className="absolute top-1 left-2 z-30 flex h-11 items-center gap-1"
+        className="absolute top-1 left-3 z-30 flex h-11 items-center gap-1"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <CollapseButton collapsed={collapsed} onClick={toggle} />

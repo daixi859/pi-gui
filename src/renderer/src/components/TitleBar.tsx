@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
+import clsx from 'clsx'
 import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from './icons'
 import { WindowControls } from './Sidebar'
 import { Button } from './Button'
 import { PiLogo } from './PiLogo'
-import { MenuItem, MenuPanel, MenuScrim } from './Menu'
+import { Menu, MenuItem } from './Menu'
 
 /** 品牌按钮：展开收起共用这一颗，hover 才换箭头，尺寸位置不变所以不抖 */
 export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
@@ -15,7 +16,7 @@ export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onC
         onClick={onClick}
         className="relative grid size-7 place-items-center rounded-sm text-fg transition-colors hover:bg-tint-strong"
       >
-        <PiLogo size={20} className="group-hover:opacity-0" />
+        <PiLogo size={28} className="group-hover:opacity-0" />
         {collapsed ? (
           <IconPanelExpand className="absolute size-4.5 opacity-0 group-hover:opacity-100" />
         ) : (
@@ -52,8 +53,13 @@ export function TitleBar({
   const [menu, setMenu] = useState(false)
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-edge px-2 [-webkit-app-region:drag]">
-      {/* 尺寸对齐 App 里的浮动工具条：left-2 + 3 个 28px 按钮 + 2 个 gap-1 = 100px */}
-      {reserveLeft && <span className="w-24 shrink-0" />}
+      {/* 尺寸对齐 App 里的浮动工具条：left-2 + 3 个 28px 按钮 + 2 个 gap-1 = 100px；宽度过渡跟随侧栏收展 */}
+      <span
+        className={clsx(
+          'shrink-0 transition-[width] duration-150 ease-out motion-reduce:transition-none',
+          reserveLeft ? 'w-24' : 'w-0'
+        )}
+      />
       {showTitle && title && (
         <>
           <IconFolder className="shrink-0 text-muted" />
@@ -67,27 +73,26 @@ export function TitleBar({
               className="[-webkit-app-region:no-drag]"
               icon={<IconDots />}
             />
-            {menu && (
-              <>
-                <MenuScrim onClose={() => setMenu(false)} />
-                <MenuPanel className="top-full mt-1 left-0 w-[176px]">
-                  <MenuItem
-                    label="复制会话路径"
-                    onClick={() => {
-                      if (sessionPath) window.pi?.host.copy(sessionPath)
-                      setMenu(false)
-                    }}
-                  />
-                  <MenuItem
-                    label="导出为 Markdown"
-                    onClick={() => {
-                      onExport()
-                      setMenu(false)
-                    }}
-                  />
-                </MenuPanel>
-              </>
-            )}
+            <Menu
+              open={menu}
+              onClose={() => setMenu(false)}
+              className="top-full mt-1 left-0 w-[176px]"
+            >
+              <MenuItem
+                label="复制会话路径"
+                onClick={() => {
+                  if (sessionPath) window.pi?.host.copy(sessionPath)
+                  setMenu(false)
+                }}
+              />
+              <MenuItem
+                label="导出为 Markdown"
+                onClick={() => {
+                  onExport()
+                  setMenu(false)
+                }}
+              />
+            </Menu>
           </div>
         </>
       )}

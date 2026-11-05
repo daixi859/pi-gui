@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { IconCheck } from './icons'
 
@@ -14,10 +14,75 @@ export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
   )
 }
 
-/** 公共下拉框容器 */
-export function MenuPanel({ className = '', children }: { className?: string; children: ReactNode }): ReactNode {
+/** 退场期间保持挂载，让 CSS 过渡播完。时长与 global.css 里 .pi-menu 的 transition 保持一致 */
+const EXIT_MS = 140
+function usePresence(open: boolean): boolean {
+  const [mounted, setMounted] = useState(open)
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+    const t = setTimeout(() => setMounted(false), EXIT_MS)
+    return () => clearTimeout(t)
+  }, [open])
+  return mounted
+}
+
+/** 公共下拉浮层：遮罩 + 面板 + 显隐过渡，调用方只管 open */
+export function Menu({
+  open,
+  onClose,
+  fixed,
+  className,
+  style,
+  children
+}: {
+  open: boolean
+  onClose: () => void
+  /** 用坐标定位的场景（右键菜单）改用 fixed */
+  fixed?: boolean
+  className?: string
+  style?: CSSProperties
+  children: ReactNode
+}): ReactNode {
+  const mounted = usePresence(open)
+  // 关闭后仍渲染 140ms，位置沿用最后一次的，否则会跳到静态位置
+  const lastStyle = useRef(style)
+  if (open) lastStyle.current = style
+  if (!mounted) return null
   return (
-    <div className={clsx('pi-menu [-webkit-app-region:no-drag]', className)}>{children}</div>
+    <>
+      {open && <MenuScrim onClose={onClose} />}
+      <MenuPanel open={open} fixed={fixed} className={className} style={lastStyle.current}>
+        {children}
+      </MenuPanel>
+    </>
+  )
+}
+
+/** 公共下拉框容器。open 变化触发 CSS 显隐过渡，默认恒开（预览页静态展示用） */
+export function MenuPanel({
+  open = true,
+  fixed,
+  className = '',
+  style,
+  children
+}: {
+  open?: boolean
+  fixed?: boolean
+  className?: string
+  style?: CSSProperties
+  children: ReactNode
+}): ReactNode {
+  return (
+    <div
+      data-open={open}
+      style={fixed ? { position: 'fixed', ...style } : style}
+      className={clsx('pi-menu [-webkit-app-region:no-drag]', className)}
+    >
+      {children}
+    </div>
   )
 }
 

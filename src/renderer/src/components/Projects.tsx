@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
-import { MenuItem, MenuPanel, MenuScrim } from './Menu'
+import { Menu, MenuItem } from './Menu'
 import { Button } from './Button'
 import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from './icons'
 import { useScrollRail } from '../useScrollRail'
@@ -83,24 +83,23 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
               {SORTS.find((s) => s.key === sort)?.label}
               <IconChevronDown className="size-3" />
             </button>
-            {sorting && (
-              <>
-                <MenuScrim onClose={() => setSorting(false)} />
-                <MenuPanel className="top-full right-0 mt-1 w-[132px]">
-                  {SORTS.map((s) => (
-                    <MenuItem
-                      key={s.key}
-                      label={s.label}
-                      selected={sort === s.key}
-                      onClick={() => {
-                        setSort(s.key)
-                        setSorting(false)
-                      }}
-                    />
-                  ))}
-                </MenuPanel>
-              </>
-            )}
+            <Menu
+              open={sorting}
+              onClose={() => setSorting(false)}
+              className="top-full right-0 mt-1 w-[132px]"
+            >
+              {SORTS.map((s) => (
+                <MenuItem
+                  key={s.key}
+                  label={s.label}
+                  selected={sort === s.key}
+                  onClick={() => {
+                    setSort(s.key)
+                    setSorting(false)
+                  }}
+                />
+              ))}
+            </Menu>
           </div>
         </div>
 

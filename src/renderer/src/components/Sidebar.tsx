@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectMeta, SessionMeta } from '@shared/blocks'
 import { Button } from './Button'
-import { MenuItem, MenuPanel, MenuScrim } from './Menu'
+import { Menu, MenuItem } from './Menu'
 import {
   IconBlocks,
   IconClock,
@@ -41,32 +41,31 @@ const SORTS = [
 ] as const
 
 function SortMenu({
+  open,
   value,
   onClose,
   onPick
 }: {
+  open: boolean
   value: string
   onClose: () => void
   onPick: (k: string) => void
 }): ReactNode {
   return (
-    <>
-      <MenuScrim onClose={onClose} />
-      <MenuPanel className="top-full mt-1 right-4 w-[152px]">
-        {SORTS.map((s) => (
-          <MenuItem
-            key={s.key}
-            icon={s.icon}
-            label={s.label}
-            selected={value === s.key}
-            onClick={() => {
-              onPick(s.key)
-              onClose()
-            }}
-          />
-        ))}
-      </MenuPanel>
-    </>
+    <Menu open={open} onClose={onClose} className="top-full mt-1 right-4 w-[152px]">
+      {SORTS.map((s) => (
+        <MenuItem
+          key={s.key}
+          icon={s.icon}
+          label={s.label}
+          selected={value === s.key}
+          onClick={() => {
+            onPick(s.key)
+            onClose()
+          }}
+        />
+      ))}
+    </Menu>
   )
 }
 
@@ -158,9 +157,12 @@ export interface SidebarProps {
   onRemoveProject: (path: string) => void
   onRename: (path: string, title: string) => void
   onDelete: (path: string) => void
+  /** 收起：宽度过渡到 0，内容被裁剪，不再参与焦点 */
+  collapsed?: boolean
 }
 
 export function Sidebar({
+  collapsed,
   onNavigate,
   projects,
   sessions,
@@ -208,7 +210,16 @@ export function Sidebar({
   })
 
   return (
-    <aside className="flex w-[262px] shrink-0 flex-col overflow-hidden pt-2">
+    // 外层管宽度动画，内层固定 262px：过渡中内容不重排，只被右侧裁剪
+    <aside
+      className={clsx(
+        'flex shrink-0 flex-col overflow-hidden transition-[width] duration-150 ease-out motion-reduce:transition-none',
+        collapsed ? 'w-0' : 'w-[262px]'
+      )}
+      aria-hidden={collapsed}
+      {...(collapsed ? { inert: true } : {})}
+    >
+      <div className="flex h-full w-[262px] flex-col pt-2">
       {/* 顶部 h-11 只留位：品牌与前进后退由 App 的浮动工具条画在最上层。
           这里刻意不设 drag：Windows 的拖拽矩形按几何算、不看 z 序，加了会吞掉上层的按钮点击 */}
       <div className="h-11 shrink-0" />
@@ -262,7 +273,7 @@ export function Sidebar({
           className={sorting ? 'text-fg' : ''}
           icon={<IconFilter />}
         />
-        {sorting && <SortMenu value={sort} onClose={() => setSorting(false)} onPick={setSort} />}
+        <SortMenu open={sorting} value={sort} onClose={() => setSorting(false)} onPick={setSort} />
       </div>
 
       {/* 分组标题行：项目下拉（排序）+ 排序 / 新建 */}
@@ -370,22 +381,20 @@ export function Sidebar({
             .map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
       </div>
 
-      {menu && (
-        <>
-          <MenuScrim onClose={() => setMenu(null)} />
-          <div className="fixed z-50" style={{ left: menu.x, top: menu.y }}>
-            <MenuPanel className="top-0 left-0">
-              <MenuItem
-                label="移除"
-                onClick={() => {
-                  onRemoveProject(menu.path)
-                  setMenu(null)
-                }}
-              />
-            </MenuPanel>
-          </div>
-        </>
-      )}
+      <Menu
+        open={menu !== null}
+        onClose={() => setMenu(null)}
+        fixed
+        style={menu ? { left: menu.x, top: menu.y } : undefined}
+      >
+        <MenuItem
+          label="移除"
+          onClick={() => {
+            onRemoveProject(menu?.path ?? '')
+            setMenu(null)
+          }}
+        />
+      </Menu>
 
       <div className="border-t border-edge" />
       <div className="flex items-center gap-2 px-4 py-2">
@@ -401,6 +410,7 @@ export function Sidebar({
             icon={<IconSettings />}
           />
         </div>
+      </div>
       </div>
     </aside>
   )
@@ -472,38 +482,37 @@ function SessionRow({ session, active, running, unread, onClick, onRename, onDel
         )}
         <span className="ml-auto shrink-0 text-2xs text-faint">{session.ageLabel}</span>
       </button>
-      {menu && (
-        <>
-          <MenuScrim onClose={() => setMenu(null)} />
-          <div className="fixed z-50" style={{ left: menu.x, top: menu.y }}>
-            <MenuPanel className="top-0 left-0 w-[132px]">
-              <MenuItem
-                label="重命名"
-                onClick={() => {
-                  setMenu(null)
-                  setDraft(session.title)
-                  setEditing(true)
-                }}
-              />
-              <MenuItem
-                label="在文件夹中显示"
-                onClick={() => {
-                  setMenu(null)
-                  window.pi?.host.revealPath(session.path)
-                }}
-              />
-              <MenuItem
-                label="删除"
-                danger
-                onClick={() => {
-                  setMenu(null)
-                  if (window.confirm(`删除任务「${session.title}」？文件会被永久移除。`)) onDelete()
-                }}
-              />
-            </MenuPanel>
-          </div>
-        </>
-      )}
+      <Menu
+        open={menu !== null}
+        onClose={() => setMenu(null)}
+        fixed
+        style={menu ? { left: menu.x, top: menu.y } : undefined}
+        className="w-[132px]"
+      >
+        <MenuItem
+          label="重命名"
+          onClick={() => {
+            setMenu(null)
+            setDraft(session.title)
+            setEditing(true)
+          }}
+        />
+        <MenuItem
+          label="在文件夹中显示"
+          onClick={() => {
+            setMenu(null)
+            window.pi?.host.revealPath(session.path)
+          }}
+        />
+        <MenuItem
+          label="删除"
+          danger
+          onClick={() => {
+            setMenu(null)
+            if (window.confirm(`删除任务「${session.title}」？文件会被永久移除。`)) onDelete()
+          }}
+        />
+      </Menu>
     </>
   )
 }
