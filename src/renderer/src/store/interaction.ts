@@ -25,14 +25,34 @@ const slots = new Map<string, UiSlot>()
 /** 通知自动消失的句柄：统一留存，退订时清掉，免得定时器打到已卸载的 store 上 */
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
-export function openSlot(toolCallId: string, name: string, args: unknown): void {
-  slots.set(toolCallId, { name, args, reqs: [], sent: 0 })
+/** toolCallId → 工具名与完整入参：ui 请求到达时所属消息必已 end，参数必完整（ADR-0014） */
+function findTool(callId: string): { name: string; args: unknown } | undefined {
+  const { order, byId } = engine.get().msgs
+  for (let i = order.length - 1; i >= 0; i--) {
+    const m = byId[order[i]]
+    if (m?.role !== 'assistant') continue
+    for (const c of m.content) {
+      if (c.type === 'toolCall' && c.id === callId) return { name: c.name ?? 'tool', args: c.arguments }
+    }
+  }
+  return undefined
 }
 
-/** 登记一个请求；被问卷认领时返回 true（调用方负责等用户提交后再 flushSlot） */
+/** 登记一个请求；被问卷认领时返回 true（调用方负责等用户提交后再 flushSlot）。
+ * toolStart 事件已删：槽位与问卷卡片都在第一个 ui 请求到达时按需建。 */
 export function acceptRequest(req: UiRequest): boolean {
-  const slot = req.toolCallId ? slots.get(req.toolCallId) : undefined
-  if (!slot || questionsOf(slot.args).length === 0) return false
+  const id = req.toolCallId
+  if (!id) return false
+  let slot = slots.get(id)
+  if (!slot) {
+    const tool = findTool(id)
+    if (!tool) return false
+    const questions = questionsOf(tool.args)
+    if (questions.length === 0) return false
+    slot = { name: tool.name, args: tool.args, reqs: [], sent: 0 }
+    slots.set(id, slot)
+    registerAsk(id, questions)
+  }
   slot.reqs.push(req)
   return true
 }

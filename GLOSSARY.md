@@ -6,7 +6,7 @@
 
 对话记录的最小渲染单元。一个 Block 有唯一 `id` 与 `kind`，渲染层只会根据 `kind` 选择组件，不知道消息来自哪个模型、哪次请求。
 
-Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking / tool / assistant / diff）。
+Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking / tool / assistant / diff）。它是渲染层从消息派生的视图模型，不跨进程传输（ADR-0014）。
 
 ## Turn（回合）
 
@@ -64,7 +64,7 @@ Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking
 
 ## AgentCommand / AgentEvent（跨进程协议）
 
-渲染层对引擎的全部输入输出。Command 是意图（发送、中止、切换会话、换模型、回答 UI 请求），Event 是事实（块增量、工具调用开始、UI 请求、状态快照、结束、错误）。Event 是**增量**的：`blocks` 事件带 `BlockDelta`（`order` / `items` / `turns`，`full` 时才是整棵快照），宿主只推变了的块。见 ADR-0013。
+渲染层对引擎的全部输入输出。Command 是意图（发送、中止、切换会话、换模型、回答 UI 请求），Event 是事实（消息增量、UI 请求、状态快照、结束、错误）。Event 是**增量**的：`messages` 事件带 `MessageDelta`（`order` / `items`，`full` 时才是整棵快照），宿主只推变了的消息；消息是 pi 的 `AgentMessage`，key 是 timestamp。见 ADR-0013 / 0014。
 
 ## UI 桥
 

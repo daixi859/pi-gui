@@ -8,7 +8,7 @@ import type { AskAnswer, AskQuestion, UiRequest } from '@shared/ipc'
 
 /** 一次待处理的交互请求，按工具调用分组（toolCallId 为 undefined 时是裸 UI 请求） */
 export interface AdapterContext {
-  /** 该请求所属工具调用的完整入参（来自 toolStart 事件），未认领时为 undefined */
+  /** 该请求所属工具调用的完整入参（认领时从消息里查），未认领时为 undefined */
   args?: unknown
   /** 该工具调用里第几个 ui.* 请求（从 0 开始） */
   index: number

@@ -11,33 +11,29 @@ import { execFile } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { readdir } from 'node:fs/promises'
 import { basename, join, relative, resolve } from 'node:path'
-import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from '@earendil-works/pi-coding-agent'
+import {
+  createAgentSession,
+  DefaultResourceLoader,
+  getAgentDir,
+  SessionManager,
+  sessionEntryToContextMessages
+} from '@earendil-works/pi-coding-agent'
 import type { ExtensionAPI, SessionInfo } from '@earendil-works/pi-coding-agent'
-import type {
-  AccessMode,
-  AgentCommand,
-  AgentEvent,
-  CommandInfo,
-  ModelOption,
-  TurnDelta,
-  UiReply,
-  UiRequest
+import {
+  keyOf,
+  type AccessMode,
+  type AgentCommand,
+  type AgentEvent,
+  type CommandInfo,
+  type ModelOption,
+  type PiMessage,
+  type UiReply,
+  type UiRequest
 } from '@shared/ipc'
-import type { Block, DiffLine, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
+import { LEVEL_LABEL } from '@shared/blocks'
+import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
-type Turn = Extract<Block, { kind: 'turn' }>
-type Tool = Extract<Block, { kind: 'tool' }>
-
-const LEVEL_LABEL: Record<string, string> = {
-  off: '关闭',
-  minimal: '最低',
-  low: '低',
-  medium: '中',
-  high: '高',
-  xhigh: '很高',
-  max: '最高'
-}
 
 /** 一个会话在宿主里的全部状态：切走后原样留着，后台继续跑，切回来直接恢复 */
 interface Mounted {
@@ -45,19 +41,14 @@ interface Mounted {
   manager: SessionManager
   detach: () => void
   cwd: string
-  /** 上一轮已定稿的块、本轮尚未归档的块、本轮折叠行 */
-  history: Block[]
-  round: Block[]
-  turn: Turn | null
-  turnStart: number
-  msgSeq: number
-  /** 已推给渲染层的块（按 id 存引用，引用变了就重发）+ 渲染层已有的顺序 */
-  sent: Map<string, { block: Block; rev: number }>
+  /** 会话消息：key 是 timestamp（start → end → 落盘不变，ADR-0014），按到达顺序存 */
+  msgs: Map<string, PiMessage>
+  order: string[]
+  /** 已推给渲染层的消息（同 key 引用变了才重发）+ 已有顺序 */
+  sent: Map<string, PiMessage>
   sentOrder: string[]
-  /** 增量比对用的版本号：块被原地修改时手动 bump */
-  revs: Map<string, number>
   forceFull: boolean
-  /** 流式文本每 60ms 推一次增量，避免渲染层重排风暴 */
+  /** 流式消息每 60ms 推一次增量，避免渲染层重排风暴 */
   flushTimer: NodeJS.Timeout | null
   /** 尚未结束的工具调用，栈顶即最近开始的那个；ui 请求据此认领到具体工具 */
   liveTools: string[]
@@ -79,9 +70,8 @@ let cwd = process.env.PI_AGENT_CWD || process.cwd()
 let models: ModelOption[] = []
 /** 工具执行前的确认策略；由渲染层的「变更前确认 / 完全访问」开关控制 */
 let access: AccessMode = 'confirm'
-let seq = 0
 
-/** 会改动磁盘或执行命令的工具，这些才需要用户点头 */
+/** 会改动磁盘或执行命令的工具，这些才需要用户点头。内置工具不带 annotations，只能按名字列 */
 const RISKY = new Set(['write', 'edit', 'powershell', 'bash'])
 
 type UiBridge = ReturnType<typeof uiContextFor>
@@ -104,13 +94,31 @@ function permissionGate(ui: UiBridge): (pi: ExtensionAPI) => void {
 const port = (process as unknown as { parentPort?: { postMessage(m: unknown): void; on(e: string, f: (m: { data: AgentCommand }) => void): void } }).parentPort
 const send = (e: AgentEvent): void => port?.postMessage(e)
 
-const bump = (rec: Mounted, id: string): void => void rec.revs.set(id, (rec.revs.get(id) ?? 0) + 1)
+/** upsert 一条消息：浅拷贝换引用——pi 可能原地改同一条消息，增量比对靠引用变化 */
+function upsert(rec: Mounted, msg: PiMessage | undefined): void {
+  if (!msg || typeof msg.timestamp !== 'number') return
+  const key = keyOf(msg)
+  if (!rec.msgs.has(key)) rec.order.push(key)
+  rec.msgs.set(key, { ...msg })
+}
+
+/** 合成一条会话内通知（压缩 / 撤销 / 出错），渲染层按提示行显示 */
+function notice(rec: Mounted, text: string, tone: 'info' | 'warn' | 'error' = 'info'): void {
+  upsert(rec, {
+    role: 'custom',
+    customType: 'pigui-notice',
+    content: text,
+    display: true,
+    details: { tone },
+    timestamp: Date.now()
+  })
+}
 
 function schedule(rec: Mounted): void {
   if (rec.flushTimer) return
   rec.flushTimer = setTimeout(() => {
     rec.flushTimer = null
-    flushBlocks(rec)
+    flushMessages(rec)
   }, 60)
 }
 function flushNow(rec: Mounted): void {
@@ -118,168 +126,37 @@ function flushNow(rec: Mounted): void {
     clearTimeout(rec.flushTimer)
     rec.flushTimer = null
   }
-  flushBlocks(rec)
+  flushMessages(rec)
 }
 
-/**
- * 折叠行能否只推变化的部分。
- * 只有「子块按 id 一一对应（含末尾追加）」才能增量，否则返回 null 让调用方退回整块。
- * 省掉的是最常见的那种变化：每秒一次的 durationMs 与流式尾部那一条文本。
- */
-function turnDelta(next: Turn, prev: Turn): TurnDelta | null {
-  const sameLen = next.children.length === prev.children.length
-  // 子块 id 逐个对应：允许内容变（流式尾部那条文本每帧都在变）
-  const idsMatch = sameLen && prev.children.every((c, i) => c.id === next.children[i]?.id)
-  // 末尾追加：前面的全部引用不变
-  const grew =
-    next.children.length > prev.children.length && prev.children.every((c, i) => c === next.children[i])
-  if (!idsMatch && !grew) return null
-  const items = idsMatch
-    ? next.children.filter((c, i) => c !== prev.children[i])
-    : next.children.slice(prev.children.length)
-  // 什么都不变（连时长都没变）就不推
-  if (!items.length && next.durationMs === prev.durationMs && next.aborted === prev.aborted) return null
-  return {
-    id: next.id,
-    durationMs: next.durationMs,
-    aborted: next.aborted,
-    ...(grew ? { order: next.children.map((c) => c.id) } : {}),
-    items
-  }
-}
-
-/** 只推变了的块：顶层引用换了或被 bump 过；折叠行只推变了的子块 */
-function flushBlocks(rec: Mounted): void {
+/** 只推变了的消息；顺序没变不带 order，渲染层沿用旧数组引用（ADR-0014） */
+function flushMessages(rec: Mounted): void {
   // 后台会话只维护自己的状态，不推给渲染层；切回来时 forceFull 一次补齐
   if (rec !== current) return
-  const blocks = all(rec)
-  const order = blocks.map((b) => b.id)
-  const items: Block[] = []
-  const turns: TurnDelta[] = []
-  for (const b of blocks) {
-    const prev = rec.sent.get(b.id)
-    const rev = rec.revs.get(b.id) ?? 0
-    const changed = !prev || prev.block !== b || prev.rev !== rev
-    if (!changed) continue
-    // 折叠行能算出差量就只发差量；否则走下面的整块
-    if (!rec.forceFull && prev && prev.rev === rev && b.kind === 'turn' && prev.block.kind === 'turn') {
-      const d = turnDelta(b, prev.block)
-      if (d) {
-        turns.push(d)
-        rec.sent.set(b.id, { block: b, rev })
-        continue
-      }
+  const items: PiMessage[] = []
+  for (const key of rec.order) {
+    const m = rec.msgs.get(key)
+    if (!m) continue
+    if (rec.forceFull || rec.sent.get(key) !== m) {
+      items.push(m)
+      rec.sent.set(key, m)
     }
-    // full 时渲染层会清空缓存，所以必须把全部块都带上，否则切回未变的会话会整页空白
-    items.push(b)
-    rec.sent.set(b.id, { block: b, rev })
   }
   const orderChanged =
-    order.length !== rec.sentOrder.length || order.some((id, i) => id !== rec.sentOrder[i])
-  if (!items.length && !turns.length && !orderChanged && !rec.forceFull) return
-  if (orderChanged) {
-    const live = new Set(order)
-    for (const id of rec.sent.keys()) if (!live.has(id)) rec.sent.delete(id)
-  }
-  rec.sentOrder = order
+    rec.order.length !== rec.sentOrder.length || rec.order.some((k, i) => k !== rec.sentOrder[i])
+  if (!items.length && !orderChanged && !rec.forceFull) return
+  // 拷贝而不是直接赋引用：order 会被 upsert 原地 push，引用共享会让 orderChanged 永远为 false
+  rec.sentOrder = [...rec.order]
   send({
-    type: 'blocks',
-    // 顺序没变就不带 order：渲染层沿用旧数组引用，列表本身一次都不重渲染
+    type: 'messages',
     delta: {
       full: rec.forceFull,
-      ...(rec.forceFull || orderChanged ? { order } : {}),
-      items,
-      ...(turns.length ? { turns } : {})
+      ...(rec.forceFull || orderChanged ? { order: rec.order } : {}),
+      items
     },
     path: rec.manager.getSessionFile() ?? null
   })
   rec.forceFull = false
-}
-function all(rec: Mounted): Block[] {
-  return [...rec.history, ...liveBlocks(rec)]
-}
-
-/** 一组块拆成 [用户气泡, 过程块, 最后的回答]。回答只在回合确实以它收尾时才提到外面；
- * 回答后面还跟着工具时，它只是过程里的一句说明 */
-function splitAnswer(items: Block[]): { users: Block[]; inner: Block[]; answer: Block[] } {
-  const users = items.filter((b) => b.kind === 'user')
-  const rest = items.filter((b) => b.kind !== 'user')
-  let last = -1
-  rest.forEach((b, i) => {
-    if (b.kind === 'assistant') last = i
-  })
-  const tail = last >= 0 && last === rest.length - 1
-  return { users, inner: tail ? rest.slice(0, -1) : rest, answer: tail ? [rest[last]] : [] }
-}
-
-/**
- * 流式中的回合：过程块收进 turn，最后一条回答提到外面——和结束态同一个形状。
- * 不这么做的话渲染层看到的是一排散块，既没有「进行中 · N 秒」，行距也会被撑开。
- */
-function liveBlocks(rec: Mounted): Block[] {
-  const { users, inner, answer } = splitAnswer(rec.round)
-  if (!inner.length) {
-    rec.turn = null
-    return [...users, ...answer]
-  }
-  // 时长按秒取整：流式期间每秒才换一次引用，turn 不必逐帧重推
-  const durationMs = Math.round((Date.now() - rec.turnStart) / 1000) * 1000
-  const prev = rec.turn
-  const same =
-    prev !== null &&
-    prev.durationMs === durationMs &&
-    prev.children.length === inner.length &&
-    prev.children.every((c, i) => c === inner[i])
-  if (!same) rec.turn = { kind: 'turn', id: 't-live', durationMs, children: inner }
-  return [...users, rec.turn as Turn, ...answer]
-}
-
-function textOf(content: unknown): string {
-  if (typeof content === 'string') return content
-  if (!Array.isArray(content)) return ''
-  return content.map((c: { type?: string; text?: string }) => (c.type === 'text' ? (c.text ?? '') : '')).join('')
-}
-
-function preview(args: unknown): string {
-  const s = typeof args === 'string' ? args : JSON.stringify(args ?? {})
-  return s.length > 160 ? s.slice(0, 160) + '…' : s
-}
-
-/** edit 工具输出的 diff 形如 "+  12 text"，转成 UI 的行模型 */
-function parseDiff(diff: string, name: string): Extract<Block, { kind: 'diff' }> {
-  const lines: DiffLine[] = []
-  for (const raw of diff.split('\n')) {
-    if (!raw) continue
-    const sign = raw[0]
-    if (sign !== '+' && sign !== '-' && sign !== ' ') continue
-    const m = /^([+\- ])\s*(\d+)?\s?(.*)$/.exec(raw)
-    if (!m) continue
-    const no = m[2] ? Number(m[2]) : undefined
-    if (m[3].trim() === '...') continue
-    lines.push({ type: sign === '+' ? 'add' : sign === '-' ? 'del' : 'ctx', text: m[3], no })
-  }
-  return {
-    kind: 'diff',
-    id: `d-${++seq}`,
-    file: name,
-    added: lines.filter((l) => l.type === 'add').length,
-    removed: lines.filter((l) => l.type === 'del').length,
-    lines
-  }
-}
-
-/** read 打开过的文件补一张卡，limit 只为给出“前 N 行”的提示 */
-function fileBlock(path: string, limit: number): Block {
-  const name = basename(path)
-  const dot = name.lastIndexOf('.')
-  const ext = dot > 0 ? name.slice(dot + 1).toUpperCase() : '文件'
-  return {
-    kind: 'file',
-    id: `f-${++seq}`,
-    name,
-    meta: limit ? `${ext} · 前 ${limit} 行` : ext,
-    path
-  }
 }
 
 function branch(): string {
@@ -683,19 +560,17 @@ async function mount(manager: SessionManager): Promise<Mounted> {
   const liveTools: string[] = []
   const ui = uiContextFor(liveTools)
   const created = await createSession(manager, ui)
+  // 顺序执行：ui 请求不带 toolCallId，并行时 liveTools 栈顶会认错工具
+  created.agent.toolExecution = 'sequential'
   const rec: Mounted = {
     session: created,
     manager,
     detach: () => {},
     cwd: manager.getCwd() || cwd,
-    history: [],
-    round: [],
-    turn: null,
-    turnStart: 0,
-    msgSeq: 0,
+    msgs: new Map(),
+    order: [],
     sent: new Map(),
     sentOrder: [],
-    revs: new Map(),
     forceFull: true,
     flushTimer: null,
     liveTools
@@ -707,7 +582,7 @@ async function mount(manager: SessionManager): Promise<Mounted> {
   return rec
 }
 
-/** 切到某个会话：后台那个不 dispose，继续跑；块全量重发给渲染层 */
+/** 切到某个会话：后台那个不 dispose，继续跑；消息全量重发给渲染层 */
 function activate(rec: Mounted): void {
   current = rec
   cwd = rec.cwd
@@ -748,12 +623,17 @@ async function open(path: string): Promise<void> {
     prune()
     return
   }
+
+
   // 大会话（几十 MB / 上千条 entry）要几秒，先告诉渲染层进阻塞态
   send({ type: 'busy', active: true, label: '正在打开会话' })
   try {
     const manager = SessionManager.open(path)
     const rec = await mount(manager)
-    rec.history = blocksFromEntries(manager.getEntries())
+    // 历史直通：entry → 消息由 pi 官方转换（ADR-0014），宿主不再组装块
+    for (const entry of manager.getEntries()) {
+      for (const m of sessionEntryToContextMessages(entry)) upsert(rec, m)
+    }
     await loadModels(rec)
     activate(rec)
     status(false)
@@ -763,229 +643,69 @@ async function open(path: string): Promise<void> {
   prune()
 }
 
-/** 历史会话的 entry 流转成块：工具结果回填到对应的 tool 块上，折叠规则与实时流一致 */
-function blocksFromEntries(entries: Array<{ type: string; timestamp?: string; message?: unknown }>): Block[] {
-  const out: Block[] = []
-  const tools = new Map<string, Tool>()
-  /** toolCallId → 原始参数，补文件卡要拿完整 path（block.args 是截断过的预览） */
-  const rawArgs = new Map<string, unknown>()
-  let group: Block[] = []
-  /** 这一组第一条 entry 的时间，用来算折叠行时长 */
-  let groupStart = NaN
-  /** 这一组最后一条 entry 的时间（不含下一条 user，否则会把思考间隔算进去） */
-  let groupEnd = NaN
-  for (const entry of entries) {
-    if (entry.type !== 'message' || !entry.message) continue
-    const ts = entry.timestamp ? Date.parse(entry.timestamp) : NaN
-    if (Number.isFinite(ts)) groupEnd = ts
-    const m = entry.message as {
-      role: string
-      content?: Array<{ type: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown }>
-      thinkingLevel?: string
-      toolCallId?: string
-      isError?: boolean
-      command?: string
-      output?: string
-      exitCode?: number | null
-      cancelled?: boolean
-    }
-    if (m.role === 'user') {
-      out.push(...settleInto(group, groupEnd - groupStart))
-      groupStart = ts
-      const imgs = Array.isArray(m.content) ? m.content.filter((c) => c.type === 'image').length : 0
-      group = [
-        {
-          kind: 'user',
-          id: `u-${++seq}`,
-          text: textOf(m.content),
-          ...(imgs ? { images: imgs } : {})
-        }
-      ]
-    } else if (m.role === 'assistant') {
-      const level = LEVEL_LABEL[m.thinkingLevel ?? ''] ?? undefined
-      for (const c of m.content ?? []) {
-        if (c.type === 'thinking' && c.thinking) {
-          group.push({ kind: 'thinking', id: `th-${++seq}`, text: c.thinking, level })
-        } else if (c.type === 'text' && c.text) {
-          group.push({ kind: 'assistant', id: `a-${++seq}`, text: c.text })
-        } else if (c.type === 'toolCall' && c.id) {
-          const block: Tool = {
-            kind: 'tool',
-            id: `tc-${c.id}`,
-            name: c.name ?? 'tool',
-            args: preview(c.arguments),
-            state: 'running'
-          }
-          tools.set(c.id, block)
-          rawArgs.set(c.id, c.arguments)
-          group.push(block)
-        }
-      }
-    } else if (m.role === 'toolResult' && m.toolCallId) {
-      const block = tools.get(m.toolCallId)
-      if (block) {
-        block.state = m.isError ? 'error' : 'done'
-        block.output = textOf(m.content).slice(0, 8000)
-        // 历史会话里的 read 也补一张文件卡，和实时流一致
-        if (block.name === 'read' && !m.isError) {
-          const raw = rawArgs.get(m.toolCallId) as { path?: unknown } | string | undefined
-          const p =
-            typeof raw === 'string' ? /"path":"([^"]+)"/.exec(raw)?.[1] : String(raw?.path ?? '')
-          if (p) group.push(fileBlock(p, 0))
-        }
-      }
-    } else if (m.role === 'bashExecution') {
-      group.push({
-        kind: 'tool',
-        id: `tc-bash-${++seq}`,
-        name: 'bash',
-        args: m.command ?? '',
-        state: m.cancelled || m.exitCode ? 'error' : 'done',
-        output: (m.output ?? '').slice(0, 8000)
-      })
-    }
-  }
-  return [...out, ...settleInto(group, groupEnd - groupStart)]
-}
-
-/** 一组块折成 [用户气泡, 折叠行, 最后一条回答]，不碰全局状态 */
-function settleInto(items: Block[], durationMs = 0): Block[] {
-  const { users, inner, answer } = splitAnswer(items)
-  const wrapped: Block[] =
-    inner.length > 0 ? [{ kind: 'turn', id: `t-${++seq}`, durationMs, children: inner }] : []
-  return [...users, ...wrapped, ...answer]
-}
-
-/** 当前 assistant 消息渲染进 round：先清掉这条消息上一帧的块，再按顺序重新放 */
-function syncMessage(rec: Mounted, partial: { content?: unknown[]; thinkingLevel?: string }, streaming: boolean): void {
-  rec.round = rec.round.filter((b) => !b.id.startsWith(`m${rec.msgSeq}-`))
-  const level = LEVEL_LABEL[partial.thinkingLevel ?? ''] ?? undefined
-  ;(partial.content ?? []).forEach((raw, i) => {
-    const c = raw as { type: string; text?: string; thinking?: string }
-    if (c.type === 'thinking' && c.thinking) {
-      rec.round.push({ kind: 'thinking', id: `m${rec.msgSeq}-th${i}`, text: c.thinking, level, streaming })
-    } else if (c.type === 'text' && c.text) {
-      rec.round.push({ kind: 'assistant', id: `m${rec.msgSeq}-a${i}`, text: c.text, streaming })
-    }
-  })
-}
-
-/** 一轮结束：用户气泡与最后一条回答留在正文，其余过程收进折叠行（保持时间顺序） */
-function settleRound(rec: Mounted, aborted: boolean): void {
-  // 结算必须换成新 id：`t-live` 只属于正在跑的回合。历史里若留着同 id 的 turn，
-  // 渲染层按 id 缓存，下一轮 order 里同一 id 出现两次，正文就会画出两份「进行中」
-  const items = settleInto(rec.round, Date.now() - rec.turnStart).map((b) =>
-    b.kind === 'turn' ? { ...b, aborted } : b
-  )
-  rec.history = [...rec.history, ...items]
-  rec.round = []
-  rec.turn = null
-}
-
 function onEvent(rec: Mounted, ev: Record<string, any>): void {
   const live = rec === current
   switch (ev.type) {
     case 'message_start':
-      if (ev.message?.role === 'assistant') rec.msgSeq++
+      // 消息开始：user / toolResult 一开始就是完整态，assistant 是空壳
+      upsert(rec, ev.message)
+      schedule(rec)
       break
     case 'message_update':
-      if (ev.message?.role === 'assistant') {
-        syncMessage(rec, ev.message, ev.message.stopReason === 'pending')
-        schedule(rec)
-      }
+      // assistant 流式增量：整条 partial 消息原样换进来（ADR-0014：宿主不过滤内容），60ms 合并后推
+      upsert(rec, ev.message)
+      schedule(rec)
       break
     case 'message_end':
-      if (ev.message?.role === 'assistant') {
-        syncMessage(rec, ev.message, false)
-        flushNow(rec)
-      }
+      // 单条消息定稿：立即推
+      upsert(rec, ev.message)
+      flushNow(rec)
       // 新会话这时才落盘，侧栏得补一次条目；已在列表里的不必每条消息都重扫
       if (ev.message?.role === 'user') {
         const path = rec.manager.getSessionFile()
         if (!lastList.some((i) => i.path === path)) setTimeout(() => void emitSessions(), 0)
       }
       break
-    case 'tool_execution_start': {
-      rec.round.push({
-        kind: 'tool',
-        id: `tc-${ev.toolCallId}`,
-        name: ev.toolName,
-        args: preview(ev.args),
-        state: 'running'
-      })
+    case 'tool_execution_start':
+      // 工具开跑：只入 liveTools 栈（ui 请求认领用）；正文状态由 toolCall ↔ toolResult 消息推导
       rec.liveTools.push(ev.toolCallId)
-      // 完整入参只发一次，交渲染层的交互适配器自行解释（宿主不解析工具参数）
-      send({ type: 'toolStart', toolCallId: ev.toolCallId, name: ev.toolName, args: ev.args })
-      flushNow(rec)
       break
-    }
     case 'tool_execution_end': {
+      // 工具结束：出栈；结果由随后的 toolResult 消息携带
       const at = rec.liveTools.lastIndexOf(ev.toolCallId)
       if (at >= 0) rec.liveTools.splice(at, 1)
-      const block = rec.round.find((b) => b.id === `tc-${ev.toolCallId}`) as Tool | undefined
-      if (block) {
-        block.state = ev.isError ? 'error' : 'done'
-        block.output = textOf(ev.result?.content).slice(0, 8000) || preview(ev.result?.details)
-        bump(rec, block.id)
-        const diff = ev.result?.details?.diff
-        const patch = ev.result?.details?.patch
-        if (typeof diff === 'string' && diff) {
-          rec.round.push({
-            ...parseDiff(diff, String(ev.args?.path ?? ev.toolName)),
-            patch: typeof patch === 'string' ? patch : undefined
-          })
-        }
-        // read 成功时补一张文件卡，模型看到了什么用户也看得到
-        if (ev.toolName === 'read' && !ev.isError) {
-          const path = String(ev.args?.path ?? '')
-          if (path) rec.round.push(fileBlock(path, Number(ev.args?.limit ?? 0)))
-        }
-      }
-      flushNow(rec)
       break
     }
     case 'thinking_level_changed':
+      // 思考强度变了：刷新顶栏快照
       if (live) status(rec.session.isStreaming)
       break
     case 'agent_start':
-      rec.turnStart = Date.now()
+      // 一轮开跑：顶栏进 streaming，侧栏标加载图标；时长由渲染层按消息时间戳算
       if (live) status(true)
-      // 后台会话开跑也要让侧栏标上加载图标
       publishSessions(lastList, scanning)
       break
     case 'agent_settled': {
-      settleRound(rec, Boolean(ev.aborted))
+      // 整轮结束：最后一批消息落定；重扫列表（标题/顺序会变，新会话也是这时才落盘）
       flushNow(rec)
       if (live) status(false)
       // 路径让渲染层区分：不是正在看的会话就把未读点打上
       send({ type: 'settled', aborted: Boolean(ev.aborted), path: rec.manager.getSessionFile() ?? null })
       publishSessions(lastList, scanning)
-      // 标题/顺序会变（新会话也是这时才落盘）
       void emitSessions()
       break
     }
-    case 'compaction_start':
-      break
     case 'compaction_end':
+      // 压缩完成：插一条合成通知消息；中止了不插（ADR-0014：非落盘事件不再有位置，压缩是保留的那个）
       if (!ev.aborted && ev.result) {
         const before = Math.round(Number(ev.result.tokensBefore ?? 0) / 1000)
         const after = Math.round(Number(ev.result.estimatedTokensAfter ?? 0) / 1000)
-        rec.round.push({
-          kind: 'system',
-          id: `s-${++seq}`,
-          tone: 'info',
-          text: after ? `上下文已压缩：${before}k → ${after}k tokens` : `上下文已压缩：${before}k tokens`
-        })
+        notice(
+          rec,
+          after ? `上下文已压缩：${before}k → ${after}k tokens` : `上下文已压缩：${before}k tokens`
+        )
+        flushNow(rec)
       }
-      break
-    case 'auto_retry_start':
-      rec.round.push({
-        kind: 'system',
-        id: `s-${++seq}`,
-        tone: 'warn',
-        text: `请求失败，${Math.round(ev.delayMs / 1000)}s 后重试（${ev.attempt}/${ev.maxAttempts}）：${ev.errorMessage}`
-      })
-      flushNow(rec)
       break
   }
 }
@@ -997,21 +717,14 @@ async function prompt(text: string, images?: Array<{ data: string; mimeType: str
   await switching
   const rec = current
   if (!rec) return
-  rec.round.push({
-    kind: 'user',
-    id: `u-${++seq}`,
-    text,
-    ...(images?.length ? { images: images.length } : {})
-  })
-  rec.turnStart = Date.now()
-  flushNow(rec)
   try {
+    // 用户消息不做本地乐观插入：session.prompt 会同步发 user 的 message 事件（日志实测同一 tick）
     await rec.session.prompt(
       text,
       images?.length ? { images: images.map((i) => ({ type: 'image' as const, ...i })) } : undefined
     )
   } catch (err) {
-    rec.round.push({ kind: 'system', id: `s-${++seq}`, tone: 'error', text: String((err as Error)?.message ?? err) })
+    notice(rec, String((err as Error)?.message ?? err), 'error')
     flushNow(rec)
   }
 }
@@ -1026,8 +739,7 @@ async function revert(patch: string): Promise<void> {
         err ? reject(new Error(String(stderr || err.message).trim())) : resolve()
       )
     })
-    const rec = current
-    rec?.round.push({ kind: 'system', id: `s-${++seq}`, tone: 'info', text: '已撤销这次修改' })
+    if (current) notice(current, '已撤销这次修改')
   } catch (err) {
     console.error('[agent-host] revert failed', err)
     send({ type: 'error', message: `撤销失败：${(err as Error).message}` })

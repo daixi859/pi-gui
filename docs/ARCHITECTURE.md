@@ -52,16 +52,17 @@ Composer 提交
   → store.prompt(text)（store/index.ts 的动作）
   → preload → ipcMain 'agent:command' → host.postMessage({type:'prompt'})
   → agent-host: session.prompt(text)
-  → pi 事件流 message_start / message_update / tool_execution_* / message_end
-  → agent-host 组装 Block，60ms 合并一次
-  → send({type:'blocks', delta: BlockDelta})     ← 只推变了的块
-  → main 转发 → preload → store/engine.ts dispatch → store/blocks.ts applyBlocks
+  → pi 事件流 message_start / message_update / message_end
+  → agent-host 只做 upsert（key = timestamp），60ms 合并一次
+  → send({type:'messages', delta: MessageDelta})   ← 只推变了的消息
+  → main 转发 → preload → store/engine.ts dispatch → store/blocks.ts applyMessages
+  → store/timeline.ts 派生成 Block（未变的消息产出同引用块）
   → 只有变化的那一行（useEngine(s => s.byId[id])）重渲染，ChatView 贴底
 ```
 
-**增量而非全量**：`BlockDelta` 带 `items`（变了的顶层块）、可选 `order`（顺序变了才带）、可选 `turns`（turn 内只变了一个子块）。
-宿主按 `sent` / `revs` 比对，原地修改的块要用 `bump(id)` 标记。渲染层正文按 id 存（`order` + `byId`），
-所以列表面板一次都不重渲染。见 ADR-0013。
+**增量而非全量**：`MessageDelta` 带 `items`（变了的消息，整条）、可选 `order`（顺序变了才带）。
+宿主按引用比对（upsert 时浅拷贝换引用）。渲染层把消息增量落进 `msgs`，再全量派生成 Block，
+派生按消息引用 memo，所以未变的行保持引用不变、列表面板一次都不重渲染。见 ADR-0013 / 0014。
 
 ### 2.2 一次扩展 UI 交互（问卷 / 确认框 / 通知）
 
@@ -119,9 +120,9 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
  │   ├─ index.ts              建无框窗口、fork 引擎宿主、双向转发、窗口控制 IPC、
  │   │                        PI_SHOT 调试截图钩子
  │   └─ agent-host.ts         引擎宿主（最大文件）：持有 AgentSession，
- │                            · 事件订阅 → Block 组装（turn 折叠、diff 解析）
+ │                            · 事件订阅 → 消息 upsert + 增量推送（ADR-0014，不组装块）
  │                            · uiContext 通用桥（pending Map + liveTools 栈）
- │                            · 会话列表 / 模型列表 / 快照 / 打开历史会话
+ │                            · 会话列表 / 模型列表 / 快照 / 打开历史会话（entry 直通）
  │
  ├─ src/preload/
  │   ├─ index.ts              contextBridge 暴露 window.pi = { window.*, agent.* }
@@ -134,7 +135,8 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ App.tsx            路由（start / chat / gallery）+ 布局 + ChatView 自动贴底
         ├─ store/             引擎状态的唯一入口（ADR-0013）
         │  ├─ state.ts        EngineState 形状 + zustand 实例 + send
-        │  ├─ blocks.ts       BlockDelta → {order, byId}，维护 answerText / liveTurnId
+        │  ├─ blocks.ts       MessageDelta → msgs{order,byId}，再派生成 Block
+        │  ├─ timeline.ts     消息 → Block 派生（turn 折叠、tool 配对、diff/file 卡）
         │  ├─ interaction.ts  ui 槽位、问卷回填、toast 计时
         │  ├─ engine.ts       宿主事件 dispatch + startEngine + HMR 退订
         │  └─ index.ts        动作层：组件只从这里 import

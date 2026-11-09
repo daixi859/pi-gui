@@ -1,5 +1,16 @@
 /** Transcript 块的唯一数据模型。UI 与引擎事件共用，引擎尚未接入，先由 mock 供给。 */
 
+/** pi 思考强度 → 界面文案；宿主快照与渲染层派生共用 */
+export const LEVEL_LABEL: Record<string, string> = {
+  off: '关闭',
+  minimal: '最低',
+  low: '低',
+  medium: '中',
+  high: '高',
+  xhigh: '很高',
+  max: '最高'
+}
+
 export interface DiffLine {
   type: 'add' | 'del' | 'ctx'
   text: string

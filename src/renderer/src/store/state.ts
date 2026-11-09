@@ -5,7 +5,7 @@
  * engine.ts 都只依赖这里，彼此之间没有 import 环。
  */
 import { create } from 'zustand'
-import type { AgentCommand, AskQuestion, CommandInfo, ModelOption, UiRequest } from '@shared/ipc'
+import type { AgentCommand, AskQuestion, CommandInfo, ModelOption, PiMessage, UiRequest } from '@shared/ipc'
 import type { Block, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 
 /** 待用户作答的问卷（一张卡一道或多道题） */
@@ -24,7 +24,9 @@ export interface Toast {
 
 export interface EngineState {
   /* ---- 正文 ---- */
-  /** 顶层块顺序：只增删时换引用，普通增量不动它 */
+  /** 宿主消息（传输模型，ADR-0014）：key 是 timestamp */
+  msgs: { order: string[]; byId: Record<string, PiMessage> }
+  /** 派生出的顶层块顺序与内容（timeline.ts）：只增删时换引用，普通增量不动它 */
   order: string[]
   byId: Record<string, Block>
   /** 最后一个回合的 id：只有它在流式时算「活着」，折叠默认展开也看它 */
@@ -65,6 +67,7 @@ export interface EngineState {
 }
 
 export const initial: EngineState = {
+  msgs: { order: [], byId: {} },
   order: [],
   byId: {},
   liveTurnId: null,

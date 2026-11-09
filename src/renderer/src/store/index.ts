@@ -31,6 +31,7 @@ export const toggleAccess = (): void =>
 function enter(path: string | null): void {
   engine.update((s) => ({
     viewPath: path,
+    msgs: { order: [], byId: {} },
     order: [],
     byId: {},
     liveTurnId: null,

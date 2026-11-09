@@ -5,17 +5,9 @@
  * 订阅在 createRoot 之前就位，首帧不会漏事件；HMR 再热重载也不会叠出第二个监听。
  */
 import type { AgentEvent } from '@shared/ipc'
-import { questionsOf } from '../interactions'
 import { engine, send } from './state'
-import { applyBlocks } from './blocks'
-import {
-  acceptRequest,
-  clearTimers,
-  flushSlot,
-  openSlot,
-  pushToast,
-  registerAsk
-} from './interaction'
+import { applyMessages } from './blocks'
+import { acceptRequest, clearTimers, flushSlot, pushToast } from './interaction'
 
 /** 新增 AgentEvent 成员时这里会编译失败：提醒同步 store，而不是静默丢掉事件 */
 function never(ev: never): never {
@@ -25,8 +17,8 @@ function never(ev: never): never {
 /** 一个事件 → 一次状态更新；不依赖任何 React 生命周期 */
 function dispatch(ev: AgentEvent): void {
   switch (ev.type) {
-    case 'blocks':
-      applyBlocks(ev.delta, ev.path)
+    case 'messages':
+      applyMessages(ev.delta, ev.path)
       return
     case 'sessions':
       engine.set({
@@ -61,17 +53,10 @@ function dispatch(ev: AgentEvent): void {
       engine.set(mine ? { streaming: false, settledAt: Date.now(), unread } : { unread })
       return
     }
-    case 'toolStart': {
-      openSlot(ev.toolCallId, ev.name, ev.args)
-      const questions = questionsOf(ev.args)
-      if (ev.name === 'ask_user_question' && questions.length > 0) {
-        registerAsk(ev.toolCallId, questions)
-      }
-      return
-    }
     case 'uiRequest': {
       const req = ev.req
       // 已被问答卡认领的请求：先挂起，等用户提交后再按题号回填
+      // （认领时才从消息里找工具参数——工具执行前所属消息必已 end，参数完整，ADR-0014）
       if (req.toolCallId && acceptRequest(req)) {
         flushSlot(req.toolCallId)
         return

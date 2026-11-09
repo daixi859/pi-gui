@@ -1,8 +1,17 @@
 /**
  * utilityProcess(引擎) 与渲染层之间的精简协议。
- * 渲染层只发命令，引擎只发事件；两边都不依赖 pi 的 SDK 类型。
+ * 渲染层只发命令，引擎只发事件。正文传输是 pi 的 AgentMessage（ADR-0014），
+ * 类型 import type 引入，编译期擦除，无运行时依赖。
  */
-import type { Block, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from './blocks'
+import type {} from '@earendil-works/pi-coding-agent'
+import type { AgentMessage } from '@earendil-works/pi-agent-core'
+import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from './blocks'
+
+/** 传输用的消息：pi 的 AgentMessage（含 pi-coding-agent 增补的 bashExecution / custom 等角色） */
+export type PiMessage = AgentMessage
+
+/** 消息 key：timestamp 字符串化。start → end → 落盘全程不变（ADR-0014），宿主与渲染层共用 */
+export const keyOf = (m: PiMessage): string => String(m.timestamp)
 
 /** 可用模型：levels 为该模型支持的思考强度，已按 pi 的 ThinkingLevel 收敛 */
 export interface ModelOption {
@@ -76,28 +85,17 @@ export interface PromptImage {
 }
 
 /**
- * 折叠行的增量：子块只带变了的那些。
- * 不动 children 的时长/中断态变化（每秒一次）只带这两个字段，不再重发整块。
+ * 消息增量：key 是消息的 timestamp（字符串化），start → end → 落盘全程不变（ADR-0014）。
+ * update 帧原样带整条 partial 消息（参数未解析完的 toolCall 由渲染层画成 pending），
+ * 宿主不做内容过滤；顺序没变就不带 order，渲染层沿用旧数组引用。
  */
-export interface TurnDelta {
-  id: string
-  durationMs: number
-  aborted?: boolean
-  /** 完整子块顺序；只有顺序变了才带，缺省沿用渲染层现有顺序 */
-  order?: string[]
-  /** 新增或变化的子块 */
-  items: Block[]
-}
-
-export interface BlockDelta {
+export interface MessageDelta {
   /** true 时渲染层丢弃缓存、只用 items 重建（切会话 / 打开历史） */
   full?: boolean
-  /** 顶层块 id 顺序：渲染层据此拼数组，不必关心增删位置；没变时不带 */
+  /** 消息 key 顺序；没变时不带 */
   order?: string[]
-  /** 需要新增或更新的顶层块；full 时 turn 自带完整 children */
-  items: Block[]
-  /** 折叠行的子块增量；full 时不使用（turn 整块在 items 里） */
-  turns?: TurnDelta[]
+  /** 新增或变化的消息（整条） */
+  items: PiMessage[]
 }
 
 /** 扩展注册的斜杠命令，供输入框的 / 菜单 */
@@ -148,16 +146,14 @@ export type AgentEvent =
       loading?: boolean
       commands: CommandInfo[]
     }
-  /** path：这些块属于哪个会话文件；full 时渲染层据此认定「现在看的是哪个会话」 */
-  | { type: 'blocks'; delta: BlockDelta; path: string | null }
+  /** path：这些消息属于哪个会话文件；full 时渲染层据此认定「现在看的是哪个会话」 */
+  | { type: 'messages'; delta: MessageDelta; path: string | null }
   /** path：当前挂载的会话文件，渲染层据此判断哪个侧栏条目在运行 */
   | { type: 'status'; snapshot: Snapshot; streaming: boolean; path: string | null }
   /** path：这轮结束的会话文件；不是当前在看的会话时渲染层标成未读 */
   | { type: 'settled'; aborted: boolean; path: string | null }
   /** 长耗时操作（打开大会话）期间的阻塞提示 */
   | { type: 'busy'; active: boolean; label?: string }
-  /** 工具开跑：args 是完整入参，只发一次，供交互适配器自行解释 */
-  | { type: 'toolStart'; toolCallId: string; name: string; args: unknown }
   | { type: 'uiRequest'; req: UiRequest }
   | { type: 'files'; items: string[] }
   | { type: 'error'; message: string }
