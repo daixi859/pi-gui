@@ -259,9 +259,9 @@ function ChatView({
           <Button
             aria-label="回到最新"
             title="回到最新"
-            variant="secondary"
+            variant="raised"
             shape="circle"
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-panel shadow-pop"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2"
             onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
             icon={<IconArrowDown />}
           />

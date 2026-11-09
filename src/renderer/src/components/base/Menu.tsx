@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 import { clsx } from 'clsx'
 import { IconCheck } from './icons'
 
@@ -8,6 +8,7 @@ export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
     <button
       type="button"
       aria-label="关闭"
+      tabIndex={-1}
       className="fixed inset-0 z-40 cursor-default [-webkit-app-region:no-drag]"
       onClick={onClose}
     />
@@ -16,7 +17,7 @@ export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
 
 /** 退场期间保持挂载，让 CSS 过渡播完。时长与 global.css 里 .pi-menu 的 transition 保持一致 */
 const EXIT_MS = 140
-function usePresence(open: boolean): boolean {
+export function usePresence(open: boolean): boolean {
   const [mounted, setMounted] = useState(open)
   useEffect(() => {
     if (open) {
@@ -67,16 +68,20 @@ export function MenuPanel({
   fixed,
   className = '',
   style,
+  ref,
   children
 }: {
   open?: boolean
   fixed?: boolean
   className?: string
   style?: CSSProperties
+  /** 定位由调用方计算时（Dropdown）需要读面板尺寸 */
+  ref?: Ref<HTMLDivElement>
   children: ReactNode
 }): ReactNode {
   return (
     <div
+      ref={ref}
       data-open={open}
       style={fixed ? { position: 'fixed', ...style } : style}
       className={clsx('pi-menu [-webkit-app-region:no-drag]', className)}

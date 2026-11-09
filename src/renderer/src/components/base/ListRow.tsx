@@ -35,7 +35,8 @@ export function ListRow({
       type="button"
       className={clsx(
         'flex w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors',
-        size === 'lg' ? 'h-9' : 'h-7',
+        /* 行高不在间距刻度内，按控件三档（Button 24/28/32）对齐：导航行 h-8、列表行 h-7 */
+        size === 'lg' ? 'h-8' : 'h-7',
         tone === 'select'
           ? [active ? 'bg-select font-medium' : 'hover:bg-select/60']
           : 'text-muted hover:text-fg',

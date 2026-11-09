@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from '../base/icons'
 import { WindowControls } from './Sidebar'
 import { Button } from '../base/Button'
 import { PiLogo } from '../base/PiLogo'
-import { Menu, MenuItem } from '../base/Menu'
+import { MenuItem } from '../base/Menu'
+import { Dropdown } from '../base/Dropdown'
 
 /** 品牌按钮：展开收起共用这一颗，hover 才换箭头，尺寸位置不变所以不抖 */
 export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {
@@ -50,7 +51,6 @@ export function TitleBar({
   error?: string
   onClearError: () => void
 }): ReactNode {
-  const [menu, setMenu] = useState(false)
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-edge px-2 [-webkit-app-region:drag]">
       {/* 尺寸对齐 App 里的浮动工具条：left-2 + 3 个 28px 按钮 + 2 个 gap-1 = 100px；宽度过渡跟随侧栏收展 */}
@@ -64,35 +64,39 @@ export function TitleBar({
         <>
           <IconFolder className="shrink-0 text-muted" />
           <span className="truncate text-sm">{title}</span>
-          <div className="relative">
-            <Button
-              aria-label="会话信息"
-              aria-expanded={menu}
-              variant="ghost"
-              onClick={() => setMenu((v) => !v)}
-              className="[-webkit-app-region:no-drag]"
-              icon={<IconDots />}
-            />
-            <Menu
-              open={menu}
-              onClose={() => setMenu(false)}
-              className="top-full mt-1 left-0 w-[176px]"
+          <div>
+            <Dropdown
+              width={176}
+              trigger={({ open, toggle }) => (
+                <Button
+                  aria-label="会话信息"
+                  aria-expanded={open}
+                  variant="ghost"
+                  onClick={toggle}
+                  className="[-webkit-app-region:no-drag]"
+                  icon={<IconDots />}
+                />
+              )}
             >
-              <MenuItem
-                label="复制会话路径"
-                onClick={() => {
-                  if (sessionPath) window.pi?.host.copy(sessionPath)
-                  setMenu(false)
-                }}
-              />
-              <MenuItem
-                label="导出为 Markdown"
-                onClick={() => {
-                  onExport()
-                  setMenu(false)
-                }}
-              />
-            </Menu>
+              {({ close }) => (
+                <>
+                  <MenuItem
+                    label="复制会话路径"
+                    onClick={() => {
+                      if (sessionPath) window.pi?.host.copy(sessionPath)
+                      close()
+                    }}
+                  />
+                  <MenuItem
+                    label="导出为 Markdown"
+                    onClick={() => {
+                      onExport()
+                      close()
+                    }}
+                  />
+                </>
+              )}
+            </Dropdown>
           </div>
         </>
       )}

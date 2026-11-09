@@ -8,6 +8,7 @@ import { AskCard } from './AskCard'
 import { UiPrompt } from './UiPrompt'
 import { Toasts } from '../base/Toasts'
 import { MenuItem, MenuPanel } from '../base/Menu'
+import { Dropdown } from '../base/Dropdown'
 import { Button } from '../base/Button'
 import * as icons from '../base/icons'
 
@@ -313,6 +314,7 @@ function ButtonsDemo(): ReactNode {
   const variants = [
     ['primary', '主按钮'],
     ['secondary', '次要'],
+    ['raised', '浮层'],
     ['ghost', '幽灵'],
     ['danger', '危险']
   ] as const
@@ -381,6 +383,7 @@ function ButtonsDemo(): ReactNode {
           <Button shape="circle" aria-label="添加附件" icon={<icons.IconPlus />} variant="ghost" />
           <Button shape="circle" aria-label="停止" icon={<icons.IconStop />} variant="ghost" size="sm" />
           <Button shape="circle" aria-label="关闭" icon={<icons.IconClose />} variant="secondary" size="lg" />
+          <Button shape="circle" aria-label="回到最新" icon={<icons.IconArrowDown />} variant="raised" />
           <span className="mx-1 h-4 w-px bg-edge" />
           <Button shape="circle" icon={<icons.IconSparkle />} variant="secondary">
             胶囊按钮
@@ -542,6 +545,36 @@ function DialogsDemo(): ReactNode {
             <MenuItem label="导出为 Markdown" selected />
             <MenuItem label="删除会话" danger />
           </MenuPanel>
+        </div>
+      </Section>
+      <Section title="下拉（Dropdown：portal 到 body + 自动翻转/贴边）">
+        <div className="flex flex-wrap items-center gap-2">
+          <Dropdown
+            width={176}
+            trigger={({ open, toggle }) => (
+              <Button aria-expanded={open} onClick={toggle}>
+                底部左对齐
+                <icons.IconChevronDown className="size-3" />
+              </Button>
+            )}
+          >
+            <MenuItem label="复制会话路径" />
+            <MenuItem label="导出为 Markdown" selected />
+          </Dropdown>
+          <Dropdown
+            placement="top"
+            align="end"
+            width={176}
+            trigger={({ open, toggle }) => (
+              <Button aria-expanded={open} variant="ghost" onClick={toggle}>
+                顶部右对齐
+                <icons.IconChevronDown className="size-3" />
+              </Button>
+            )}
+          >
+            <MenuItem label="重命名会话" />
+            <MenuItem label="删除会话" danger />
+          </Dropdown>
         </div>
       </Section>
       <Section title="工具确认弹窗 / 提示条">

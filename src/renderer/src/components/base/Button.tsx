@@ -3,12 +3,12 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { IconSpinner } from './icons'
 
 /**
- * 全站唯一按钮。四种语义变体 × 三档尺寸 × 两档形状，图标作为插槽。
+ * 全站唯一按钮。五种语义变体 × 三档尺寸 × 两档形状，图标作为插槽。
  * 无 children 时按图标按钮渲染成正方形，此时必须给 aria-label。
  * 焦点环由 global.css 的 button:focus-visible 兜底，这里不再写。
  */
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'raised' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
 type Shape = 'square' | 'circle'
 
@@ -19,6 +19,8 @@ const VARIANT: Record<Variant, string> = {
   /* 一屏只留一个主动作 */
   primary: 'bg-fg text-white enabled:hover:bg-fg/85',
   secondary: 'border border-edge text-fg enabled:hover:bg-tint',
+  /* 浮在内容/滚动区上方的实底按钮：hover 也只能加深，不能变半透明露出底下的字 */
+  raised: 'border border-edge bg-panel text-fg shadow-pop enabled:hover:bg-sunken',
   ghost: 'text-muted enabled:hover:bg-sunken enabled:hover:text-fg',
   danger: 'border border-edge text-del enabled:hover:bg-danger-1'
 }

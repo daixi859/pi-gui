@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectMeta, SessionMeta } from '@shared/blocks'
 import { Button } from '../base/Button'
+import { Dropdown } from '../base/Dropdown'
 import { ListRow } from '../base/ListRow'
 import { Menu, MenuItem } from '../base/Menu'
 import {
@@ -38,19 +39,17 @@ const SORTS = [
   { key: 'unread', label: '未读', icon: <IconSparkle className="size-[15px] text-muted" /> }
 ] as const
 
-function SortMenu({
-  open,
+function SortOptions({
   value,
-  onClose,
-  onPick
+  onPick,
+  close
 }: {
-  open: boolean
   value: string
-  onClose: () => void
   onPick: (k: string) => void
+  close: () => void
 }): ReactNode {
   return (
-    <Menu open={open} onClose={onClose} className="top-full mt-1 right-4 w-[152px]">
+    <>
       {SORTS.map((s) => (
         <MenuItem
           key={s.key}
@@ -59,11 +58,11 @@ function SortMenu({
           selected={value === s.key}
           onClick={() => {
             onPick(s.key)
-            onClose()
+            close()
           }}
         />
       ))}
-    </Menu>
+    </>
   )
 }
 
@@ -172,7 +171,6 @@ export function Sidebar({
   onRename,
   onDelete
 }: SidebarProps): ReactNode {
-  const [sorting, setSorting] = useState(false)
   const [sort, setSort] = useState('project')
   /** 项目行三点菜单：项目路径 + 屏幕坐标 */
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null)
@@ -262,29 +260,39 @@ export function Sidebar({
             />
           </>
         )}
-        <Button
-          aria-label="筛选"
-          aria-expanded={sorting}
-          variant="ghost"
-          onClick={() => setSorting((v) => !v)}
-          className={sorting ? 'text-fg' : ''}
-          icon={<IconFilter />}
-        />
-        <SortMenu open={sorting} value={sort} onClose={() => setSorting(false)} onPick={setSort} />
+        <Dropdown
+          align="end"
+          width={152}
+          trigger={({ open, toggle }) => (
+            <Button
+              aria-label="筛选"
+              aria-expanded={open}
+              variant="ghost"
+              onClick={toggle}
+              className={open ? 'text-fg' : ''}
+              icon={<IconFilter />}
+            />
+          )}
+        >
+          {({ close }) => <SortOptions value={sort} onPick={setSort} close={close} />}
+        </Dropdown>
       </div>
 
       {/* 分组标题行：项目下拉（排序）+ 排序 / 新建 */}
       <div className="flex h-8 shrink-0 items-center gap-1 px-4">
-        <Button
-          aria-label="切换排序"
-          aria-expanded={sorting}
-          variant="ghost"
-          size="sm"
-          onClick={() => setSorting((v) => !v)}
+        {/* 外观来自 ListRow 的 quiet tone（ADR-0012）：-ml-2 抵消行内边距，文字与下方项目行对齐。
+            浮层由 Dropdown 接管：portal 到 body，不再被侧栏 overflow 裁剪，也不再相对上方筛选行定位 */}
+        <Dropdown
+          width={152}
+          trigger={({ open, toggle }) => (
+            <ListRow tone="quiet" aria-expanded={open} className="-ml-2 w-auto gap-1" onClick={toggle}>
+              {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
+              <IconChevronDown className="size-3" />
+            </ListRow>
+          )}
         >
-          {SORTS.find((s) => s.key === sort)?.label ?? '项目'}
-          <IconChevronDown className="size-3" />
-        </Button>
+          {({ close }) => <SortOptions value={sort} onPick={setSort} close={close} />}
+        </Dropdown>
         <div className="ml-auto flex items-center gap-1">
           <Button aria-label="排序" variant="ghost" icon={<IconSortList />} />
           <Button aria-label="新建项目" variant="ghost" icon={<IconPlus />} />

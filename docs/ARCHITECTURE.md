@@ -143,6 +143,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
             ├─ base/               基础组件（不知道 pi，控件外观唯一书写地，ADR-0012）
             │  ├─ Button.tsx       全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
             │  ├─ Menu.tsx         公共下拉：遮罩 + 面板 + 条目 + 分组标题
+            │  ├─ Dropdown.tsx     点击下拉：把 Menu 面板 portal 到 body 并自己定位
             │  ├─ ListRow.tsx      全宽列表行底座：select/quiet × 两档高度
             │  ├─ Tip.tsx          悬停提示（靠父级 group 显隐）
             │  ├─ Toasts.tsx       扩展 notify 的右下角提示

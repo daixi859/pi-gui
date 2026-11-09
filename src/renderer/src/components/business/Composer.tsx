@@ -3,7 +3,8 @@ import { clsx } from 'clsx'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../../drafts'
-import { Menu, MenuItem, MenuLabel, MenuPanel } from '../base/Menu'
+import { MenuItem, MenuLabel, MenuPanel } from '../base/Menu'
+import { Dropdown } from '../base/Dropdown'
 import { Button } from '../base/Button'
 import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from '../base/icons'
 import { Tip } from '../base/Tip'
@@ -31,57 +32,71 @@ function WorkspaceBar({
   workspaces: string[]
   onSwitch: (path: string) => void
 }): ReactNode {
-  const [menu, setMenu] = useState(false)
   const [query, setQuery] = useState('')
   const hits = workspaces.filter((p) => p.toLowerCase().includes(query.trim().toLowerCase()))
-  const choose = (path: string): void => {
-    setMenu(false)
+  const choose = (path: string, close: () => void): void => {
+    close()
     setQuery('')
     if (path !== snapshot.workspace) onSwitch(path)
   }
-  const add = (): void => {
-    setMenu(false)
+  const add = (close: () => void): void => {
+    close()
     setQuery('')
     void window.pi?.host.pickDirectory().then((path) => {
-      if (path) choose(path)
+      if (path) choose(path, () => undefined)
     })
   }
   return (
-    <div className="relative flex items-center gap-0.5 rounded-t-lg bg-tint px-2 py-1 text-xs text-muted">
-      <Button variant="ghost" size="sm" onClick={() => setMenu((v) => !v)} title="切换工作区">
-        <IconFolder className="size-[14px]" />
-        {snapshot.cwd}
-        <IconChevronDown className="size-3" />
-      </Button>
+    <div className="flex items-center gap-0.5 rounded-t-lg bg-tint px-2 py-1 text-xs text-muted">
+      <Dropdown
+        placement="top"
+        width={240}
+        trigger={({ open, toggle }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-expanded={open}
+            onClick={toggle}
+            title="切换工作区"
+          >
+            <IconFolder className="size-[14px]" />
+            {snapshot.cwd}
+            <IconChevronDown className="size-3" />
+          </Button>
+        )}
+      >
+        {({ close }) => (
+          <>
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜索工作区"
+              aria-label="搜索工作区"
+              className="pi-input mb-1 w-full"
+            />
+            <div className="max-h-[280px] overflow-y-auto">
+              {hits.map((path) => (
+                <MenuItem
+                  key={path}
+                  label={basename(path)}
+                  title={path}
+                  selected={path === snapshot.workspace}
+                  onClick={() => choose(path, close)}
+                />
+              ))}
+              {hits.length === 0 && <div className="px-2 py-1 text-xs text-faint">没有匹配的工作区</div>}
+            </div>
+            <div className="mt-1 border-t border-edge pt-1">
+              <MenuItem label="添加工作区…" onClick={() => add(close)} />
+            </div>
+          </>
+        )}
+      </Dropdown>
       <span className="flex items-center gap-1 rounded-sm px-1 py-0.5">
         <IconBranch className="size-[14px]" />
         {snapshot.branch}
       </span>
-      <Menu open={menu} onClose={() => setMenu(false)} className="bottom-full left-0 mb-1 w-[240px]">
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索工作区"
-          aria-label="搜索工作区"
-          className="pi-input mb-1 w-full"
-        />
-        <div className="max-h-[280px] overflow-y-auto">
-          {hits.map((path) => (
-            <MenuItem
-              key={path}
-              label={basename(path)}
-              title={path}
-              selected={path === snapshot.workspace}
-              onClick={() => choose(path)}
-            />
-          ))}
-          {hits.length === 0 && <div className="px-2 py-1 text-xs text-faint">没有匹配的工作区</div>}
-        </div>
-        <div className="mt-1 border-t border-edge pt-1">
-          <MenuItem label="添加工作区…" onClick={add} />
-        </div>
-      </Menu>
     </div>
   )
 }
@@ -110,7 +125,6 @@ function Toolbar({
   onAttach: () => void
   onAccess: () => void
 }): ReactNode {
-  const [menu, setMenu] = useState(false)
   return (
     <div className="flex items-center gap-1 px-2 pt-1 pb-2">
       <Button
@@ -125,22 +139,24 @@ function Toolbar({
         {snapshot.access}
       </Button>
       <div className="ml-auto flex items-center gap-1">
-        <div className="relative">
-          <Button variant="ghost" onClick={() => setMenu((v) => !v)}>
-            <span className="size-[13px] rounded-full border-2 border-success-3" />
-            <span className="font-medium text-fg">{snapshot.model}</span>
-            <span className="text-muted">{snapshot.thinkingLevel}</span>
-            <IconChevronDown className="size-3 text-muted" />
-          </Button>
-          <ModelMenu
-            open={menu}
-            snapshot={snapshot}
-            models={models}
-            onModel={onModel}
-            onLevel={onLevel}
-            onClose={() => setMenu(false)}
-          />
-        </div>
+        {/* 浮层向上开：输入条贴在窗口底部 */}
+        <Dropdown
+          placement="top"
+          align="end"
+          width={320}
+          trigger={({ open, toggle }) => (
+            <Button aria-expanded={open} variant="ghost" onClick={toggle}>
+              <span className="mr-1 inline-block size-3 shrink-0 rounded-full border-2 border-add/40 align-middle" />
+              <span className="font-medium text-fg">{snapshot.model}</span>
+              <span className="text-muted">{snapshot.thinkingLevel}</span>
+              <IconChevronDown className="size-3 text-muted" />
+            </Button>
+          )}
+        >
+          {({ close }) => (
+            <ModelMenu snapshot={snapshot} models={models} onModel={onModel} onLevel={onLevel} close={close} />
+          )}
+        </Dropdown>
         {/* 视觉 26，外圈 28 保住可点热区 */}
         {streaming ? (
           <div className="group relative">
@@ -473,7 +489,7 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
       {['周报总结', '报错修复', 'PPT 制作', '闲时任务'].map((label) => (
         <Button key={label} variant="secondary" onClick={() => onPick(label)}>
-          <span className="size-3 rounded-sm border border-faint" />
+          <span className="mr-1 inline-block size-3 shrink-0 rounded-sm border border-faint align-middle" />
           {label}
         </Button>
       ))}
@@ -481,21 +497,19 @@ export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): R
   )
 }
 
-/** 模型选择浮层：模型列表 + 思考强度滑块，数据全部来自引擎 */
+/** 模型选择浮层内容：模型列表 + 思考强度滑块，数据全部来自引擎。定位与开关归 Dropdown */
 function ModelMenu({
-  open,
   snapshot,
   models,
   onModel,
   onLevel,
-  onClose
+  close
 }: {
-  open: boolean
   snapshot: Snapshot
   models: ModelOption[]
   onModel: (id: string) => void
   onLevel: (level: string) => void
-  onClose: () => void
+  close: () => void
 }): ReactNode {
   const current = models.find((m) => m.name === snapshot.model) ?? models[0]
   const levels = current?.levels ?? ['off']
@@ -504,7 +518,7 @@ function ModelMenu({
   const groups = [...new Set(models.map((m) => m.provider))]
 
   return (
-    <Menu open={open} onClose={onClose} className="right-0 bottom-full mb-1 w-[320px]">
+    <>
       <div className="max-h-[240px] overflow-y-auto">
         {groups.map((g) => (
           <div key={g}>
@@ -516,7 +530,10 @@ function ModelMenu({
                   key={m.id}
                   label={m.name}
                   selected={m.name === snapshot.model}
-                  onClick={() => onModel(m.id)}
+                  onClick={() => {
+                    onModel(m.id)
+                    close()
+                  }}
                 />
               ))}
           </div>
@@ -547,6 +564,6 @@ function ModelMenu({
           ))}
         </div>
       </div>
-    </Menu>
+    </>
   )
 }

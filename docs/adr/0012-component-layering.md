@@ -17,7 +17,7 @@
 
 ```
 components/
-├── base/       Button, Menu, ListRow, Tip, Toasts, icons, PiLogo, CodeBlock, MarkdownView
+├── base/       Button, Menu, Dropdown, ListRow, Tip, Toasts, icons, PiLogo, CodeBlock, MarkdownView
 └── business/   Sidebar, Composer, Projects, TitleBar, StartPage, AskCard,
                 UiPrompt, DiffBlock, Preview, blocks
                 └── transcript/   会话正文子分组

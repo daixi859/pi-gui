@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
-import { Menu, MenuItem } from '../base/Menu'
+import { MenuItem } from '../base/Menu'
+import { Dropdown } from '../base/Dropdown'
 import { Button } from '../base/Button'
 import { ListRow } from '../base/ListRow'
 import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from '../base/icons'
@@ -41,7 +42,6 @@ export interface ProjectsProps {
 export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps): ReactNode {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortKey>('recent')
-  const [sorting, setSorting] = useState(false)
   const [showRemoved, setShowRemoved] = useState(true)
   const rail = useScrollRail()
 
@@ -74,33 +74,30 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
               className="pi-input w-full pl-7"
             />
           </div>
-          <div className="relative shrink-0">
-            <Button
-              aria-expanded={sorting}
-              variant="secondary"
-              onClick={() => setSorting((v) => !v)}
-            >
-              {SORTS.find((s) => s.key === sort)?.label}
-              <IconChevronDown className="size-3" />
-            </Button>
-            <Menu
-              open={sorting}
-              onClose={() => setSorting(false)}
-              className="top-full right-0 mt-1 w-[132px]"
-            >
-              {SORTS.map((s) => (
+          <Dropdown
+            align="end"
+            width={132}
+            trigger={({ open, toggle }) => (
+              <Button aria-expanded={open} variant="secondary" onClick={toggle}>
+                {SORTS.find((s) => s.key === sort)?.label}
+                <IconChevronDown className="size-3" />
+              </Button>
+            )}
+          >
+            {({ close }) =>
+              SORTS.map((s) => (
                 <MenuItem
                   key={s.key}
                   label={s.label}
                   selected={sort === s.key}
                   onClick={() => {
                     setSort(s.key)
-                    setSorting(false)
+                    close()
                   }}
                 />
-              ))}
-            </Menu>
-          </div>
+              ))
+            }
+          </Dropdown>
         </div>
 
         <div className="overflow-hidden rounded-md border border-edge">
