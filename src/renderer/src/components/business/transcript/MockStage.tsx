@@ -6,7 +6,7 @@ import { StaticTranscript } from './Transcript'
 
 /** 虚拟时钟：按 speed 推进，播完自动停 */
 function usePlayback(timeline: { frames: Frame[]; total: number }): {
-  blocks: Frame['blocks']
+  turns: Frame['turns']
   streaming: boolean
   clock: number
   playing: boolean
@@ -38,7 +38,7 @@ function usePlayback(timeline: { frames: Frame[]; total: number }): {
     if (timeline.total > 0 && clock > timeline.total) setPlaying(false)
   }, [clock, timeline.total])
 
-  const blocks = useMemo(() => {
+  const turns = useMemo(() => {
     const frames = timeline.frames
     let lo = 0
     let hi = frames.length - 1
@@ -50,11 +50,11 @@ function usePlayback(timeline: { frames: Frame[]; total: number }): {
         lo = mid + 1
       } else hi = mid - 1
     }
-    return hit < 0 ? [] : frames[hit].blocks
+    return hit < 0 ? [] : frames[hit].turns
   }, [clock, timeline])
 
   return {
-    blocks,
+    turns,
     streaming: clock < timeline.total,
     clock,
     playing,
@@ -123,7 +123,7 @@ const btn = 'h-7 rounded-sm px-2 text-xs transition-colors'
 export function MockStage(): ReactNode {
   const [rounds, setRounds] = useState(0)
   const timeline = useMemo(() => buildTimeline(rounds), [rounds])
-  const { blocks, clock, playing, speed, setSpeed, toggle, restart, end } = usePlayback(timeline)
+  const { turns, clock, playing, speed, setSpeed, toggle, restart, end } = usePlayback(timeline)
   const scroller = useRef<HTMLDivElement>(null)
   const perf = usePerf(scroller)
 
@@ -132,7 +132,7 @@ export function MockStage(): ReactNode {
     if (!el) return
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 160
     if (near || clock < 1200) el.scrollTop = el.scrollHeight
-  }, [blocks, clock])
+  }, [turns, clock])
 
   return (
     <div className="flex flex-col gap-2">
@@ -173,13 +173,13 @@ export function MockStage(): ReactNode {
         ))}
         <span className="ml-auto font-mono text-2xs text-muted">
           p95 {perf.p95.toFixed(1)}ms · 最长 {perf.max.toFixed(1)}ms · 长任务 {perf.long} · DOM{' '}
-          {perf.dom} · 块 {blocks.length} · {(clock / 1000).toFixed(1)}s
+          {perf.dom} · 块 {turns.reduce((n, t) => n + t.blocks.length, 0)} · {(clock / 1000).toFixed(1)}s
         </span>
       </div>
 
       <div ref={scroller} className="pi-panel h-[520px] overflow-y-auto">
         <div className="mx-auto w-full max-w-[720px] px-6 py-4">
-          <StaticTranscript blocks={blocks} />
+          <StaticTranscript turns={turns} />
         </div>
       </div>
     </div>

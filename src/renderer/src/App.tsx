@@ -217,7 +217,7 @@ function ToastsHost(): ReactNode {
 function ChatView({ streaming, scope }: { streaming: boolean; scope: string }): ReactNode {
   const scroller = useRef<HTMLDivElement>(null)
   const rail = useScrollRail()
-  const empty = useEngine((s) => s.order.length === 0)
+  const empty = useEngine((s) => s.turns.length === 0)
   const busy = useEngine((s) => s.busy)
   const ask = useEngine((s) => s.asks[0])
   // 离底部超过这个余量才给回到最新，避免小波动一直闪

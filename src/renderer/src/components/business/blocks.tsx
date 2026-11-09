@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { Block, ToolState } from '@shared/blocks'
-import { workTime } from '../../util'
 import { MarkdownView } from '../base/MarkdownView'
 import { DiffBlock } from './DiffBlock'
 import {
@@ -131,47 +130,6 @@ function FileBlock({ name, meta, path }: { name: string; meta: string; path?: st
   )
 }
 
-function TurnBlock({
-  id,
-  durationMs,
-  aborted,
-  children
-}: {
-  id: string
-  durationMs: number
-  aborted?: boolean
-  children: Block[]
-}): ReactNode {
-  // 展开状态存本地：切会话、重开后还保持原样
-  const [open, setOpen] = useState(() => localStorage.getItem(`pi.turn.${id}`) === '1')
-  const toggle = (): void => {
-    setOpen((v) => {
-      localStorage.setItem(`pi.turn.${id}`, v ? '0' : '1')
-      return !v
-    })
-  }
-  return (
-    <div className="rounded-md border border-edge/70">
-      <button
-        type="button"
-        onClick={toggle}
-        className="flex w-full items-center gap-1 px-2 py-2 text-left text-xs text-muted transition-colors hover:text-fg"
-      >
-        {open ? <IconChevronDown /> : <IconChevronRight />}
-        <span>{aborted ? '已中断' : '已完成'}</span>
-        <span className="text-faint">· {workTime(durationMs)}</span>
-      </button>
-      {open && (
-        <div className="space-y-3 border-t border-edge/70 px-2 py-2">
-          {children.map((c) => (
-            <BlockView key={c.id} block={c} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 const TONES = {
   info: 'text-muted',
   warn: 'text-warn',
@@ -209,12 +167,6 @@ export function BlockView({ block }: { block: Block }): ReactNode {
       )
     case 'file':
       return <FileBlock name={block.name} meta={block.meta} path={block.path} />
-    case 'turn':
-      return (
-        <TurnBlock id={block.id} durationMs={block.durationMs} aborted={block.aborted}>
-          {block.children}
-        </TurnBlock>
-      )
     case 'system':
       return <SystemBlock tone={block.tone} text={block.text} />
   }

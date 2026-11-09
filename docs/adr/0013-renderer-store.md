@@ -48,6 +48,7 @@ byId: Record<string, Block>     // 增量时展开复制，只改那一个键
 
 turn 的 `children` 保持嵌套，不摊平进 `byId`：`TurnView` 订阅整个 turn。理由见 ADR-0011
 「turn 是原子渲染单位」，而且 `Step` 已经 memo，展开时真正渲染的只有最后一块。
+（→ ADR-0015 修订：块已摊平进 `byId`，回合降级为段坐标 `TurnSpan`，行级订阅覆盖段内全部块。）
 
 ### 3. 订阅在模块级，不在组件 effect 里（A′）
 

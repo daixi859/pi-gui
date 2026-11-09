@@ -11,7 +11,6 @@ import { DiffLines, FilePeek, Output, TerminalBody } from './bodies'
 import type { StepProps } from './StepRow'
 
 type Tool = Extract<Block, { kind: 'tool' }>
-type Diff = Extract<Block, { kind: 'diff' }>
 
 /** 参数是宿主给的 postMessage 预览串：可能是 JSON，也可能被截断成半截原文 */
 function parse(args: string): Record<string, unknown> | null {
@@ -44,13 +43,14 @@ function count(text: string | undefined): number {
  * 一次工具调用要显示的完整信息。返回描述而不是节点：外壳只在 StepRow 里装配一次，
  * 新增工具 = 加一个 case，不动渲染逻辑。
  */
-export function toolView(block: Tool, diff?: Diff): StepProps {
+export function toolView(block: Tool): StepProps {
   const a = parse(block.args)
   const path = str(a, 'path') ?? str(a, 'file_path')
   const name = base(path)
   const out = block.output
   const hits = count(out)
   const state = block.state
+  const diff = block.diff
 
   switch (block.name) {
     case 'read':

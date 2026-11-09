@@ -54,56 +54,6 @@ const report = `加仓信号：储能毛利率连续两季回升至 32%+；AIDC/
 
 总结：用周期股的买入纪律去买成长股的故事——85 元以下小仓参与可以，60 元下方才是显著的安全边际；放进观察名单跟踪先行指标，不以龙头信仰重仓。本报告仅供学习研究，不构成投资建议。`
 
-export const chatBlocks: Block[] = [
-  {
-    kind: 'assistant',
-    id: 'a1',
-    text: report
-  },
-  {
-    kind: 'file',
-    id: 'f1',
-    name: '阳光电源投资研究报告_20260914.md',
-    meta: '文档 · MD'
-  },
-  {
-    kind: 'diff',
-    id: 'd1',
-    file: '阳光电源投资研究报告_20260914.md',
-    added: 167,
-    removed: 0,
-    lines: []
-  },
-  {
-    kind: 'turn',
-    id: 't1',
-    durationMs: 12300,
-    children: [
-      {
-        kind: 'thinking',
-        id: 'th1',
-        level: '最高',
-        text: '先确认报告周期与数据源口径：\n1. 2025 年报与港股招股书的营收差异需要并列标注\n2. 抽检脚本 report_audit.py 的样本量是否足够\n3. 结论部分要区分"小仓参与"与"安全边际"两个不同门槛'
-      },
-      {
-        kind: 'assistant',
-        id: 'a2',
-        text: '我先读一下现有草稿与核验脚本，再补数据抽检章节。'
-      },
-      { kind: 'tool', id: 'tl1', name: 'read', args: '阳光电源投资研究报告_20260914.md', state: 'done', output: '# 阳光电源投资研究报告\n\n## 1. 结论先行\n…' },
-      { kind: 'tool', id: 'tl2', name: 'bash', args: 'python report_audit.py --sample 7', state: 'done', output: '抽检 7 项：5 通过 / 2 警告 / 0 不通过' },
-      { kind: 'tool', id: 'tl3', name: 'grep', args: '营收 891.84', state: 'done', output: '2025 营收 891.84 亿（A 股年报）' },
-      { kind: 'system', id: 'sy1', tone: 'info', text: '上下文已压缩：12.4k → 3.1k tokens' }
-    ]
-  },
-  {
-    kind: 'system',
-    id: 'sy2',
-    tone: 'warn',
-    text: '操作已中断'
-  }
-]
-
 export const gallerySections = [
   { id: 'user', label: '用户消息' },
   { id: 'assistant', label: 'assistant · markdown' },
@@ -111,7 +61,6 @@ export const gallerySections = [
   { id: 'tool', label: 'tool running / done / error' },
   { id: 'diff', label: 'diff 折叠 / 展开' },
   { id: 'file', label: '文件卡' },
-  { id: 'turn', label: 'turn 折叠' },
   { id: 'system', label: 'system 提示' }
 ] as const
 
@@ -155,18 +104,6 @@ export const galleryBlocks: Record<GallerySection, Block[]> = {
     }
   ],
   file: [{ kind: 'file', id: 'g-f1', name: 'report_20260914.md', meta: '文档 · MD' }],
-  turn: [
-    {
-      kind: 'turn',
-      id: 'g-tu1',
-      durationMs: 12300,
-      aborted: true,
-      children: [
-        { kind: 'thinking', id: 'g-tu1-th', text: '需要先读 auth.ts' },
-        { kind: 'tool', id: 'g-tu1-tl', name: 'read', args: 'src/auth.ts', state: 'done' }
-      ]
-    }
-  ],
   system: [
     { kind: 'system', id: 'g-s1', tone: 'info', text: '上下文已压缩：12.4k → 3.1k tokens' },
     { kind: 'system', id: 'g-s2', tone: 'warn', text: '操作已中断' },

@@ -1,12 +1,13 @@
 /**
- * 消息 → Block 的派生（ADR-0014）：宿主只搬运 pi 消息，转成什么样子在这里定。
- * turn 折叠、tool 状态配对、diff / 文件卡全部从消息推导；
+ * 消息 → Block 的派生（ADR-0014/0015）：宿主只搬运 pi 消息，转成什么样子在这里定。
+ * 产出是平铺块 + 回合段坐标（TurnSpan）：tool 状态配对、diff / 文件卡从消息推导，
+ * 折叠的呈现（哪些收进折叠、收起时留什么）不在数据里，全部由组件按段坐标决定。
  * 流式中的 toolCall 只有名字（参数要等 message_end 才解析完），画成 pending 行。
  *
  * 派生结果按消息引用 memo：增量到达时未变的消息产出同引用块，行级 memo 继续生效。
  */
 import type { PiMessage } from '@shared/ipc'
-import { LEVEL_LABEL, type Block, type DiffLine, type SystemTone } from '@shared/blocks'
+import { LEVEL_LABEL, type Block, type DiffBlock, type DiffLine, type SystemTone } from '@shared/blocks'
 
 type Assistant = Extract<PiMessage, { role: 'assistant' }>
 type ToolResult = Extract<PiMessage, { role: 'toolResult' }>
@@ -27,7 +28,7 @@ function argsPreview(m: Assistant, args: unknown): string {
 }
 
 /** edit 工具输出的 diff 形如 "+  12 text"，转成 UI 的行模型 */
-function parseDiff(diff: string, name: string): Extract<Block, { kind: 'diff' }> {
+function parseDiff(diff: string, name: string): DiffBlock {
   const lines: DiffLine[] = []
   for (const raw of diff.split('\n')) {
     if (!raw) continue
@@ -40,7 +41,6 @@ function parseDiff(diff: string, name: string): Extract<Block, { kind: 'diff' }>
     lines.push({ type: sign === '+' ? 'add' : sign === '-' ? 'del' : 'ctx', text: m[3], no })
   }
   return {
-    kind: 'diff',
     id: `d-${++seq}`,
     file: name,
     added: lines.filter((l) => l.type === 'add').length,
@@ -92,27 +92,28 @@ function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[
       out.push({ kind: 'assistant', id: `a-${m.timestamp}-${i}`, text: c.text, streaming })
     } else if (c.type === 'toolCall' && c.id) {
       const r = results.get(c.id)
+      const details = r?.details as { diff?: unknown; patch?: unknown } | undefined
+      const args = c.arguments as { path?: unknown; limit?: unknown } | undefined
+      const d =
+        r && typeof details?.diff === 'string' && details.diff
+          ? {
+              ...parseDiff(details.diff, String(args?.path ?? c.name)),
+              patch: typeof details.patch === 'string' ? details.patch : undefined
+            }
+          : undefined
       out.push({
         kind: 'tool',
         id: `tc-${c.id}`,
         name: c.name ?? 'tool',
         args: argsPreview(m, c.arguments),
         state: r ? (r.isError ? 'error' : 'done') : 'running',
-        ...(r ? { output: textOf(r.content).slice(0, 8000) || undefined } : {})
+        ...(r ? { output: textOf(r.content).slice(0, 8000) || undefined } : {}),
+        // diff 属于它的工具行，派生时直接并进来
+        ...(d ? { diff: d } : {})
       })
-      if (r) {
-        const details = r.details as { diff?: unknown; patch?: unknown } | undefined
-        const args = c.arguments as { path?: unknown; limit?: unknown } | undefined
-        if (typeof details?.diff === 'string' && details.diff) {
-          out.push({
-            ...parseDiff(details.diff, String(args?.path ?? c.name)),
-            patch: typeof details.patch === 'string' ? details.patch : undefined
-          })
-        }
-        // read 成功时补一张文件卡，模型看到了什么用户也看得到
-        if (c.name === 'read' && !r.isError && typeof args?.path === 'string' && args.path) {
-          out.push(fileBlock(args.path, Number(args.limit ?? 0)))
-        }
+      // read 成功时补一张文件卡，模型看到了什么用户也看得到
+      if (r && c.name === 'read' && !r.isError && typeof args?.path === 'string' && args.path) {
+        out.push(fileBlock(args.path, Number(args.limit ?? 0)))
       }
     }
   })
@@ -175,14 +176,14 @@ function messageBlocks(m: PiMessage, results: Map<string, ToolResult>): Block[] 
   }
 }
 
-/* ---------------- 回合分组与总装配 ---------------- */
+/* ---------------- 回合分段与总装配 ---------------- */
 
 interface Group {
   user: PiMessage | null
   items: PiMessage[]
 }
 
-/** user 消息开一组；首条 user 之前的散件（压缩通知等）自成一组 */
+/** user 消息开一段；首条 user 之前的散件（压缩通知等）自成一段 */
 function groupMessages(order: string[], byId: Record<string, PiMessage>): Group[] {
   const groups: Group[] = []
   let cur: Group = { user: null, items: [] }
@@ -212,55 +213,93 @@ function groupLive(g: Group, results: Map<string, ToolResult>): boolean {
   return false
 }
 
+/** 一个回合的段坐标：只记范围与统计，不嵌套块。折叠与否、收起时留什么由组件决定 */
+export interface TurnSpan {
+  /** `t-${user 消息 timestamp}`：live 到落定不变，折叠记忆也按它存 */
+  key: string
+  /** user 气泡块 id，渲染在段头之前；首条 user 之前的散件组没有 */
+  userId?: string
+  /** 段头之后的全部块（过程、中间文本、答案），顺序即渲染顺序 */
+  ids: string[]
+  /** live 段随派生刷新（Date.now()），落定后固定 */
+  durationMs: number
+  /** 过程块数（thinking/tool/diff/file/system），> 0 才有折叠按钮 */
+  stepCount: number
+  /** 文本块数（中间文本 + 答案），> 1 且无过程块才有纯时长行 */
+  noteCount: number
+  toolCount: number
+  live: boolean
+  aborted: boolean
+}
+
 export interface Derived {
-  order: string[]
+  turns: TurnSpan[]
   byId: Record<string, Block>
-  liveTurnId: string | null
   answerText: string
 }
 
-/** 全量派生：组内 [用户气泡, 折叠行, 回答]，回答只在确实以它收尾时提到折叠行外 */
+/** 上一次的段索引：值没变的段复用旧对象（含 ids 引用），段容器 memo 才能命中 */
+let prevTurns: TurnSpan[] = []
+
+/** 值相等（含 ids 逐位）才算没变：live 段的 durationMs 每帧在变，必然换新对象 */
+function sameSpan(p: TurnSpan, t: TurnSpan): boolean {
+  return (
+    p.userId === t.userId &&
+    p.live === t.live &&
+    p.aborted === t.aborted &&
+    p.durationMs === t.durationMs &&
+    p.stepCount === t.stepCount &&
+    p.noteCount === t.noteCount &&
+    p.toolCount === t.toolCount &&
+    p.ids.length === t.ids.length &&
+    p.ids.every((id, i) => id === t.ids[i])
+  )
+}
+
+/** 全量派生：平铺块按消息顺序产出，回合只给段坐标。最后一段在流式 / 有工具没结果时算 live */
 export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): Derived {
   const groups = groupMessages(order, byId)
-  const rows: Block[] = []
   const outById: Record<string, Block> = {}
-  let liveTurnId: string | null = null
-  const now = Date.now()
+  const turns: TurnSpan[] = []
+  let answerText = ''
 
   groups.forEach((g, gi) => {
     const results = new Map<string, ToolResult>()
     for (const m of g.items) if (m.role === 'toolResult') results.set(m.toolCallId, m)
 
-    if (g.user) rows.push(...messageBlocks(g.user, results))
-    const steps = g.items.flatMap((m) => messageBlocks(m, results))
-    const answer = steps[steps.length - 1]?.kind === 'assistant' ? steps.pop() : undefined
+    // user 气泡单独走（渲染在段头之前），段头之下只放回应过程
+    const userBlock = g.user ? messageBlocks(g.user, results)[0] : undefined
+    const items: Block[] = []
+    for (const m of g.items) items.push(...messageBlocks(m, results))
 
-    if (steps.length) {
-      const userTs = g.user ? g.user.timestamp : (g.items[0]?.timestamp ?? 0)
-      const live = gi === groups.length - 1 && groupLive(g, results)
-      const endTs = live ? now : (g.items[g.items.length - 1]?.timestamp ?? userTs)
-      const aborted = g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')
-      const turn: Block = {
-        kind: 'turn',
-        id: `t-${userTs}`,
-        durationMs: Math.max(0, endTs - userTs),
-        ...(aborted ? { aborted } : {}),
-        children: steps
-      }
-      rows.push(turn)
-      if (live) liveTurnId = turn.id
+    if (userBlock) outById[userBlock.id] = userBlock
+    for (const b of items) {
+      outById[b.id] = b
+      // 顺序遍历，最后一个 assistant 块即最终答案
+      if (b.kind === 'assistant') answerText = b.text
     }
-    if (answer) rows.push(answer)
+
+    const userTs = g.user ? g.user.timestamp : (g.items[0]?.timestamp ?? 0)
+    const live = gi === groups.length - 1 && groupLive(g, results)
+    const endTs = live ? Date.now() : (g.items[g.items.length - 1]?.timestamp ?? userTs)
+    turns.push({
+      key: `t-${userTs}`,
+      ...(userBlock ? { userId: userBlock.id } : {}),
+      ids: items.map((b) => b.id),
+      durationMs: Math.max(0, endTs - userTs),
+      stepCount: items.filter((b) => b.kind !== 'assistant').length,
+      noteCount: items.filter((b) => b.kind === 'assistant').length,
+      toolCount: items.filter((b) => b.kind === 'tool').length,
+      live,
+      aborted: g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')
+    })
   })
 
-  for (const b of rows) outById[b.id] = b
-  let answerText = ''
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const b = rows[i]
-    if (b.kind === 'assistant') {
-      answerText = b.text
-      break
-    }
-  }
-  return { order: rows.map((b) => b.id), byId: outById, liveTurnId, answerText }
+  const prevByKey = new Map(prevTurns.map((t) => [t.key, t]))
+  const stable = turns.map((t) => {
+    const p = prevByKey.get(t.key)
+    return p && sameSpan(p, t) ? p : t
+  })
+  prevTurns = stable
+  return { turns: stable, byId: outById, answerText }
 }

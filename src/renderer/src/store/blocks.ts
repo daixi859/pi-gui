@@ -35,10 +35,9 @@ export function applyMessages(delta: MessageDelta, path: string | null): void {
   const d = deriveBlocks(order, byId)
   const patch: Partial<EngineState> = {
     msgs: { order, byId },
-    order: d.order,
+    turns: d.turns,
     byId: d.byId,
-    answerText: d.answerText,
-    liveTurnId: d.liveTurnId
+    answerText: d.answerText
   }
   if (delta.full) {
     patch.viewPath = path
@@ -48,13 +47,19 @@ export function applyMessages(delta: MessageDelta, path: string | null): void {
   engine.set(patch)
 }
 
-/** 导出 / 复制用：按顺序拼出完整块数组。只在用户点按钮时调用，不进渲染路径 */
+/** 导出 / 复制用：按段顺序拼出完整块数组（user 气泡 + 段内容）。只在用户点按钮时调用，不进渲染路径 */
 export function blocksOf(): Block[] {
-  const { order, byId } = engine.get()
+  const { turns, byId } = engine.get()
   const out: Block[] = []
-  for (const id of order) {
-    const b = byId[id]
-    if (b) out.push(b)
+  for (const t of turns) {
+    if (t.userId) {
+      const u = byId[t.userId]
+      if (u) out.push(u)
+    }
+    for (const id of t.ids) {
+      const b = byId[id]
+      if (b) out.push(b)
+    }
   }
   return out
 }

@@ -32,9 +32,8 @@ function enter(path: string | null): void {
   engine.update((s) => ({
     viewPath: path,
     msgs: { order: [], byId: {} },
-    order: [],
+    turns: [],
     byId: {},
-    liveTurnId: null,
     answerText: '',
     streaming: false,
     settledAt: null,
@@ -59,12 +58,12 @@ export const openSession = (path: string): void => {
 
 export const deleteSession = (path: string): void => {
   // 删的是正在看的会话：宿主会切到新会话，路径等它回来再认
-  engine.update((s) => (s.viewPath === path ? { viewPath: null, streaming: false, liveTurnId: null } : {}))
+  engine.update((s) => (s.viewPath === path ? { viewPath: null, streaming: false } : {}))
   send({ type: 'deleteSession', path })
 }
 
 export const deleteProject = (path: string): void => {
   // 项目下的会话会被整批删掉，正在看的那条可能在里面，宿主会切到新会话
-  engine.update(() => ({ viewPath: null, streaming: false, liveTurnId: null }))
+  engine.update(() => ({ viewPath: null, streaming: false }))
   send({ type: 'projectDelete', path })
 }

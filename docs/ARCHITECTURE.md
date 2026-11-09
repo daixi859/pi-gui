@@ -135,8 +135,8 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ App.tsx            路由（start / chat / gallery）+ 布局 + ChatView 自动贴底
         ├─ store/             引擎状态的唯一入口（ADR-0013）
         │  ├─ state.ts        EngineState 形状 + zustand 实例 + send
-        │  ├─ blocks.ts       MessageDelta → msgs{order,byId}，再派生成 Block
-        │  ├─ timeline.ts     消息 → Block 派生（turn 折叠、tool 配对、diff/file 卡）
+        │  ├─ blocks.ts       MessageDelta → msgs{order,byId}，再派生成块
+        │  ├─ timeline.ts     消息 → 平铺块 + 回合段坐标 TurnSpan（tool 配对、diff 并工具行、file 卡）
         │  ├─ interaction.ts  ui 槽位、问卷回填、toast 计时
         │  ├─ engine.ts       宿主事件 dispatch + startEngine + HMR 退订
         │  └─ index.ts        动作层：组件只从这里 import

@@ -5,11 +5,12 @@ import { IconImage } from '../../base/icons'
 import { useEngine } from '../../../store'
 import { count } from '../../../perf'
 import { Step } from './Step'
-import { TurnView } from './TurnView'
+import { TurnSection, StaticTurn } from './TurnView'
+import type { TurnSpan } from '../../../store/timeline'
 
 function UserLine({ text, images }: { text: string; images?: number }): ReactNode {
   return (
-    <div className="flex justify-end">
+    <div className="mb-8 flex justify-end">
       <div className="max-w-[85%] rounded-lg rounded-br-sm bg-sunken px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap">
         {images ? (
           <div className="mb-1 flex items-center gap-1 text-xs text-muted">
@@ -40,61 +41,53 @@ export function WorkingDots(): ReactNode {
   )
 }
 
-/** 一个块 → 一行。引用不变就跳过渲染（memo 的浅比较就是这个语义） */
-export const RowView = memo(function RowView({
-  block,
-  live
-}: {
-  block: Block
-  live: boolean
-}): ReactNode {
+/**
+ * 一个块 → 一行。引用不变就跳过渲染（memo 的浅比较就是这个语义）。
+ * open = 所在段展开与否：收起时 user 气泡与 assistant 文本仍显示，过程块整行不渲染。
+ */
+export const RowView = memo(function RowView({ block, open }: { block: Block; open: boolean }): ReactNode {
   count('row')
   switch (block.kind) {
     case 'user':
       return <UserLine text={block.text} images={block.images} />
     case 'assistant':
       return <MarkdownView text={block.text} streaming={block.streaming} />
-    case 'turn':
-      return <TurnView block={block} live={live} />
     default:
-      return <Step block={block} />
+      return open ? <Step block={block} /> : null
   }
 })
 
 /**
  * 一行只订阅自己那个块（按 id）。
- * 别的块变了不惊动这一行，这一行变了也只有它重渲染——列表本身不参与。
+ * 别的块变了不惊动这一行，这一行变了也只有它重渲染——段容器也不参与。
  */
-const Row = memo(function Row({ id, live }: { id: string; live: boolean }): ReactNode {
+export const Row = memo(function Row({ id, open }: { id: string; open: boolean }): ReactNode {
   const block = useEngine((s) => s.byId[id])
-  return block ? <RowView block={block} live={live} /> : null
+  return block ? <RowView block={block} open={open} /> : null
 })
 
-/** 会话正文：只订阅 id 顺序，块内容由每行自己订阅。 */
+/** 会话正文：只订阅段坐标（turns），折叠呈现与块内容都由段容器 / 行自己负责。 */
 export const Transcript = memo(function Transcript(): ReactNode {
-  const order = useEngine((s) => s.order)
-  const liveTurnId = useEngine((s) => s.liveTurnId)
+  const turns = useEngine((s) => s.turns)
   return (
     <div className="space-y-4">
-      {order.map((id) => (
-        <Row key={id} id={id} live={id === liveTurnId} />
+      {turns.map((span) => (
+        <TurnSection key={span.key} span={span} />
       ))}
     </div>
   )
 })
 
-/** 给定数组直接渲染：预览页的假流用，不碰引擎状态 */
+/** 给定段结构直接渲染：预览页的假流用，不碰引擎状态 */
 export const StaticTranscript = memo(function StaticTranscript({
-  blocks,
-  liveTurnId
+  turns
 }: {
-  blocks: Block[]
-  liveTurnId?: string | null
+  turns: { span: TurnSpan; blocks: Block[] }[]
 }): ReactNode {
   return (
     <div className="space-y-4">
-      {blocks.map((b) => (
-        <RowView key={b.id} block={b} live={b.id === liveTurnId} />
+      {turns.map(({ span, blocks }) => (
+        <StaticTurn key={span.key} span={span} blocks={blocks} />
       ))}
     </div>
   )

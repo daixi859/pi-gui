@@ -1,6 +1,6 @@
 import type { Block } from '@shared/blocks'
 
-/** 把一个块序列化成 Markdown；turn 展开子块 */
+/** 把一个块序列化成 Markdown */
 function line(b: Block): string {
   switch (b.kind) {
     case 'user':
@@ -15,8 +15,6 @@ function line(b: Block): string {
       return `> 修改 \`${b.file}\` +${b.added} -${b.removed}`
     case 'file':
       return `> 文件 \`${b.name}\` · ${b.meta}`
-    case 'turn':
-      return b.children.map(line).join('\n\n')
     case 'system':
       return `> ${b.text}`
   }

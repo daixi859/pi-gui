@@ -1,13 +1,11 @@
 import type { Block, DiffLine } from '@shared/blocks'
+import type { TurnSpan } from './store/timeline'
 
-/** 一帧：虚拟时刻 t（毫秒）对应的完整块序列。宿主每 60ms 推一次，这里照抄这个节奏 */
+/** 一帧：虚拟时刻 t（毫秒）对应的段结构。宿主每 60ms 推一次，这里照抄这个节奏 */
 export interface Frame {
   t: number
-  blocks: Block[]
+  turns: { span: TurnSpan; blocks: Block[] }[]
 }
-
-type Turn = Extract<Block, { kind: 'turn' }>
-type Child = Block
 
 const FLUSH = 60
 
@@ -16,8 +14,8 @@ const THINK_A = `先把现状理清楚。
 先看块是怎么从宿主推过来的，再决定改哪一层。`
 
 const THINK_B = `差量协议没问题，问题全在渲染层。
-先确认改完后 turn 的折叠不会丢内容：children 里最后一个 assistant 是答案，要留在折叠外面；中间的说明文字属于过程。
-diff 单独成块，跟工具行合并显示。`
+先确认改完后 turn 的折叠不会丢内容：段内最后一个 assistant 是答案，收起时要留在折叠外面；中间的说明文字属于过程。
+diff 并进工具行显示。`
 
 const ANSWER_A = `现状定位清楚了，三处都在渲染层：
 
@@ -42,21 +40,29 @@ const CODE_DIFF: DiffLine[] = [
 
 /** 新建文件：整段都是新增行 */
 const WRITE_DIFF: DiffLine[] = [
-  { type: 'add', no: 1, text: 'export const TurnView = memo(function TurnView({ block, live }: Props) {' },
+  { type: 'add', no: 1, text: 'export const TurnView = memo(function TurnView({ span }: Props) {' },
   { type: 'add', no: 2, text: '  const [choice, setChoice] = useState<boolean | null>(null)' },
-  { type: 'add', no: 3, text: '  const open = choice ?? live' },
-  { type: 'add', no: 4, text: '  return <div className="space-y-2">{steps}</div>' },
+  { type: 'add', no: 3, text: '  const open = choice ?? span.live' },
+  { type: 'add', no: 4, text: '  return <div className="space-y-2">{rows}</div>' },
   { type: 'add', no: 5, text: '})' }
 ]
+
+/** 一个回合：user 气泡单独存（渲染在段头之前），段内其余块平铺，段坐标在快照时算 */
+interface Seg {
+  key: string
+  user: Block
+  blocks: Block[]
+  startedAt: number
+  endedAt: number | null
+  aborted: boolean
+}
 
 /** 把脚本展开成按时间排序的帧序列，运行器只需要推进虚拟时钟 */
 class Script {
   t = 0
   readonly frames: Frame[] = []
-  private top: Block[] = []
-  private turn: Turn | null = null
-  private turnAt = -1
-  private turnStart = 0
+  private segs: Seg[] = []
+  private cur: Seg | null = null
   private n = 0
 
   constructor(private readonly rounds: number) {
@@ -64,34 +70,43 @@ class Script {
   }
 
   private flush(): void {
+    const snap: Frame = { t: Math.round(this.t), turns: this.segs.map((s) => this.snapshot(s)) }
     const last = this.frames[this.frames.length - 1]
-    const snap = { t: Math.round(this.t), blocks: [...this.top] }
     if (last && last.t === snap.t) this.frames[this.frames.length - 1] = snap
     else this.frames.push(snap)
   }
 
-  private setTurn(children: Child[]): void {
-    if (!this.turn) return
-    this.turn = { ...this.turn, children, durationMs: Math.round(this.t - this.turnStart) }
-    this.top[this.turnAt] = this.turn
+  private snapshot(seg: Seg): { span: TurnSpan; blocks: Block[] } {
+    return {
+      span: {
+        key: seg.key,
+        userId: seg.user.id,
+        ids: seg.blocks.map((b) => b.id),
+        durationMs: Math.round((seg.endedAt ?? this.t) - seg.startedAt),
+        stepCount: seg.blocks.filter((b) => b.kind !== 'assistant').length,
+        noteCount: seg.blocks.filter((b) => b.kind === 'assistant').length,
+        toolCount: seg.blocks.filter((b) => b.kind === 'tool').length,
+        live: seg.endedAt === null,
+        aborted: seg.aborted
+      },
+      blocks: [seg.user, ...seg.blocks]
+    }
   }
 
-  private patch(id: string, f: (c: Child) => Child): void {
-    const children = this.turn?.children ?? []
-    const i = children.findIndex((c) => c.id === id)
-    if (i < 0) return
-    const next = [...children]
-    next[i] = f(next[i])
-    this.setTurn(next)
+  private patch(id: string, f: (c: Block) => Block): void {
+    const blocks = this.cur?.blocks
+    if (!blocks) return
+    const i = blocks.findIndex((c) => c.id === id)
+    if (i >= 0) blocks[i] = f(blocks[i])
   }
 
-  private push(b: Child): string {
-    this.setTurn([...(this.turn?.children ?? []), b])
+  private push(b: Block): string {
+    this.cur?.blocks.push(b)
     return b.id
   }
 
   /** 按 60ms 一帧把文本吐出去，跟宿主的合帧节奏一致 */
-  private stream(build: (text: string, done: boolean, elapsed: number) => Child, text: string, ms: number): void {
+  private stream(build: (text: string, done: boolean, elapsed: number) => Block, text: string, ms: number): void {
     const count = Math.max(1, Math.round(ms / FLUSH))
     const size = Math.ceil(text.length / count)
     let id = ''
@@ -106,22 +121,25 @@ class Script {
   }
 
   private beginTurn(user: string, gap = 320): void {
-    const userId = `u${++this.n}`
-    this.top.push({ kind: 'user', id: userId, text: user })
-    this.turnStart = this.t
-    this.turn = { kind: 'turn', id: `t${++this.n}`, durationMs: 0, children: [] }
-    this.turnAt = this.top.length
-    this.top.push(this.turn)
+    this.cur = {
+      key: `t${++this.n}`,
+      user: { kind: 'user', id: `u${++this.n}`, text: user },
+      blocks: [],
+      startedAt: this.t,
+      endedAt: null,
+      aborted: false
+    }
+    this.segs.push(this.cur)
     this.t += gap
     this.flush()
   }
 
   private endTurn(aborted = false): void {
-    if (!this.turn) return
-    this.turn = { ...this.turn, durationMs: Math.round(this.t - this.turnStart), aborted }
-    this.top[this.turnAt] = this.turn
+    if (!this.cur) return
+    this.cur.endedAt = this.t
+    this.cur.aborted = aborted
     this.flush()
-    this.turn = null
+    this.cur = null
   }
 
   private think(text: string, ms: number): void {
@@ -139,40 +157,37 @@ class Script {
     this.push({ kind: 'tool', id, name, args, state: 'running' })
     this.flush()
     this.t += ms
-    this.patch(id, (c) => ({ ...c, state: fail ? 'error' : 'done', output }) as Child)
+    this.patch(id, (c) => ({ ...c, state: fail ? 'error' : 'done', output }) as Block)
     this.flush()
   }
 
+  /** diff 属于它的工具行：补进段内最后一个 tool 块的字段 */
   private diff(file: string, lines: DiffLine[], ms: number): void {
-    const id = `d${++this.n}`
-    this.push({
-      kind: 'diff',
-      id,
-      file,
-      added: lines.filter((l) => l.type === 'add').length,
-      removed: lines.filter((l) => l.type === 'del').length,
-      lines
-    })
+    const blocks = this.cur?.blocks
+    if (!blocks) return
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const b = blocks[i]
+      if (b.kind !== 'tool') continue
+      blocks[i] = {
+        ...b,
+        diff: {
+          id: `d${++this.n}`,
+          file,
+          added: lines.filter((l) => l.type === 'add').length,
+          removed: lines.filter((l) => l.type === 'del').length,
+          lines
+        }
+      }
+      break
+    }
     this.flush()
     this.t += ms
   }
 
-  /** 答案走顶层块（宿主就是这么分的），回合里只留过程 */
+  /** 答案也流式进段：收起时它是留在折叠外面的文本 */
   private say(text: string, ms: number): void {
     const id = `a${++this.n}`
-    const count = Math.max(1, Math.round(ms / FLUSH))
-    const size = Math.ceil(text.length / count)
-    let at = -1
-    for (let i = 0; i < count; i++) {
-      this.t += ms / count
-      const b: Child = { kind: 'assistant', id, text: text.slice(0, (i + 1) * size), streaming: i < count - 1 }
-      if (at < 0) {
-        at = this.top.length
-        this.top.push(b)
-      } else this.top[at] = b
-      this.setTurn([...(this.turn?.children ?? [])])
-      this.flush()
-    }
+    this.stream((acc, done) => ({ kind: 'assistant', id, text: acc, streaming: !done }), text, ms)
   }
 
   private run(): void {
