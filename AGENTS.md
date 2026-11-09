@@ -63,4 +63,6 @@ npm run typecheck  # 三端类型检查，改完必跑
 
 主进程支持 `PI_SHOT=<png路径>` + `PI_SHOT_JS=<页面脚本>`（或 `PI_SHOT_JS_FILE=<脚本路径>`，脚本返回值会打到 stdout）+ `PI_SHOT_AT=<触发ms>` + `PI_SHOT_DELAY=<截图前ms>`，用于无头截图验证。改代码后重启 dev（热更新对 main/host 不生效）。
 
+**临时文件统一放项目根的 `tmp/`**（已被 `.gitignore` 忽略，可整体删除）：运行日志 `tmp/log/`、dev 输出 `tmp/dev.log`、临时截图与探针脚本。只有文档要引用的截图才进 `docs/screenshots/`。
+
 **原则上用户可以直接查看的不用启动无头浏览器截图验证**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、用户无法判断的或跨进程改动时才需要启动验证。

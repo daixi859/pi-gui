@@ -5,15 +5,16 @@ dist/
 release/
 *.tsbuildinfo
 
+# 临时文件统一放 tmp/（日志、截图、探针脚本、一次性验证产物）
+# 约定见 tmp/README.md
+tmp/
+
 # 本地调试脚本（内含本机绝对路径，不可复用）
 dev.cmd
 shot.ps1
 shot.js
 
-# 日志与临时文件
-log/
-dev.log
-*.log
+# 环境变量
 .env
 .env.*
 Thumbs.db

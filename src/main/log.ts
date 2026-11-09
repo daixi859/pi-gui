@@ -1,11 +1,12 @@
 /**
- * 调试日志：追加写到项目根的 log/ 目录，每次启动一个以时间戳命名的文件。
+ * 调试日志：追加写到项目根的 tmp/log/ 目录，每次启动一个以时间戳命名的文件。
+ * tmp/ 是约定的一次性产物目录（见 tmp/README.md），已被 .gitignore 忽略。
  * 日志只是辅助，任何写失败都静默放弃，不能反过来弄崩应用。
  */
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-const dir = join(process.cwd(), 'log')
+const dir = join(process.cwd(), 'tmp', 'log')
 const file = join(dir, `${startupStamp()}.log`)
 let ready = false
 
