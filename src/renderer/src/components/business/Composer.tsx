@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../../drafts'
+import { abort, queryFiles, setModel, setThinkingLevel, switchWorkspace, toggleAccess, useEngine } from '../../store'
 import { MenuItem, MenuLabel, MenuPanel } from '../base/Menu'
 import { Dropdown } from '../base/Dropdown'
 import { Button } from '../base/Button'
@@ -452,36 +453,64 @@ function InputCard({
 export interface ComposerProps {
   /** 草稿键：会话 id，起始页用 'new' */
   scope: string
+  onSubmit: (text: string, images?: PromptImage[]) => void
+}
+
+/** 输入卡要的都从 store 自己订阅：快照、模型、命令、@ 候选、工作区 */
+interface ComposerData {
   snapshot: Snapshot
   models: ModelOption[]
   streaming: boolean
-  onSubmit: (text: string, images?: PromptImage[]) => void
+  files: string[]
+  commands: CommandInfo[]
+  workspaces: string[]
   onAbort: () => void
   onModel: (id: string) => void
   onLevel: (level: string) => void
-  files: string[]
   onQueryFiles: (query: string) => void
-  commands: CommandInfo[]
   onAccess: () => void
   onSwitchWorkspace: (path: string) => void
-  workspaces: string[]
+}
+
+function useComposerStore(): ComposerData {
+  const snapshot = useEngine((s) => s.snapshot)
+  const models = useEngine((s) => s.models)
+  const streaming = useEngine((s) => s.streaming)
+  const files = useEngine((s) => s.files)
+  const commands = useEngine((s) => s.commands)
+  const workspaces = useEngine((s) => s.workspaces)
+  return {
+    snapshot,
+    models,
+    streaming,
+    files,
+    commands,
+    workspaces,
+    onAbort: abort,
+    onModel: setModel,
+    onLevel: setThinkingLevel,
+    onQueryFiles: queryFiles,
+    onAccess: toggleAccess,
+    onSwitchWorkspace: switchWorkspace
+  }
 }
 
 /** 起始页的大输入卡 */
-export function ComposerCard(props: Omit<ComposerProps, 'onAbort'> & { onAbort?: () => void }): ReactNode {
+export function ComposerCard({ scope, onSubmit }: ComposerProps): ReactNode {
   return (
     <InputCard
       big
+      scope={scope}
+      onSubmit={onSubmit}
       placeholder="向 Pi 提问，使用 @ 添加上下文，使用 / 选择命令或能力"
-      {...props}
-      onAbort={props.onAbort ?? (() => undefined)}
+      {...useComposerStore()}
     />
   )
 }
 
 /** 会话页底部输入条 */
-export function ChatComposer(props: ComposerProps): ReactNode {
-  return <InputCard placeholder="提出后续修改要求" {...props} />
+export function ChatComposer({ scope, onSubmit }: ComposerProps): ReactNode {
+  return <InputCard scope={scope} onSubmit={onSubmit} placeholder="提出后续修改要求" {...useComposerStore()} />
 }
 
 export function SuggestionRow({ onPick }: { onPick: (text: string) => void }): ReactNode {

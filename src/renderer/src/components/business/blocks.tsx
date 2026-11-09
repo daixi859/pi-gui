@@ -4,17 +4,12 @@ import type { Block, ToolState } from '@shared/blocks'
 import { workTime } from '../../util'
 import { MarkdownView } from '../base/MarkdownView'
 import { DiffBlock } from './DiffBlock'
-import { Button } from '../base/Button'
 import {
   IconChevronDown,
   IconChevronRight,
-  IconCopy,
   IconFile,
   IconImage,
-  IconShare,
-  IconSparkle,
-  IconThumbDown,
-  IconThumbUp
+  IconSparkle
 } from '../base/icons'
 
 /** 渲染层不能直接用 shell / clipboard，全部过 preload 的主进程桥 */
@@ -225,59 +220,6 @@ export function BlockView({ block }: { block: Block }): ReactNode {
   }
 }
 
-export function MessageActions({ text, time }: { text: string; time: string }): ReactNode {
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null)
-  const [copied, setCopied] = useState(false)
-  const items = [
-    {
-      key: 'copy',
-      icon: IconCopy,
-      label: copied ? '已复制' : '复制',
-      onClick: () => {
-        host()?.copy(text)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      }
-    },
-    {
-      key: 'up',
-      icon: IconThumbUp,
-      label: '有帮助',
-      active: voted === 'up',
-      onClick: () => setVoted((v) => (v === 'up' ? null : 'up'))
-    },
-    {
-      key: 'down',
-      icon: IconThumbDown,
-      label: '没帮助',
-      active: voted === 'down',
-      onClick: () => setVoted((v) => (v === 'down' ? null : 'down'))
-    },
-    {
-      key: 'share',
-      icon: IconShare,
-      label: '导出为 Markdown',
-      onClick: () => host()?.saveText('Pi 会话.md', text)
-    }
-  ]
-  return (
-    <div className="flex items-center gap-1 text-faint">
-      {items.map(({ key, icon: Ico, label, active, onClick }) => (
-        <Button
-          key={key}
-          title={label}
-          aria-label={label}
-          variant="ghost"
-          className={clsx(active && 'text-fg')}
-          onClick={onClick}
-          icon={<Ico className="size-[15px]" />}
-        />
-      ))}
-      <span className="ml-1 text-xs">{time}</span>
-    </div>
-  )
-}
-
 export function TranscriptStack({ blocks }: { blocks: Block[] }): ReactNode {
   return (
     <div className="space-y-6">
@@ -288,8 +230,3 @@ export function TranscriptStack({ blocks }: { blocks: Block[] }): ReactNode {
   )
 }
 
-/** 最后一个块里最后一段回答的纯文本，供复制 / 导出用 */
-export function lastText(blocks: Block[]): string {
-  const tail = [...blocks].reverse().find((b) => b.kind === 'assistant')
-  return tail?.kind === 'assistant' ? tail.text : ''
-}

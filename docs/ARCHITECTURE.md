@@ -11,12 +11,12 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │ 渲染层 Renderer  (React 19 + Tailwind 4, 无 Node 权限)            │
 │                                                                  │
-│   App.tsx ──── useAgent() ──── interactions/  ← 交互语义在这里    │
-│      │              │                  │                         │
-│      │              │  AgentCommand →  │                         │
-│   components/       │  ← AgentEvent    │                         │
-└──────┼──────────────┼──────────────────┼─────────────────────────┘
-       │              │                  │
+│   App.tsx ──── store/ ──── interactions/  ← 交互语义在这里        │
+│      │            │              │                                │
+│      │            │  AgentCommand →                                │
+│   components/     │  ← AgentEvent │                                │
+└──────┼────────────┼──────────────┼────────────────────────────────┘
+       │            │              │
        │  window.pi.agent.send / onEvent │  (contextBridge)
 ┌──────┼──────────────▼──────────────────▼─────────────────────────┐
 │ preload (CJS, sandbox) — 只做白名单转发，无业务逻辑                 │
@@ -49,18 +49,19 @@
 
 ```
 Composer 提交
-  → useAgent.prompt(text)
+  → store.prompt(text)（store/index.ts 的动作）
   → preload → ipcMain 'agent:command' → host.postMessage({type:'prompt'})
   → agent-host: session.prompt(text)
   → pi 事件流 message_start / message_update / tool_execution_* / message_end
   → agent-host 组装 Block，60ms 合并一次
-  → send({type:'reset', blocks})          ← 每次全量快照，不推增量
-  → main 转发 → preload → useAgent setState
-  → TranscriptStack 重渲染，ChatView 贴底
+  → send({type:'blocks', delta: BlockDelta})     ← 只推变了的块
+  → main 转发 → preload → store/engine.ts dispatch → store/blocks.ts applyBlocks
+  → 只有变化的那一行（useEngine(s => s.byId[id])）重渲染，ChatView 贴底
 ```
 
-**全量而非增量**：两层各自维护增量补丁太容易错位。代价是长会话（本机实测 11MB / 约 700 块）
-每帧要序列化整棵 Block 树，已列入 BACKLOG P0（万级块时必须切成按 `id` 增量）。
+**增量而非全量**：`BlockDelta` 带 `items`（变了的顶层块）、可选 `order`（顺序变了才带）、可选 `turns`（turn 内只变了一个子块）。
+宿主按 `sent` / `revs` 比对，原地修改的块要用 `bump(id)` 标记。渲染层正文按 id 存（`order` + `byId`），
+所以列表面板一次都不重渲染。见 ADR-0013。
 
 ### 2.2 一次扩展 UI 交互（问卷 / 确认框 / 通知）
 
@@ -129,9 +130,15 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
  └─ src/renderer/
      ├─ index.html
      └─ src/
-        ├─ main.tsx            createRoot
+        ├─ main.tsx            createRoot（之前显式 startEngine 挂 IPC 订阅）
         ├─ App.tsx            路由（start / chat / gallery）+ 布局 + ChatView 自动贴底
-        ├─ useAgent.ts        引擎状态唯一入口：发命令、收事件、ui 槽位与回填
+        ├─ store/             引擎状态的唯一入口（ADR-0013）
+        │  ├─ state.ts        EngineState 形状 + zustand 实例 + send
+        │  ├─ blocks.ts       BlockDelta → {order, byId}，维护 answerText / liveTurnId
+        │  ├─ interaction.ts  ui 槽位、问卷回填、toast 计时
+        │  ├─ engine.ts       宿主事件 dispatch + startEngine + HMR 退订
+        │  └─ index.ts        动作层：组件只从这里 import
+        ├─ perf.ts            dev-only 渲染计数（window.__piPerf）
         ├─ useScrollRail.ts   滚动条贴到右边缘才露出滑块（WebKit 没有轨道 hover）
         ├─ drafts.ts          输入框草稿 store（按会话键，仅内存）
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
@@ -158,6 +165,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
                ├─ StartPage.tsx    起始页：水印 + 问候 + 大输入卡 + 建议胶囊
                ├─ Composer.tsx     WorkspaceBar / InputCard / ChatComposer / 模型弹窗
                ├─ transcript/      会话正文（运行时）：Transcript / TurnView / Step / tool 展开体
+               ├─ MessageActions.tsx 回合结束后的动作条（复制/赞踩/分享/导出）
                ├─ blocks.tsx       旧 Block 分派：仅供组件预览对照
                ├─ DiffBlock.tsx    文件变更折叠行 + 行号着色
                ├─ AskCard.tsx      问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
@@ -173,9 +181,10 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
 
 | 状态 | 存在哪 | 谁写 | 谁读 |
 |---|---|---|---|
-| 会话历史 / 模型列表 / 快照 | 宿主 | pi 事件 | 渲染层（只读副本） |
-| 当前 Block 树 | 宿主组装，渲染层持有副本 | `reset` 覆盖整棵 | TranscriptStack |
-| 问卷答案 / UI 槽位 | 渲染层 `slots` ref | 用户提交 | `flushSlot` |
+| 会话历史 / 模型列表 / 快照 | 宿主 | pi 事件 | 渲染层 store（只读副本） |
+| 正文块 `{order, byId}` | 宿主组装增量，渲染层 store | `blocks` 事件的 `BlockDelta` | `Transcript` 只读 `order`，每行只读 `byId[id]` |
+| `answerText` / `liveTurnId` | 渲染层 store（派生缓存） | `blocks.ts` 应用增量时顺带算 | `AnswerActions` / `Transcript` |
+| 问卷答案 / UI 槽位 | `store/interaction.ts` 的 `slots` | 用户提交 | `flushSlot` |
 | 路由、侧栏折叠、下拉开关 | 渲染层组件 state | 用户 | 各自组件 |
 | pi 会话文件 | `~/.pi/agent/sessions/*.jsonl` | pi | `openSession` 时读 |
 
@@ -190,20 +199,18 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
 - **阶段一** 纯 UI 壳 + 设计稿对齐（8 个 Block、无框外观、侧栏、输入卡、模型弹窗、画廊）
 - **阶段二** 真引擎接入：宿主会话、会话列表、模型/思考强度切换、流式渲染、turn 折叠、历史会话打开
 - **阶段二补** 扩展 UI 通用桥 + 交互适配器分层（ADR 0004），四种原语实测通过
+- **阶段三前半** 正文增量（`BlockDelta`）+ 按 id 订阅的 zustand store（ADR 0013）；`/` 斜杠命令、`@` 文件提及、会话重命名/删除、图片发送
 
 ### 下一阶段：先止血（1–2 天）
 
-1. `git init` + 首次提交 —— 无版本控制已付过一次代价（`agent-host.ts` 被写坏只能从构建产物还原）。
-2. `newSession` 不立刻建空会话文件（当前侧栏总出现空标题条目）。
-3. `openSession` 加加载态（打开 11MB 会话静默卡几秒）。
-4. `AgentEvent` 加版本号，宿主与渲染层版本错配时明确报错而不是静默失败。
+1. `AgentEvent` 加版本号，宿主与渲染层版本错配时明确报错而不是静默失败。
+2. 长会话虚拟滚动（未装任何虚拟化库；先量 700 块打开耗时再定，ADR-0011 的目标是 < 400ms）
 
 ### 阶段三：长会话与命令（约一周）
 
-5. Block 增量同步（`reset` → `blockUpsert` / `blockRemove`），万级块不卡。
-6. 斜杠命令 `/`：现在 `/xxx` 被当普通文本发给模型（已实测），需要本地命令面板 + 转发到 pi 的
-   `commandContext`。
-7. `@` 文件提及：输入 `@` 弹文件补全，选中后把路径塞进 prompt 或作为附件。
+5. ~~Block 增量同步~~ → 已完成（`BlockDelta` + `TurnDelta`，ADR-0013）。
+6. ~~斜杠命令 `/`~~ → 已完成。
+7. ~~`@` 文件提及~~ → 已完成。
 8. 会话管理：重命名、删除、搜索（当前搜索是 `prompt()` 弹窗过滤，排序项也不生效）。
 9. 图片发送（协议 `prompt` 加 `images`）、`bashExecution` 消息映射、`read` 结果映射成 file 块。
 
@@ -211,8 +218,8 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
 
 10. `electron-builder` 出 Windows 安装包；`asar` 里 pi SDK 的 `.node` 与 `node-pty` 必须
     `asarUnpack`（spike 已验证 utilityProcess 内可 spawn）。
-11. 单实例锁（现在双击图标会开两个窗口、两个宿主抢同一批会话文件）。
-12. 宿主崩溃自动重启 + 会话恢复；`app.requestSingleInstanceLock` 后二次启动聚焦已有窗口。
+11. 单实例锁~~（已加）~~。
+12. 宿主崩溃自动重启 + 会话恢复（现在只发一条 error）。
 13. 自动更新与崩溃上报（未评估）。
 
 ### 阶段五：产品化（方向待确认）
@@ -220,7 +227,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
 14. 设置页：模型凭据、默认工作目录、主题、快捷键。
 15. 插件市场：读 `~/.pi/agent/settings.json` 的 packages，展示/启用/禁用扩展 —— 现在导航有入口但无功能。
 16. 多工作区：起始页 `+` 目前无 handler；需要 workspace 概念贯穿侧栏与会话归属。
-17. 会话内搜索与「跳到上一条提问」；长会话虚拟滚动（`@tanstack/react-virtual` 已在依赖里但未用）。
+17. 会话内搜索与「跳到上一条提问」；长会话虚拟滚动（`@tanstack/react-virtual` **未安装**，需要时自己加）。
 
 ### 明确不做
 

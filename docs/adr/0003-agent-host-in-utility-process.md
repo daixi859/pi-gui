@@ -12,7 +12,7 @@ pi SDK 只在 `src/main/agent-host.ts` 里 import，由主进程用 `utilityProc
 
 ## 代价
 
-- 每层要写透传代码：`shared/ipc.ts` 的类型 → preload → `ipcMain`/`parentPort` → `useAgent`。
+- 每层要写透传代码：`shared/ipc.ts` 的类型 → preload → `ipcMain`/`parentPort` → `store/`。
 - 宿主内没有 Electron API，文件路径、git 分支都得用 Node 自己读。
 - 增量渲染靠宿主自己压帧（60ms 合并一次完整快照），不能指望 React 端 diff。
 

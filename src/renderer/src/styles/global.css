@@ -205,7 +205,10 @@ body {
   background: var(--color-edge);
 }
 
-/* markdown 排版：只保留品牌所需的间距与层级 */
+/* markdown 排版：只保留品牌所需的间距与层级。
+   .md 的字号就是 1em 基准（正文 = 标准字号），
+   内部一律用 em 相对它缩放：正文/表格/引用 = 1em，标题才放大；
+   代码是唯一例外，固定用刻度上的 --text-xs（12px）。 */
 .md {
   font-size: var(--text-sm);
   line-height: 1.85;
@@ -223,13 +226,16 @@ body {
   margin-top: 1.6em;
 }
 .md h1 {
-  font-size: 1.35em;
+  font-size: 1.5em;
 }
 .md h2 {
-  font-size: 1.15em;
+  font-size: 1.25em;
 }
 .md h3 {
-  font-size: 1.02em;
+  font-size: 1.125em;
+}
+.md h4 {
+  font-size: 1em;
 }
 .md ul,
 .md ol {
@@ -251,7 +257,8 @@ body {
 }
 .md code {
   font-family: var(--font-mono);
-  font-size: 0.88em;
+  /* 代码小一号：固定用刻度上的 --text-xs（12px），不随 em 缩放 */
+  font-size: var(--text-xs);
   background: var(--color-sunken);
   border-radius: 4px;
   padding: 0.12em 0.36em;
@@ -271,7 +278,6 @@ body {
 }
 .md table {
   border-collapse: collapse;
-  font-size: 0.95em;
 }
 .md th,
 .md td {

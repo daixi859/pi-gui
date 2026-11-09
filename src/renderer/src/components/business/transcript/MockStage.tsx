@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } 
 import { clsx } from 'clsx'
 import { buildTimeline, type Frame } from '../../../mockTimeline'
 import { IconPause } from '../../base/icons'
-import { Transcript } from './Transcript'
+import { StaticTranscript } from './Transcript'
 
 /** 虚拟时钟：按 speed 推进，播完自动停 */
 function usePlayback(timeline: { frames: Frame[]; total: number }): {
@@ -123,7 +123,7 @@ const btn = 'h-7 rounded-sm px-2 text-xs transition-colors'
 export function MockStage(): ReactNode {
   const [rounds, setRounds] = useState(0)
   const timeline = useMemo(() => buildTimeline(rounds), [rounds])
-  const { blocks, streaming, clock, playing, speed, setSpeed, toggle, restart, end } = usePlayback(timeline)
+  const { blocks, clock, playing, speed, setSpeed, toggle, restart, end } = usePlayback(timeline)
   const scroller = useRef<HTMLDivElement>(null)
   const perf = usePerf(scroller)
 
@@ -179,7 +179,7 @@ export function MockStage(): ReactNode {
 
       <div ref={scroller} className="pi-panel h-[520px] overflow-y-auto">
         <div className="mx-auto w-full max-w-[720px] px-6 py-4">
-          <Transcript blocks={blocks} streaming={streaming} />
+          <StaticTranscript blocks={blocks} />
         </div>
       </div>
     </div>

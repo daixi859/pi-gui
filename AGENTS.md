@@ -24,7 +24,7 @@ npm run typecheck  # 三端类型检查，改完必跑
 ## 关键约定
 
 - **块优先**：所有内容表示成 `Block`（`user|assistant|thinking|tool|diff|file|turn|system`），渲染层只认 Block，不认 pi 的 `AgentMessage`。转换在 `agent-host.ts` 的 `syncMessage` / `blocksFromEntries`。
-- **块增量**：`blocks` 事件带 `BlockDelta { full?, order, items }`，只推变了的块；原地修改的块要 `bump(id)` 否则推不出去。渲染层 `useAgent` 按 id 缓存、未变的块保持引用不变。
+- **块增量**：`blocks` 事件带 `BlockDelta { full?, order?, items, turns? }`，只推变了的块；原地修改的块要 `bump(id)` 否则推不出去。渲染层的正文按 `order + byId` 存（`src/renderer/src/store/blocks.ts`），未变的块保持引用不变。
 - **宿主不懂扩展**：`agent-host.ts` 不能出现任何具体扩展/工具名。扩展的 UI 请求统一变成 `uiRequest` 事件，由渲染层 `interactions/` 里的适配器解释（见 `docs/adr/0004-interaction-layer.md`）。新增交互 = 加一个适配器，不改宿主。
 - **pi 的 `bindExtensions({ uiContext, mode: 'rpc' })`** 是扩展 UI 的入口，`mode: 'rpc'` 让扩展走 `ui.select/input/confirm` 而不是 TUI 渲染。答案回填必须严格按请求顺序（扩展是逐题 `await` 的）。
 
@@ -36,7 +36,7 @@ npm run typecheck  # 三端类型检查，改完必跑
 | `src/main/index.ts` | 建窗、IPC 转发、fork agent-host |
 | `src/main/agent-host.ts` | pi 会话生命周期、事件→Block、会话列表扫描、UI 桥 |
 | `src/preload/` | `window.pi` 的唯一出口 |
-| `src/renderer/src/useAgent.ts` | 引擎状态唯一入口，view 只读它 |
+| `src/renderer/src/store/` | 引擎状态唯一入口（zustand，ADR-0013）：`state.ts` 形状+实例、`blocks.ts` 正文增量、`interaction.ts` UI 请求、`engine.ts` 事件接入、`index.ts` 动作层 |
 | `src/renderer/src/interactions/` | 扩展 UI 请求 → 具体控件的适配器 |
 | `src/renderer/src/components/base/` | 基础组件：不知道 pi 的通用控件，控件外观唯一书写地（ADR-0012） |
 | `src/renderer/src/components/business/` | 业务组件：知道 pi，由基础组件组合，不写控件外观 |

@@ -8,7 +8,7 @@
 
 ### 判定（两条，违反任一条即业务组件）
 
-1. 不 import 渲染层业务状态与适配器：`useAgent` / `drafts` / `projects` / `mock` / `mockTimeline` / `interactions`。
+1. 不 import 渲染层业务状态与适配器：`store/` / `drafts` / `projects` / `mock` / `mockTimeline` / `interactions`。
 2. props 不引用 `@shared` 协议类型（Block、DiffLine、UiRequest、AskQuestion…）。
 
 「谁知道 pi 谁是业务」是可判定标准；「长得像不像控件」不是——DiffBlock、UiPrompt 只吃纯数据，但吃的是跨进程契约，归业务。

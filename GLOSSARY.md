@@ -20,6 +20,8 @@ Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking
 
 当前会话的 Block 线性序列，按发生顺序排列。Transcript 只追加，不重排。
 
+渲染层用「顺序 + 按 id 存」两份数据表示它（`order` / `byId`），而不是一个数组：这样增量到达时只有发生变化的那一行需要重渲染。
+
 ## Session（会话）
 
 一个可独立恢复的 Transcript，绑定唯一工作目录（Project）。会话之间不共享历史。
@@ -62,7 +64,7 @@ Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking
 
 ## AgentCommand / AgentEvent（跨进程协议）
 
-渲染层对引擎的全部输入输出。Command 是意图（发送、中止、切换会话、换模型、回答 UI 请求），Event 是事实（完整块序列、工具调用开始、UI 请求、状态快照、结束、错误）。Event 不承载增量补丁，每次都是当前完整快照，避免两层状态对不上。
+渲染层对引擎的全部输入输出。Command 是意图（发送、中止、切换会话、换模型、回答 UI 请求），Event 是事实（块增量、工具调用开始、UI 请求、状态快照、结束、错误）。Event 是**增量**的：`blocks` 事件带 `BlockDelta`（`order` / `items` / `turns`，`full` 时才是整棵快照），宿主只推变了的块。见 ADR-0013。
 
 ## UI 桥
 

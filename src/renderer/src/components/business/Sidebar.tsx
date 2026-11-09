@@ -1,6 +1,8 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
-import type { ProjectMeta, SessionMeta } from '@shared/blocks'
+import type { SessionMeta } from '@shared/blocks'
+import { removeProject, renameSession, useEngine } from '../../store'
+import { count } from '../../perf'
 import { Button } from '../base/Button'
 import { Dropdown } from '../base/Dropdown'
 import { ListRow } from '../base/ListRow'
@@ -141,17 +143,11 @@ function useStored<T>(key: string, init: T): [T, (next: T | ((prev: T) => T)) =>
 
 export interface SidebarProps {
   onNavigate: Nav
-  projects: ProjectMeta[]
-  sessions: SessionMeta[]
   activeId: string | null
-  /** 后台跑完、未再打开的会话文件（蓝点） */
-  unread: string[]
   onOpenSession: (id: string, path: string) => void
   onNewSession: () => void
   /** 在指定项目目录下开新会话 */
   onNewSessionIn: (path: string) => void
-  onRemoveProject: (path: string) => void
-  onRename: (path: string, title: string) => void
   onDelete: (path: string) => void
   /** 收起：宽度过渡到 0，内容被裁剪，不再参与焦点 */
   collapsed?: boolean
@@ -160,17 +156,17 @@ export interface SidebarProps {
 export function Sidebar({
   collapsed,
   onNavigate,
-  projects,
-  sessions,
   activeId,
-  unread,
   onOpenSession,
   onNewSession,
   onNewSessionIn,
-  onRemoveProject,
-  onRename,
   onDelete
 }: SidebarProps): ReactNode {
+  count('sidebar')
+  // 列表数据自己订阅：外壳（App）不会因为会话列表变化而重渲染
+  const projects = useEngine((s) => s.projects)
+  const sessions = useEngine((s) => s.sessions)
+  const unread = useEngine((s) => s.unread)
   const [sort, setSort] = useState('project')
   /** 项目行三点菜单：项目路径 + 屏幕坐标 */
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null)
@@ -182,25 +178,35 @@ export function Sidebar({
   const [folded, setFolded] = useStored<Record<string, boolean>>('pi.sidebar.folded', {})
 
   const q = query.trim().toLowerCase()
-  const visible = sessions
-    .filter((s) => !q || s.title.toLowerCase().includes(q))
-    .sort((a, b) => b.modifiedAt - a.modifiedAt)
-  // 按宿主给的 p.sessions 分组（按目录路径聚的），不能按项目名过滤：不同目录可能同名
-  const grouped = projects
-    .map((p) => ({
-      ...p,
-      sessions: p.sessions
+  // 派生值只在搜索词或数据变化时算：流式期间 sessions 引用不变，这里一次都不跑
+  const visible = useMemo(
+    () =>
+      sessions
         .filter((s) => !q || s.title.toLowerCase().includes(q))
-        .sort((a, b) => b.modifiedAt - a.modifiedAt)
-    }))
-    .filter((p) => p.sessions.length > 0)
+        .sort((a, b) => b.modifiedAt - a.modifiedAt),
+    [sessions, q]
+  )
+  // 按宿主给的 p.sessions 分组（按目录路径聚的），不能按项目名过滤：不同目录可能同名
+  const grouped = useMemo(
+    () =>
+      projects
+        .map((p) => ({
+          ...p,
+          sessions: p.sessions
+            .filter((s) => !q || s.title.toLowerCase().includes(q))
+            .sort((a, b) => b.modifiedAt - a.modifiedAt)
+        }))
+        .filter((p) => p.sessions.length > 0),
+    [projects, q]
+  )
+  const unreadSet = useMemo(() => new Set(unread), [unread])
   const rowProps = (s: SessionMeta) => ({
     session: s,
     active: s.id === activeId,
     running: s.running === true,
-    unread: unread.includes(s.path),
+    unread: unreadSet.has(s.path),
     onClick: () => onOpenSession(s.id, s.path),
-    onRename: (title: string) => onRename(s.path, title),
+    onRename: (title: string) => renameSession(s.path, title),
     onDelete: () => onDelete(s.path)
   })
 
@@ -382,7 +388,7 @@ export function Sidebar({
         {sort === 'recent' && visible.map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
         {sort === 'unread' &&
           [...visible]
-            .sort((a, b) => Number(unread.includes(b.path)) - Number(unread.includes(a.path)))
+            .sort((a, b) => Number(unreadSet.has(b.path)) - Number(unreadSet.has(a.path)))
             .map((s) => <SessionRow key={s.id} {...rowProps(s)} />)}
       </div>
 
@@ -395,7 +401,7 @@ export function Sidebar({
         <MenuItem
           label="移除"
           onClick={() => {
-            onRemoveProject(menu?.path ?? '')
+            removeProject(menu?.path ?? '')
             setMenu(null)
           }}
         />

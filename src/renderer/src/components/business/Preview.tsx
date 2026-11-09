@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
-import { galleryBlocks, gallerySections, snapshot, type GallerySection } from '../../mock'
+import { galleryBlocks, gallerySections, type GallerySection } from '../../mock'
 import { TranscriptStack } from './blocks'
 import { MockStage } from './transcript/MockStage'
 import { ComposerCard } from './Composer'
@@ -476,11 +476,6 @@ const MOCK_QUESTIONS = [
   }
 ]
 
-const MOCK_MODELS = [
-  { id: 'deepseek', name: 'DeepSeek V4.1 Flash (OpenDesign)', provider: 'deepseek', levels: ['off', 'low', 'medium', 'high'] },
-  { id: 'claude', name: 'Claude Sonnet 5', provider: 'anthropic', levels: ['off', 'medium', 'high'] }
-]
-
 function InputsDemo(): ReactNode {
   const [text, setText] = useState('')
   return (
@@ -494,21 +489,7 @@ function InputsDemo(): ReactNode {
         />
       </Section>
       <Section title="输入卡（起始页大卡）">
-        <ComposerCard
-          scope="preview"
-          snapshot={snapshot}
-          models={MOCK_MODELS}
-          streaming={false}
-          onSubmit={() => undefined}
-          onModel={() => undefined}
-          onLevel={() => undefined}
-          files={[]}
-          onQueryFiles={() => undefined}
-          commands={[]}
-          onAccess={() => undefined}
-          onSwitchWorkspace={() => undefined}
-          workspaces={[]}
-        />
+        <ComposerCard scope="preview" onSubmit={() => undefined} />
       </Section>
       <Section title="提问卡">
         <AskCard id="preview-ask" questions={MOCK_QUESTIONS} onAnswer={() => undefined} onCancel={() => undefined} />

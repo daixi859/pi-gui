@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
+import { deleteProject, removeProject, restoreProject, useEngine } from '../../store'
 import { MenuItem } from '../base/Menu'
 import { Dropdown } from '../base/Dropdown'
 import { Button } from '../base/Button'
@@ -31,15 +32,13 @@ type SortKey = (typeof SORTS)[number]['key']
 const cell = 'flex h-10 items-center gap-2 px-2'
 
 export interface ProjectsProps {
-  rows: ProjectRow[]
-  onRemove: (path: string) => void
-  onRestore: (path: string) => void
   /** 真删：会话文件一起删，调用方自己弹确认 */
-  onDelete: (path: string) => void
+  onDelete?: (path: string) => void
 }
 
 /** 项目页：所有数据都从会话扫描派生，PiGui 只额外记「哪个项目被软移除」 */
-export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps): ReactNode {
+export function Projects({ onDelete = deleteProject }: ProjectsProps = {}): ReactNode {
+  const rows = useEngine((s) => s.projectRows)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortKey>('recent')
   const [showRemoved, setShowRemoved] = useState(true)
@@ -109,7 +108,7 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
           </div>
           {live.length === 0 && <p className="px-2 py-6 text-center text-xs text-faint">没有匹配的项目</p>}
           {live.map((r) => (
-            <ProjectLine key={r.path} row={r} onRemove={() => onRemove(r.path)} />
+            <ProjectLine key={r.path} row={r} onRemove={() => removeProject(r.path)} />
           ))}
         </div>
 
@@ -136,7 +135,7 @@ export function Projects({ rows, onRemove, onRestore, onDelete }: ProjectsProps)
                       <div className="truncate text-xs text-faint">{r.path}</div>
                     </div>
                     <span className="shrink-0 text-xs text-faint">{ago(r.removedAt ?? 0)}移除</span>
-                    <Button variant="secondary" size="sm" onClick={() => onRestore(r.path)}>
+                    <Button variant="secondary" size="sm" onClick={() => restoreProject(r.path)}>
                       恢复
                     </Button>
                     <Button

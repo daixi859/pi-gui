@@ -13,7 +13,16 @@ import { readdir } from 'node:fs/promises'
 import { basename, join, relative, resolve } from 'node:path'
 import { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager } from '@earendil-works/pi-coding-agent'
 import type { ExtensionAPI, SessionInfo } from '@earendil-works/pi-coding-agent'
-import type { AccessMode, AgentCommand, AgentEvent, CommandInfo, ModelOption, UiReply, UiRequest } from '@shared/ipc'
+import type {
+  AccessMode,
+  AgentCommand,
+  AgentEvent,
+  CommandInfo,
+  ModelOption,
+  TurnDelta,
+  UiReply,
+  UiRequest
+} from '@shared/ipc'
 import type { Block, DiffLine, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
@@ -112,30 +121,78 @@ function flushNow(rec: Mounted): void {
   flushBlocks(rec)
 }
 
-/** 只推变了的块：顶层引用换了或被 bump 过。turn 自己带 children，整块重发 */
+/**
+ * 折叠行能否只推变化的部分。
+ * 只有「子块按 id 一一对应（含末尾追加）」才能增量，否则返回 null 让调用方退回整块。
+ * 省掉的是最常见的那种变化：每秒一次的 durationMs 与流式尾部那一条文本。
+ */
+function turnDelta(next: Turn, prev: Turn): TurnDelta | null {
+  const sameLen = next.children.length === prev.children.length
+  // 子块 id 逐个对应：允许内容变（流式尾部那条文本每帧都在变）
+  const idsMatch = sameLen && prev.children.every((c, i) => c.id === next.children[i]?.id)
+  // 末尾追加：前面的全部引用不变
+  const grew =
+    next.children.length > prev.children.length && prev.children.every((c, i) => c === next.children[i])
+  if (!idsMatch && !grew) return null
+  const items = idsMatch
+    ? next.children.filter((c, i) => c !== prev.children[i])
+    : next.children.slice(prev.children.length)
+  // 什么都不变（连时长都没变）就不推
+  if (!items.length && next.durationMs === prev.durationMs && next.aborted === prev.aborted) return null
+  return {
+    id: next.id,
+    durationMs: next.durationMs,
+    aborted: next.aborted,
+    ...(grew ? { order: next.children.map((c) => c.id) } : {}),
+    items
+  }
+}
+
+/** 只推变了的块：顶层引用换了或被 bump 过；折叠行只推变了的子块 */
 function flushBlocks(rec: Mounted): void {
   // 后台会话只维护自己的状态，不推给渲染层；切回来时 forceFull 一次补齐
   if (rec !== current) return
   const blocks = all(rec)
   const order = blocks.map((b) => b.id)
   const items: Block[] = []
+  const turns: TurnDelta[] = []
   for (const b of blocks) {
     const prev = rec.sent.get(b.id)
-    // full 时渲染层会清空缓存，所以必须把全部块都带上，否则切回未变的会话会整页空白
-    if (rec.forceFull || !prev || prev.block !== b || prev.rev !== (rec.revs.get(b.id) ?? 0)) {
-      items.push(b)
-      rec.sent.set(b.id, { block: b, rev: rec.revs.get(b.id) ?? 0 })
+    const rev = rec.revs.get(b.id) ?? 0
+    const changed = !prev || prev.block !== b || prev.rev !== rev
+    if (!changed) continue
+    // 折叠行能算出差量就只发差量；否则走下面的整块
+    if (!rec.forceFull && prev && prev.rev === rev && b.kind === 'turn' && prev.block.kind === 'turn') {
+      const d = turnDelta(b, prev.block)
+      if (d) {
+        turns.push(d)
+        rec.sent.set(b.id, { block: b, rev })
+        continue
+      }
     }
+    // full 时渲染层会清空缓存，所以必须把全部块都带上，否则切回未变的会话会整页空白
+    items.push(b)
+    rec.sent.set(b.id, { block: b, rev })
   }
   const orderChanged =
     order.length !== rec.sentOrder.length || order.some((id, i) => id !== rec.sentOrder[i])
-  if (!items.length && !orderChanged && !rec.forceFull) return
+  if (!items.length && !turns.length && !orderChanged && !rec.forceFull) return
   if (orderChanged) {
     const live = new Set(order)
     for (const id of rec.sent.keys()) if (!live.has(id)) rec.sent.delete(id)
   }
   rec.sentOrder = order
-  send({ type: 'blocks', delta: { full: rec.forceFull, order, items }, path: rec.manager.getSessionFile() ?? null })
+  send({
+    type: 'blocks',
+    // 顺序没变就不带 order：渲染层沿用旧数组引用，列表本身一次都不重渲染
+    delta: {
+      full: rec.forceFull,
+      ...(rec.forceFull || orderChanged ? { order } : {}),
+      items,
+      ...(turns.length ? { turns } : {})
+    },
+    path: rec.manager.getSessionFile() ?? null
+  })
   rec.forceFull = false
 }
 function all(rec: Mounted): Block[] {

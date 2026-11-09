@@ -8,7 +8,7 @@
 
 - ~~**P0** `ask_user_question` 没有回答界面~~ → **已解决**。宿主不再认领问卷，改为通用 UI 桥：`ui.select/confirm/input/editor/notify` 全部转 `uiRequest` 事件，渲染层的 `askQuestion` 适配器把结构化问卷渲染成卡片。四种原语均已实测通过（confirm=true / select / input / notify toast）。见 ADR 0004。
 - ~~**P0** `newSession` 直接 `start()`（第 412 行）…侧栏出现空标题条目~~ → **实测证伪**（2026-11-02）。`SessionManager.create(cwd)` 只算出 `sessionFile` 路径不写盘（`dist/core/session-manager.js:711-716` 仅在 `persist` 时拼路径），点 5 次「新建任务」后目录 jsonl 数量 42 → 42，`listAll()` 630 条里 `messageCount === 0` 的是 0 条。空会话只在真产生消息时落盘。
-- ~~**P0** 每帧全量快照~~ → **已解决**。事件改为 `blocks` + `BlockDelta { full?, order, items }`；宿主按 `sent`/`revs` 比对只推变了的块（原地修改的块用 `bump(id)` 标记），渲染层按 `order` 拼数组，未变的块沿用旧引用。
+- ~~**P0** 每帧全量快照~~ → **已解决**。事件改为 `blocks` + `BlockDelta { full?, order?, items, turns? }`；宿主按 `sent`/`revs` 比对只推变了的块（原地修改的块用 `bump(id)` 标记），turn 再细一层用 `TurnDelta` 只推变了的子块；`order` 没变就不带，渲染层沿用旧引用。见 ADR-0013。
 - ~~**P0** `open` 无加载态~~ → **已解决**。`open()` 期间发 `busy {active:true,label:'正在打开会话'}`，`finally` 复位；渲染层在输入区上方显示 spinner + 文案。实测 44.2MB 会话约 1.9s，提示可见。
 - ~~**P1** `emitSessions` 只取最近 40 条 / 12 个项目~~ → **实测未发生**（2026-11-02）。`publishSessions` 对 `listAll()` 结果不做截断，搜索「powershell」能命中 `pi`、`inteplm-print-website`、`wsl` 等其它项目的历史会话；侧栏只显示前 5 条是渲染层的分页（点「显示更多」继续加载）。
 - ~~**P2** `read` 结果映射的 `file` 块在历史会话里靠正则取 path~~ → **已修**。`blocksFromEntries` 用 `rawArgs` 记原始参数：对象直接取 `.path`，字符串才回落正则。
@@ -33,7 +33,7 @@
 - ~~**P3** 无外部链接拦截~~ → `host:openExternal` 只放行 `^https?://`。
 - **P3** 无打包配置（electron-builder）、无应用图标、无 `productName`。
 
-## 4. 渲染层骨架 `src/renderer/src/App.tsx` / `useAgent.ts`
+## 4. 渲染层骨架 `src/renderer/src/App.tsx` / `store/`
 
 - ~~**P1** 后退/前进按钮没有实现~~ → 已实现（`past`/`future` 两个 ref + `Place {route,id}`）。
 - ~~**P1** `MessageActions` 传 `time=""`~~ → 已传 `settledAt` 格式化的时间。
@@ -81,7 +81,7 @@
 
 - ~~**P0** 无 git 仓库~~ → 已 `git init` + 首次提交（`b59cbe0`）。
 - ~~**P3** `docs/screenshots/` 全是 UI 阶段的 mock 截图~~ → 已按真实引擎重截（2026-11-02 收尾批次）。
-- **P3** `GLOSSARY.md` 已补 Agent Host / AgentCommand / AgentEvent；`docs/adr/` 已到 0005。
+- **P3** `GLOSSARY.md` 已补 Agent Host / AgentCommand / AgentEvent；`docs/adr/` 已到 0013。
 - **P3** 无 `npm run typecheck` 之外的检查（无 lint、无测试；用户在 v1 明确说不写 vitest）。
 
 ## 12. 2026-11-02 收尾批次（已实现，待真机回归）
@@ -105,7 +105,20 @@
 - 滚动跟随合到 rAF 一帧内；`TurnBlock` 折叠态仍按块 id 存 localStorage。
 - **P2** 旧 `DiffBlock` 的「打开 diff」「撤销」在新正文里没有入口（`DiffBlock.tsx` 已无运行时引用），需要时在 `transcript/Step.tsx` 的 diff 行补。
 - **P3** `transcript/MockStage.tsx` + `mockTimeline.ts`（假流 + perf HUD）只挂在预览页，不参与运行时；ADR-0011 §五要求的一次性体检脚本未进仓库。
-- **P3** 后台会话切换：`useAgent` 用 `ev.path === viewPath` 过滤增量，`enter()` 期间 `viewPath` 为 null，靠宿主首个 `full` 事件补种；新建会话路径未定前到达的增量会被丢弃（未实测）。
+- ~~**P3** 后台会话切换：`useAgent` 用 `ev.path === viewPath` 过滤增量，`enter()` 期间 `viewPath` 为 null，靠宿主首个 `full` 事件补种；新建会话路径未定前到达的增量会被丢弃（未实测）。~~ → 已迁到 `store/blocks.ts` 的 `applyBlocks`，逻辑不变。
+
+## 14. 2026-11-09 状态管理改为 zustand（ADR-0013）
+
+- 新建 `src/renderer/src/store/`（state / blocks / interaction / engine / index），单 store 多 slice。
+- 正文改按 id 存：`order: string[]` + `byId: Record<string, Block>`；`Transcript` 只订阅 `order`，每行 `Row` 只订阅 `byId[id]`。
+- 删 `useAgent.ts`（约 400 行），组件改用 `useEngine` selector + `./store` 动作。
+- `Sidebar` / `Projects` / `ComposerCard` 自己订阅数据，props 分别从 12→7、4→1、14→2。
+- 侧栏 `filter().sort()` 进 `useMemo` 并预建 `unreadSet`；`answerText` 进 store；`toMarkdown` 只在点导出时算。
+- 宿主侧顺带优化：`BlockDelta.order` 变成「顺序没变就不带」；turn 新增 `TurnDelta`（只推变了的子块 + `durationMs`）。
+- `MessageActions` 从 `blocks.tsx` 抽出，新增 `full?: () => string`。
+- **P3** 验收：`src/renderer/src/perf.ts` 暴露 `window.__piPerf.renders`（dev-only），组件渲染体里 `count('app'/'sidebar'/'row')`（另暴露 `reset()`，生产构建里整块被摇掉）。2026-11-09 实测（`PI_SHOT_JS_FILE` 打开一条 27KB 会话并发一句 prompt）：启动阶段 app=4、sidebar=80、row=40（全是 `sessions` / `busy` 事件，一次性）；流式 6 秒内 app +4、sidebar +4、row +2（侧栏增量全部来自 `sessions` 事件，不是正文增量）。正文块增量未触发过侧栏重渲染，目标达成。
+- **P2** 待重测：上面这组数取自重构前。ADR-0011 的「打开 700 块会话 < 400ms」「DOM < 8k」与 ARCHITECTURE §「万级块不卡」都还没在 id 化缓存 + `TurnDelta` 之后验过，旧数字作废。
+- 重构后的审查修补：`store/engine.ts` 用 `hot.accept` 重新订阅（否则改该文件后引擎永久失联）；`dispatch` 末尾 `never(ev)` 兜底，新增 `AgentEvent` 成员会编译失败而不是静默丢弃；`App` 的会话查找改为先订 `sessions` 再 `useMemo`，不再每个 delta 跑一遍 `find`。
 
 ## 建议的下一刀
 

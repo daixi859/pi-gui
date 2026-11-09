@@ -2,6 +2,8 @@ import { memo, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
 import { MarkdownView } from '../../base/MarkdownView'
 import { IconImage } from '../../base/icons'
+import { useEngine } from '../../../store'
+import { count } from '../../../perf'
 import { Step } from './Step'
 import { TurnView } from './TurnView'
 
@@ -38,13 +40,15 @@ export function WorkingDots(): ReactNode {
   )
 }
 
-const Row = memo(function Row({
+/** 一个块 → 一行。引用不变就跳过渲染（memo 的浅比较就是这个语义） */
+export const RowView = memo(function RowView({
   block,
   live
 }: {
   block: Block
   live: boolean
 }): ReactNode {
+  count('row')
   switch (block.kind) {
     case 'user':
       return <UserLine text={block.text} images={block.images} />
@@ -57,28 +61,40 @@ const Row = memo(function Row({
   }
 })
 
-/** 会话正文：块引用不变就不重渲染，只有正在流式的那个块会跟着增量走 */
-export const Transcript = memo(function Transcript({
+/**
+ * 一行只订阅自己那个块（按 id）。
+ * 别的块变了不惊动这一行，这一行变了也只有它重渲染——列表本身不参与。
+ */
+const Row = memo(function Row({ id, live }: { id: string; live: boolean }): ReactNode {
+  const block = useEngine((s) => s.byId[id])
+  return block ? <RowView block={block} live={live} /> : null
+})
+
+/** 会话正文：只订阅 id 顺序，块内容由每行自己订阅。 */
+export const Transcript = memo(function Transcript(): ReactNode {
+  const order = useEngine((s) => s.order)
+  const liveTurnId = useEngine((s) => s.liveTurnId)
+  return (
+    <div className="space-y-4">
+      {order.map((id) => (
+        <Row key={id} id={id} live={id === liveTurnId} />
+      ))}
+    </div>
+  )
+})
+
+/** 给定数组直接渲染：预览页的假流用，不碰引擎状态 */
+export const StaticTranscript = memo(function StaticTranscript({
   blocks,
-  streaming
+  liveTurnId
 }: {
   blocks: Block[]
-  streaming: boolean
+  liveTurnId?: string | null
 }): ReactNode {
-  let liveTurnId: string | null = null
-  if (streaming) {
-    for (let i = blocks.length - 1; i >= 0; i--) {
-      if (blocks[i].kind === 'turn') {
-        liveTurnId = blocks[i].id
-        break
-      }
-    }
-  }
-
   return (
     <div className="space-y-4">
       {blocks.map((b) => (
-        <Row key={b.id} block={b} live={b.id === liveTurnId} />
+        <RowView key={b.id} block={b} live={b.id === liveTurnId} />
       ))}
     </div>
   )

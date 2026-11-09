@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { Sidebar } from './components/business/Sidebar'
 import { Projects } from './components/business/Projects'
 import { TitleBar, CollapseButton } from './components/business/TitleBar'
 import { StartPage } from './components/business/StartPage'
 import { ChatComposer } from './components/business/Composer'
-import { MessageActions, lastText } from './components/business/blocks'
+import { MessageActions } from './components/business/MessageActions'
 import { Transcript, WorkingDots } from './components/business/transcript/Transcript'
 import { Preview } from './components/business/Preview'
 import { AskCard } from './components/business/AskCard'
@@ -14,8 +14,22 @@ import { Toasts } from './components/base/Toasts'
 import { IconArrowDown, IconArrowLeft, IconArrowRight, IconSpinner } from './components/base/icons'
 import { Button } from './components/base/Button'
 import { toMarkdown } from './exportMarkdown'
-import { useAgent } from './useAgent'
+import { blocksOf } from './store'
+import {
+  abort,
+  answerAsk,
+  cancelAsk,
+  clearError,
+  deleteSession,
+  newSession,
+  openSession,
+  prompt,
+  replyUi,
+  switchWorkspace,
+  useEngine
+} from './store'
 import { useScrollRail } from './useScrollRail'
+import { count } from './perf'
 
 type Route = 'start' | 'chat' | 'gallery' | 'projects'
 
@@ -29,7 +43,7 @@ type Place = {
 const bottomGap = (el: HTMLElement): number => el.scrollHeight - el.scrollTop - el.clientHeight
 
 export default function App(): ReactNode {
-  const agent = useAgent()
+  count('app')
   const [collapsed, setCollapsed] = useState(false)
   const [place, setPlace] = useState<Place>({ route: 'start', id: null })
   const past = useRef<Place[]>([])
@@ -37,6 +51,13 @@ export default function App(): ReactNode {
   const [, bump] = useState(0)
   const route = place.route
   const activeId = place.id
+  // 只选真正影响外壳的两个字段：流式状态与错误条。正文一概不进这里
+  const streaming = useEngine((s) => s.streaming)
+  const error = useEngine((s) => s.error)
+  // 先只订 sessions（引用只在 sessions 事件时变），find 再 memo 一次：
+  // 否则每个 delta 的 set 都会跑一遍 O(n) 的 selector
+  const sessions = useEngine((s) => s.sessions)
+  const current = useMemo(() => sessions.find((x) => x.id === activeId), [sessions, activeId])
   const toggle = (): void => setCollapsed((v) => !v)
 
   /** 压栈后跳转；同位置不压 */
@@ -76,56 +97,49 @@ export default function App(): ReactNode {
       // Ctrl+N 新建任务
       if (e.ctrlKey && e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        agent.newSession()
+        newSession()
         setPlace({ route: 'start', id: null })
       }
       // Esc 停止生成；输入框/弹层自己认领的 Esc 会先 preventDefault
-      if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && agent.streaming) agent.abort()
+      if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && useEngine.getState().streaming) {
+        abort()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [agent])
-
-  const current = agent.sessions.find((s) => s.id === activeId)
+  }, [])
 
   const send = (text: string): void => {
-    agent.prompt(text)
+    prompt(text)
     go({ route: 'chat', id: activeId })
   }
 
-  const openSession = (id: string, path: string): void => {
-    agent.openSession(path)
+  const open = (id: string, path: string): void => {
+    openSession(path)
     go({ route: 'chat', id })
   }
-
-  const answerText = lastText(agent.blocks)
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-canvas">
       <Sidebar
         collapsed={collapsed}
         onNavigate={(r) => go({ route: r, id: null })}
-          projects={agent.projects}
-          sessions={agent.sessions}
-          activeId={activeId}
-          unread={agent.unread}
-          onOpenSession={openSession}
-          onNewSession={() => {
-            agent.newSession()
-            go({ route: 'start', id: null })
-          }}
-          onNewSessionIn={(path) => {
-            agent.switchWorkspace(path)
-            go({ route: 'start', id: null })
-          }}
-          onRemoveProject={agent.removeProject}
-          onRename={agent.renameSession}
-          onDelete={(path) => {
-            agent.deleteSession(path)
-            // 删的若是当前看着的会话，宿主已切到新会话，界面回到起始页
-            if (current?.path === path) go({ route: 'start', id: null })
-          }}
-        />
+        activeId={activeId}
+        onOpenSession={open}
+        onNewSession={() => {
+          newSession()
+          go({ route: 'start', id: null })
+        }}
+        onNewSessionIn={(path) => {
+          switchWorkspace(path)
+          go({ route: 'start', id: null })
+        }}
+        onDelete={(path) => {
+          deleteSession(path)
+          // 删的若是当前看着的会话，宿主已切到新会话，界面回到起始页
+          if (current?.path === path) go({ route: 'start', id: null })
+        }}
+      />
 
       {/* 展开时主卡片贴住侧栏右缘，侧栏分隔线与卡片左边框连成一条贯穿线；收起时四边留相等边距 */}
       <div
@@ -141,29 +155,24 @@ export default function App(): ReactNode {
             showTitle={route === 'chat'}
             sessionPath={current?.path}
             onExport={() =>
-              current && window.pi?.host.saveText(`${current.title}.md`, toMarkdown(agent.blocks))
+              current && window.pi?.host.saveText(`${current.title}.md`, toMarkdown(blocksOf()))
             }
-            onClearError={agent.clearError}
-            error={agent.error}
+            onClearError={clearError}
+            error={error}
           />
           <main className="min-h-0 flex-1 overflow-hidden">
-            {route === 'start' && <StartPage agent={agent} onSubmit={send} />}
+            {route === 'start' && <StartPage onSubmit={send} />}
             {route === 'gallery' && <Preview />}
-            {route === 'projects' && (
-              <Projects
-                rows={agent.projectRows}
-                onRemove={agent.removeProject}
-                onRestore={agent.restoreProject}
-                onDelete={agent.deleteProject}
-              />
+            {route === 'projects' && <Projects />}
+            {route === 'chat' && (
+              <ChatView streaming={streaming} scope={activeId ?? 'new'} />
             )}
-            {route === 'chat' && <ChatView agent={agent} answerText={answerText} scope={activeId ?? 'new'} />}
           </main>
         </div>
       </div>
       {/* 弹窗与提示放在最外层：起始页上的工具确认也要能看到 */}
-      {agent.ui[0] && <UiPrompt req={agent.ui[0]} onReply={agent.replyUi} />}
-      <Toasts items={agent.toasts} />
+      <UiPromptHost />
+      <ToastsHost />
       {/* 品牌 / 前进后退浮在最上层：侧栏展开收起都在同一位置，只换箭头方向，不会因布局变化跳位。
           DOM 必须排在 TitleBar 之后：Windows 按 DOM 顺序算拖拽区，后来的 no-drag 才能把先前的 drag 挖掉 */}
       <div
@@ -189,22 +198,33 @@ export default function App(): ReactNode {
     </div>
   )
 }
-function ChatView({
-  agent,
-  answerText,
-  scope
-}: {
-  agent: ReturnType<typeof useAgent>
-  answerText: string
-  scope: string
-}): ReactNode {
+
+/** 裸 UI 请求（select / input / confirm / editor）：一次只显示队首 */
+function UiPromptHost(): ReactNode {
+  const req = useEngine((s) => s.ui[0])
+  if (!req) return null
+  return <UiPrompt req={req} onReply={replyUi} />
+}
+
+
+/** 扩展通知：自动消失的计时在 store/interaction.ts 里 */
+function ToastsHost(): ReactNode {
+  const items = useEngine((s) => s.toasts)
+  return <Toasts items={items} />
+}
+
+/** 会话页：正文之外只有孤立的动作条、工作指示与输入卡需要状态，各自订阅自己那一份 */
+function ChatView({ streaming, scope }: { streaming: boolean; scope: string }): ReactNode {
   const scroller = useRef<HTMLDivElement>(null)
   const rail = useScrollRail()
+  const empty = useEngine((s) => s.order.length === 0)
+  const busy = useEngine((s) => s.busy)
+  const ask = useEngine((s) => s.asks[0])
   // 离底部超过这个余量才给回到最新，避免小波动一直闪
   const AWAY = 120
   const [away, setAway] = useState(false)
   // 内容尺寸变化就重算：流式跟底，翻上去就松手，并给「回到最新」。
-  // 用 ResizeObserver 而不是依赖 blocks：markdown / 高亮 / 图片都是异步长高的，没有滚动事件
+  // 用 ResizeObserver 而不是依赖正文：markdown / 高亮 / 图片都是异步长高的，没有滚动事件
   useEffect(() => {
     const el = scroller.current
     // ChatView 恒渲染 .pi-page 包裹层，首个子元素就是内容根
@@ -234,27 +254,18 @@ function ChatView({
           }}
           {...rail}
         >
-        <div className="pi-page">
-          {agent.blocks.length === 0 ? (
-            <p className="pt-10 text-center text-xs text-faint">
-              {agent.busy ?? '这个会话还没有内容'}
-            </p>
-          ) : (
-            <>
-              <Transcript blocks={agent.blocks} streaming={agent.streaming} />
-              {(agent.streaming || agent.busy) && <WorkingDots />}
-              {!agent.streaming && (
-                <div className="mt-2 pl-1">
-                  <MessageActions
-                    text={answerText || toMarkdown(agent.blocks)}
-                    time={agent.settledAt ? new Date(agent.settledAt).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                  />
-                </div>
-              )}
-            </>
-          )}
+          <div className="pi-page">
+            {empty ? (
+              <p className="pt-10 text-center text-xs text-faint">{busy ?? '这个会话还没有内容'}</p>
+            ) : (
+              <>
+                <Transcript />
+                {(streaming || busy) && <WorkingDots />}
+                {!streaming && <AnswerActions />}
+              </>
+            )}
+          </div>
         </div>
-      </div>
         {away && (
           <Button
             aria-label="回到最新"
@@ -268,39 +279,37 @@ function ChatView({
         )}
       </div>
       <div className="mx-auto w-full max-w-[820px] px-8 pb-4">
-        {agent.busy && (
+        {busy && (
           <p className="mb-2 flex items-center gap-2 text-xs text-muted">
             <IconSpinner />
-            {agent.busy}…
+            {busy}…
           </p>
         )}
-        {agent.asks[0] && (
+        {ask && (
           <div className="mb-2">
-            <AskCard
-              id={agent.asks[0].id}
-              questions={agent.asks[0].questions}
-              onAnswer={agent.answerAsk}
-              onCancel={agent.cancelAsk}
-            />
+            <AskCard id={ask.id} questions={ask.questions} onAnswer={answerAsk} onCancel={cancelAsk} />
           </div>
         )}
-        <ChatComposer
-          scope={scope}
-          snapshot={agent.snapshot}
-          models={agent.models}
-          streaming={agent.streaming}
-          onSubmit={agent.prompt}
-          onAbort={agent.abort}
-          onModel={agent.setModel}
-          onLevel={agent.setThinkingLevel}
-          files={agent.files}
-          onQueryFiles={agent.queryFiles}
-          commands={agent.commands}
-          onAccess={agent.toggleAccess}
-          onSwitchWorkspace={agent.switchWorkspace}
-          workspaces={agent.workspaces}
-        />
+        <ChatComposer scope={scope} onSubmit={prompt} />
       </div>
+    </div>
+  )
+}
+
+/**
+ * 动作条：只在回合结束后出现。
+ * 导出用的 markdown 在点击时才拼（store 里只留最后一段回答的纯文本）。
+ */
+function AnswerActions(): ReactNode {
+  const settledAt = useEngine((s) => s.settledAt)
+  const answerText = useEngine((s) => s.answerText)
+  return (
+    <div className="mt-2 pl-1">
+      <MessageActions
+        text={answerText}
+        full={() => toMarkdown(blocksOf())}
+        time={settledAt ? new Date(settledAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : ''}
+      />
     </div>
   )
 }

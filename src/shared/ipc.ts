@@ -75,13 +75,29 @@ export interface PromptImage {
   mimeType: string
 }
 
+/**
+ * 折叠行的增量：子块只带变了的那些。
+ * 不动 children 的时长/中断态变化（每秒一次）只带这两个字段，不再重发整块。
+ */
+export interface TurnDelta {
+  id: string
+  durationMs: number
+  aborted?: boolean
+  /** 完整子块顺序；只有顺序变了才带，缺省沿用渲染层现有顺序 */
+  order?: string[]
+  /** 新增或变化的子块 */
+  items: Block[]
+}
+
 export interface BlockDelta {
   /** true 时渲染层丢弃缓存、只用 items 重建（切会话 / 打开历史） */
   full?: boolean
-  /** 顶层块 id 顺序：渲染层据此拼数组，不必关心增删位置 */
-  order: string[]
-  /** 需要新增或更新的块；turn 自带完整 children */
+  /** 顶层块 id 顺序：渲染层据此拼数组，不必关心增删位置；没变时不带 */
+  order?: string[]
+  /** 需要新增或更新的顶层块；full 时 turn 自带完整 children */
   items: Block[]
+  /** 折叠行的子块增量；full 时不使用（turn 整块在 items 里） */
+  turns?: TurnDelta[]
 }
 
 /** 扩展注册的斜杠命令，供输入框的 / 菜单 */
