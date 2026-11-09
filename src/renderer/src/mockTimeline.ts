@@ -1,5 +1,5 @@
 import type { Block, DiffLine } from '@shared/blocks'
-import type { TurnSpan } from './store/timeline'
+import { argDetail, type TurnActivity, type TurnSpan } from './store/timeline'
 
 /** 一帧：虚拟时刻 t（毫秒）对应的段结构。宿主每 60ms 推一次，这里照抄这个节奏 */
 export interface Frame {
@@ -23,7 +23,7 @@ const ANSWER_A = `现状定位清楚了，三处都在渲染层：
 2. **MarkdownView 每个增量全文重跑** —— 单条长回答的解析成本是 O(n²)。
 3. **流式期间跑 shiki** —— 缓存 key 含 \`code\`，每个半截代码串都必然 miss。
 
-按 ZCode 的形态重排：思考与工具收成一行摘要，\`已工作 12 秒\` 折叠，答案留在外面。`
+按 ZCode 的形态重排：思考与工具收成一行摘要，\`已完成，用时 12秒\` 折叠，答案留在外面。`
 
 const ANSWER_B = `压测结果：\`npm test\` 在这台机器上没有测试套件，这是预期内的——项目本来就没测试。
 
@@ -55,6 +55,8 @@ interface Seg {
   startedAt: number
   endedAt: number | null
   aborted: boolean
+  /** live 头要显示的当前活动；think / tool / say 各自切换 */
+  activity: TurnActivity
 }
 
 /** 把脚本展开成按时间排序的帧序列，运行器只需要推进虚拟时钟 */
@@ -77,16 +79,19 @@ class Script {
   }
 
   private snapshot(seg: Seg): { span: TurnSpan; blocks: Block[] } {
+    const live = seg.endedAt === null
     return {
       span: {
         key: seg.key,
         userId: seg.user.id,
         ids: seg.blocks.map((b) => b.id),
-        durationMs: Math.round((seg.endedAt ?? this.t) - seg.startedAt),
+        startedAt: seg.startedAt,
+        durationMs: live ? 0 : Math.round(seg.endedAt! - seg.startedAt),
         stepCount: seg.blocks.filter((b) => b.kind !== 'assistant').length,
         noteCount: seg.blocks.filter((b) => b.kind === 'assistant').length,
         toolCount: seg.blocks.filter((b) => b.kind === 'tool').length,
-        live: seg.endedAt === null,
+        live,
+        ...(live ? { activity: seg.activity } : {}),
         aborted: seg.aborted
       },
       blocks: [seg.user, ...seg.blocks]
@@ -127,7 +132,8 @@ class Script {
       blocks: [],
       startedAt: this.t,
       endedAt: null,
-      aborted: false
+      aborted: false,
+      activity: { kind: 'thinking' }
     }
     this.segs.push(this.cur)
     this.t += gap
@@ -143,6 +149,7 @@ class Script {
   }
 
   private think(text: string, ms: number): void {
+    if (this.cur) this.cur.activity = { kind: 'thinking' }
     const id = `th${++this.n}`
     this.stream(
       (acc, done) =>
@@ -153,6 +160,8 @@ class Script {
   }
 
   private tool(name: string, args: string, ms: number, output?: string, fail = false): void {
+    const detail = argDetail(JSON.parse(args) as Record<string, unknown>)
+    if (this.cur) this.cur.activity = { kind: 'tool', toolName: name, ...(detail ? { detail } : {}) }
     const id = `tl${++this.n}`
     this.push({ kind: 'tool', id, name, args, state: 'running' })
     this.flush()
@@ -186,6 +195,7 @@ class Script {
 
   /** 答案也流式进段：收起时它是留在折叠外面的文本 */
   private say(text: string, ms: number): void {
+    if (this.cur) this.cur.activity = { kind: 'replying' }
     const id = `a${++this.n}`
     this.stream((acc, done) => ({ kind: 'assistant', id, text: acc, streaming: !done }), text, ms)
   }

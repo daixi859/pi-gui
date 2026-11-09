@@ -20,10 +20,10 @@ merging 注册的私有派生（`TurnProcessSpec` 只含范围坐标 `processSta
    知道归属），直接放进 tool 块的 `diff` 字段。行级订阅后行不知道相邻块，相邻合并逻辑
    （旧 TurnView 里"diff 跟着 edit/write 走"）随之消失。
 3. **回合降级为段坐标 `TurnSpan`**（timeline.ts 定义，渲染层私有）：`{ key, userId?, ids,
-   durationMs, stepCount, noteCount, toolCount, live, aborted }`——只记范围与统计，等价
-   deepseek 的 `TurnProcessSpec`。user 气泡单列 `userId`（渲染在段头之前，与旧实现的
-   顶层顺序一致），`ids` 是段头之后的全部块、顺序即渲染顺序；值未变的段复用旧对象
-   （含 ids 引用），段容器 memo 才能命中。
+   startedAt, durationMs, stepCount, noteCount, toolCount, live, activity?, aborted }`——
+   只记范围与统计，等价 deepseek 的 `TurnProcessSpec`。user 气泡单列 `userId`（渲染在
+   段头之前，与旧实现的顶层顺序一致），`ids` 是段头之后的全部块、顺序即渲染顺序；
+   值未变的段复用旧对象（含 ids 引用），段容器 memo 才能命中。
 4. **折叠全在组件**：Transcript 只订阅 `turns`；TurnSection 按段坐标渲染折叠头
    （统计/时长/状态全来自 span），行（Row/RowView）按 `open` 自判——user 气泡与
    assistant 文本不受折叠影响，其余过程块收起时整行不渲染。"末尾答案提到折叠外"
@@ -32,6 +32,12 @@ merging 注册的私有派生（`TurnProcessSpec` 只含范围坐标 `processSta
    导出走 `turns.ids`），`answerText` 保留（复制按钮用）。
 6. 折叠记忆仍存 localStorage，key 从"第一个子块 id"改为段 key（`t-${user 消息
    timestamp}`，live 到落定不变）；存量记忆失效一次，可接受。
+7. **运行头与落定头分工**（照 deepseek：运行中与落定是两种展示，不是同一行换文案）：
+   live 段头显示当前活动 `TurnActivity`——正在跑的工具 + 参数摘要（`command/path/pattern`
+   优先截断；参数要等 message_end 才完整，没流完就只有"正在调用 X…"），思考 / 回复兜底；
+   走表由组件内的独立时钟 `RunClock`（`setInterval` 1s，只重渲自己）负责，派生不再每帧
+   刷 `durationMs`——span 引用只在内容 / 活动真变时更换，工具静默期时钟照走。
+   落定后头只留「已完成，用时 X」（aborted 替换掉时长），不显示计数。
 
 ## 否掉的方案
 
@@ -48,7 +54,7 @@ merging 注册的私有派生（`TurnProcessSpec` 只含范围坐标 `processSta
 - 转录渲染路径：`msgs → deriveBlocks → { turns, byId, answerText } → Transcript
   （段容器）→ Row（按 id 订阅）`。任何一块变化只有那一行重渲染；未变段的容器引用
   稳定，Transcript 不重渲染它们。
-- live 段的 `durationMs` 随派生刷新（消息增量持续到达时即走表）；工具静默期无帧到达
-  时时停走，与旧实现一致。
+- live 段 `durationMs` 恒 0（走表归 UI 时钟），落定时用末条消息 timestamp 一次性定格；
+  工具静默期时钟照走（旧实现会停）。
 - mock 假流（mockTimeline.ts）与预览库同步换段结构；无消费方的 `chatBlocks` 死数据
   顺手删除。

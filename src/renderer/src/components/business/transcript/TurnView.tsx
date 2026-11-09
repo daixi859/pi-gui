@@ -1,21 +1,48 @@
-import { memo, useState, type ReactNode } from 'react'
+import { memo, useEffect, useState, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
 import { IconChevronDown, IconChevronRight, IconSpinner } from '../../base/icons'
 import { workTime } from '../../../util'
-import type { TurnSpan } from '../../../store/timeline'
+import type { TurnActivity, TurnSpan } from '../../../store/timeline'
 import { Row, RowView } from './Transcript'
 
-/** 段头状态文案：live 在跑 / 被中断 / 正常收工 */
-function turnTitle(span: TurnSpan): string {
-  const t = workTime(span.durationMs)
-  if (span.live) return `进行中 · ${t}`
-  if (span.aborted) return `已中断 · ${t}`
-  return `已工作 ${t}`
+/** 工具名 → 头上的中文动词 */
+const VERB: Record<string, string> = {
+  read: '阅读',
+  ls: '查看',
+  glob: '查找',
+  grep: '检索',
+  bash: '执行',
+  edit: '修改',
+  write: '写入'
 }
 
-/** 折叠头：统计与时长全来自段坐标，组件不读块内容 */
+/** live 段的活动文案：工具带参数摘要（参数没流完就省略号），思考 / 回复兜底 */
+function activityText(a: TurnActivity | undefined): string {
+  if (!a) return '进行中'
+  if (a.kind === 'thinking') return '思考中'
+  if (a.kind === 'replying') return '回复中'
+  const verb = VERB[a.toolName ?? ''] ?? `调用 ${a.toolName}`
+  return a.detail ? `正在${verb} ${a.detail}` : `正在${verb}…`
+}
+
+/** live 段的走表时钟：独立组件每秒只重渲这一个数，派生与转录都不参与 */
+function RunClock({ startedAt }: { startedAt: number }): ReactNode {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return <span className="text-faint">· {workTime(Date.now() - startedAt)}</span>
+}
+
+/** 落定后的状态文案：正常收工带定格时长（紧凑写法，如「3分15秒」），中断替换掉时长 */
+function turnTitle(span: TurnSpan): string {
+  if (span.aborted) return '已中断'
+  return `已完成，用时 ${workTime(span.durationMs).replace(/ /g, '')}`
+}
+
+/** 折叠头：live 显示当前活动 + 走表，落定只留状态文案；统计与时长全来自段坐标 */
 function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggle: () => void }): ReactNode {
-  const label = span.toolCount ? `工具调用 ${span.toolCount} 项` : `过程 ${span.stepCount} 项`
   return (
     <button
       type="button"
@@ -23,25 +50,26 @@ function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggl
       aria-expanded={open}
       className="flex h-8 w-full items-center gap-1 border-b border-edge px-1 text-sm text-muted transition-colors hover:text-fg"
     >
-      <span>{label}</span>
-      <span className="text-faint">· {turnTitle(span)}</span>
+      <span>{span.live ? activityText(span.activity) : turnTitle(span)}</span>
+      {span.live ? <RunClock startedAt={span.startedAt} /> : null}
       {span.live ? <IconSpinner className="size-3.5" /> : null}
       {open ? <IconChevronDown className="size-3.5 text-faint" /> : <IconChevronRight className="size-3.5 text-faint" />}
     </button>
   )
 }
 
-/** 无过程块（纯文本回合）：只给一行时长，不可折叠 */
+/** 无过程块（纯文本回合）：只给一行状态，不可折叠 */
 function TurnBare({ span }: { span: TurnSpan }): ReactNode {
   return (
     <div className="flex h-8 w-full items-center gap-1 px-1 text-xs text-faint">
-      {turnTitle(span)}
+      <span>{span.live ? activityText(span.activity) : turnTitle(span)}</span>
+      {span.live ? <RunClock startedAt={span.startedAt} /> : null}
       {span.live ? <IconSpinner className="size-3.5" /> : null}
     </div>
   )
 }
 
-/** 段头三态：有过程给折叠按钮，只有中间文本给一行时长，纯问答什么都不给 */
+/** 段头三态：有过程给折叠按钮，只有中间文本给一行状态，纯问答什么都不给 */
 function turnHead(span: TurnSpan, open: boolean, toggle: () => void): ReactNode {
   if (span.stepCount > 0) return <TurnHead span={span} open={open} toggle={toggle} />
   if (span.noteCount > 1) return <TurnBare span={span} />
@@ -51,7 +79,7 @@ function turnHead(span: TurnSpan, open: boolean, toggle: () => void): ReactNode 
 /**
  * 一个回合的段容器：折叠与否在这里决定，数据只是段坐标。
  *
- * 收起：`工具调用 3 项 · 已工作 12 秒`（一行折叠头）
+ * 收起：`已完成，用时 12秒`（一行折叠头）
  *       中间文本1 → 中间文本2 → 结论
  * 展开：工具1 → 中间文本1 → 工具2 → 中间文本2 → 结论（原顺序交错）
  *

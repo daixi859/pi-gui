@@ -201,16 +201,31 @@ function groupMessages(order: string[], byId: Record<string, PiMessage>): Group[
   return groups
 }
 
-/** 回合还活着吗：消息在流式，或工具调了还没结果 */
+/** 回合还活着吗：消息在流式、有工具没结果，或末条 assistant 因工具收尾——
+ * 结果虽都配对了，模型马上接着说（工具间隙），不算落定，否则头会闪断式收起又展开 */
 function groupLive(g: Group, results: Map<string, ToolResult>): boolean {
+  for (let i = g.items.length - 1; i >= 0; i--) {
+    const m = g.items[i]
+    if (m.role !== 'assistant') continue
+    if (m.stopReason === 'pending' || m.stopReason === 'toolUse') return true
+    break // 只看末条 assistant 的终态（stop/length/error/aborted = 落定）
+  }
   for (const m of g.items) {
     if (m.role !== 'assistant') continue
-    if (m.stopReason === 'pending') return true
     for (const c of m.content) {
       if (c.type === 'toolCall' && !results.has(c.id)) return true
     }
   }
   return false
+}
+
+/** live 段此刻在干什么：工具优先（带参数摘要），其次流式思考 / 回复 */
+export interface TurnActivity {
+  kind: 'thinking' | 'replying' | 'tool'
+  /** kind === 'tool' 时的工具名 */
+  toolName?: string
+  /** 一行任务摘要（command/path/pattern… 截断；参数没流完时缺省） */
+  detail?: string
 }
 
 /** 一个回合的段坐标：只记范围与统计，不嵌套块。折叠与否、收起时留什么由组件决定 */
@@ -221,7 +236,9 @@ export interface TurnSpan {
   userId?: string
   /** 段头之后的全部块（过程、中间文本、答案），顺序即渲染顺序 */
   ids: string[]
-  /** live 段随派生刷新（Date.now()），落定后固定 */
+  /** 回合起点；live 走表（UI 时钟）与落定时长（durationMs）都从它算 */
+  startedAt: number
+  /** 落定后的总时长；live 段恒 0（走表不靠派生刷新，交给组件里的时钟） */
   durationMs: number
   /** 过程块数（thinking/tool/diff/file/system），> 0 才有折叠按钮 */
   stepCount: number
@@ -229,6 +246,8 @@ export interface TurnSpan {
   noteCount: number
   toolCount: number
   live: boolean
+  /** live 段当前活动；落定后无 */
+  activity?: TurnActivity
   aborted: boolean
 }
 
@@ -241,7 +260,49 @@ export interface Derived {
 /** 上一次的段索引：值没变的段复用旧对象（含 ids 引用），段容器 memo 才能命中 */
 let prevTurns: TurnSpan[] = []
 
-/** 值相等（含 ids 逐位）才算没变：live 段的 durationMs 每帧在变，必然换新对象 */
+/** 工具参数抽一行摘要：command/path/pattern 优先，压空白截长。mock 假流也用它 */
+export function argDetail(args: Record<string, unknown> | undefined): string | undefined {
+  if (!args) return undefined
+  for (const key of ['command', 'path', 'pattern', 'query', 'url']) {
+    const v = args[key]
+    if (typeof v !== 'string' || !v) continue
+    const s = v.replace(/\s+/g, ' ').trim()
+    return s.length > 80 ? s.slice(0, 80) + '…' : s
+  }
+  return undefined
+}
+
+/** live 段此刻在干什么：只看末条 assistant——顺序执行下它未配对的调用即当前活动。
+ * 参数要等 message_end 才完整（ADR-0014），没流完就不带摘要（「正在调用 X…」）；
+ * 调用都收尾了说明模型在准备下一步，显示思考中。不回溯旧消息，避免间隙闪回过期活动 */
+function groupActivity(g: Group, results: Map<string, ToolResult>): TurnActivity {
+  for (let i = g.items.length - 1; i >= 0; i--) {
+    const m = g.items[i]
+    if (m.role !== 'assistant') continue
+    let call: { name?: string; args: unknown } | null = null
+    for (const c of m.content) {
+      if (c.type === 'toolCall' && !results.has(c.id)) call = { name: c.name, args: c.arguments }
+    }
+    if (call) {
+      const detail =
+        m.stopReason === 'pending' ? undefined : argDetail(call.args as Record<string, unknown> | undefined)
+      return { kind: 'tool', toolName: call.name ?? 'tool', ...(detail ? { detail } : {}) }
+    }
+    if (m.stopReason === 'pending') {
+      const last = [...m.content].reverse().find((c) => c.type === 'thinking' || c.type === 'text')
+      return last?.type === 'thinking' ? { kind: 'thinking' } : { kind: 'replying' }
+    }
+    return { kind: 'thinking' }
+  }
+  return { kind: 'thinking' }
+}
+
+function sameActivity(a: TurnActivity | undefined, b: TurnActivity | undefined): boolean {
+  if (!a || !b) return a === b
+  return a.kind === b.kind && a.toolName === b.toolName && a.detail === b.detail
+}
+
+/** 值相等（含 ids 逐位）才算没变：live 段的走表不进派生，只有内容 / 活动真变了才换对象 */
 function sameSpan(p: TurnSpan, t: TurnSpan): boolean {
   return (
     p.userId === t.userId &&
@@ -251,6 +312,7 @@ function sameSpan(p: TurnSpan, t: TurnSpan): boolean {
     p.stepCount === t.stepCount &&
     p.noteCount === t.noteCount &&
     p.toolCount === t.toolCount &&
+    sameActivity(p.activity, t.activity) &&
     p.ids.length === t.ids.length &&
     p.ids.every((id, i) => id === t.ids[i])
   )
@@ -281,16 +343,19 @@ export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): 
 
     const userTs = g.user ? g.user.timestamp : (g.items[0]?.timestamp ?? 0)
     const live = gi === groups.length - 1 && groupLive(g, results)
-    const endTs = live ? Date.now() : (g.items[g.items.length - 1]?.timestamp ?? userTs)
+    // live 段不算时长（走表归 UI 时钟），落定用末条消息 timestamp 定格
+    const endTs = live ? userTs : (g.items[g.items.length - 1]?.timestamp ?? userTs)
     turns.push({
       key: `t-${userTs}`,
       ...(userBlock ? { userId: userBlock.id } : {}),
       ids: items.map((b) => b.id),
+      startedAt: userTs,
       durationMs: Math.max(0, endTs - userTs),
       stepCount: items.filter((b) => b.kind !== 'assistant').length,
       noteCount: items.filter((b) => b.kind === 'assistant').length,
       toolCount: items.filter((b) => b.kind === 'tool').length,
       live,
+      ...(live ? { activity: groupActivity(g, results) } : {}),
       aborted: g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')
     })
   })
