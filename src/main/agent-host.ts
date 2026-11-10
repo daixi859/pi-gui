@@ -48,7 +48,7 @@ interface Mounted {
   sent: Map<string, PiMessage>
   sentOrder: string[]
   forceFull: boolean
-  /** 流式消息每 60ms 推一次增量，避免渲染层重排风暴 */
+  /** 流式消息按 FLUSH_MS 合并推送增量，避免渲染层重排风暴 */
   flushTimer: NodeJS.Timeout | null
   /** 尚未结束的工具调用，栈顶即最近开始的那个；ui 请求据此认领到具体工具 */
   liveTools: string[]
@@ -114,12 +114,16 @@ function notice(rec: Mounted, text: string, tone: 'info' | 'warn' | 'error' = 'i
   })
 }
 
+/** 流式增量合并窗口（毫秒）。设为 0 则关闭合并：每次 message_start / message_update 立即推送 */
+const FLUSH_MS = 0
+
 function schedule(rec: Mounted): void {
+  if (FLUSH_MS <= 0) return flushNow(rec)
   if (rec.flushTimer) return
   rec.flushTimer = setTimeout(() => {
     rec.flushTimer = null
     flushMessages(rec)
-  }, 60)
+  }, FLUSH_MS)
 }
 function flushNow(rec: Mounted): void {
   if (rec.flushTimer) {
