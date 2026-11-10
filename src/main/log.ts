@@ -6,9 +6,16 @@
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+// 只在开发环境落盘：打包版不建 tmp/、不写文件（与渲染层 [boot] 埋点同一开关）
+const enabled = !!process.env.ELECTRON_RENDERER_URL
 const dir = join(process.cwd(), 'tmp', 'log')
-const file = join(dir, `${startupStamp()}.log`)
+// 主进程拉起宿主时会把同一个文件名传下来：三次进程的时间线落在一个文件里，才能按顺序读
+const stamp = process.env.PI_LOG_FILE ?? startupStamp()
+const file = join(dir, `${stamp}.log`)
 let ready = false
+
+/** 本次启动的日志文件名（不含扩展名），主进程用它传给宿主 */
+export const logStamp = stamp
 
 /** 文件名用本地时间：2026-11-09_15-42-07.log */
 function startupStamp(): string {
@@ -28,9 +35,13 @@ function fmt(v: unknown): string {
   }
 }
 
-/** 追加一行：ISO 时间 + 标签 + 内容 */
+/** 自本进程启动以来的毫秒数：启动日志里行首带它，一眼看出「这行多晚才来」 */
+export const sinceStart = (): number => Math.round(process.uptime() * 1000)
+
+/** 追加一行：ISO 时间 + 进程内已过毫秒 + 标签 + 内容 */
 export function logLine(tag: string, ...parts: unknown[]): void {
-  const line = `${new Date().toISOString()} [${tag}] ${parts.map(fmt).join(' ')}\n`
+  if (!enabled) return
+  const line = `${new Date().toISOString()} +${sinceStart()}ms [${tag}] ${parts.map(fmt).join(' ')}\n`
   try {
     if (!ready) {
       mkdirSync(dir, { recursive: true })
@@ -39,6 +50,16 @@ export function logLine(tag: string, ...parts: unknown[]): void {
     appendFileSync(file, line)
   } catch {
     // 目录建不了 / 盘写不下：放弃这一行
+  }
+}
+
+/** 量一段异步操作的耗时，跑完（含抛错）都记一行：await track('host:init', 'loader.reload', () => loader.reload()) */
+export async function track<T>(tag: string, label: string, run: () => Promise<T>): Promise<T> {
+  const at = Date.now()
+  try {
+    return await run()
+  } finally {
+    logLine(tag, `${label} ${Date.now() - at}ms`)
   }
 }
 

@@ -32,6 +32,11 @@ import {
 } from '@shared/ipc'
 import { LEVEL_LABEL } from '@shared/blocks'
 import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
+import { logLine, sinceStart, track } from './log'
+
+// 埋点第一行：此时上面所有 import（含 pi SDK 约 12MB 的模块图）都已求值完毕，
+// 所以这个数就是「utilityProcess 起来了 + SDK 加载完」的合计耗时。
+logLine('host', `模块就绪（含 SDK import） +${sinceStart()}ms`)
 
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
 
@@ -275,12 +280,26 @@ function ageLabel(d: Date): string {
   return `${Math.floor(hours / 24)}天`
 }
 
-function titleOf(info: { name?: string; firstMessage: string }): string {
-  const clean = (info.name?.trim() || info.firstMessage.trim().split('\n')[0] || '未命名任务')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+/** 标题：压空白、截 28 字 */
+const clip = (s: string): string => {
+  const clean = s.replace(/\s+/g, ' ').trim()
   return clean.length > 28 ? clean.slice(0, 28) + '…' : clean
+}
+
+/**
+ * 侧栏标题取首条用户消息里第一行有字的文本。
+ * skill 展开会把整段 SKILL 包进 `<skill name=…>…</skill>` 塞进首条 user 消息：只剥标签会剩下空串（侧栏空白），
+ * 所以包裹块整段去掉；只剩包裹块时退回 skill 名。pi 自己的会话选择器不剥标签，直接显示原文首行。
+ */
+function titleOf(info: { name?: string; firstMessage: string }): string {
+  const name = info.name?.replace(/<[^>]+>/g, '').trim()
+  if (name) return clip(name)
+  const raw = info.firstMessage
+  const body = raw.replace(/<([a-zA-Z][\w-]*)\b[^>]*>[\s\S]*?<\/\1>/g, '\n').replace(/<[^>]+>/g, ' ')
+  const line = body.split('\n').map((s) => s.trim()).find(Boolean)
+  const skill = /<skill name="([^"]+)"/.exec(raw)?.[1]
+  if (skill) return clip(line ? `${skill}：${line}` : `技能 ${skill}`)
+  return clip(line ?? '未命名任务')
 }
 
 /** 会话扫描可能重入（init / 用户消息 / turn 结束都会触发），只跑一个 */
@@ -491,6 +510,7 @@ async function emitSessions(): Promise<void> {
     return
   }
   scanning = true
+  const at = Date.now()
   // 上一批结果先顶上，免得重扫时侧栏一闪变空
   publishSessions(lastList, true)
   try {
@@ -506,11 +526,15 @@ async function emitSessions(): Promise<void> {
     const all: SessionInfo[] = []
     for (const dir of dirs) {
       // pi 要逐个头读 JSONL 才能拿到首条消息，一个项目几十个会话就要上百 ms
+      const one = Date.now()
       all.push(
         ...(await SessionManager.listAll(dir, (_loaded, _total, partial) => {
           if (partial?.length && !scanAgain) publishSessions([...all, ...partial], true)
         }))
       )
+      const ms = Date.now() - one
+      // 只记慢目录：几十个会话的目录逐个打会把日志刷满
+      if (ms > 100) logLine('host', `扫描慢目录 ${dir} ${ms}ms`)
       if (scanAgain) break
       publishSessions(all, true)
     }
@@ -519,6 +543,7 @@ async function emitSessions(): Promise<void> {
       lastList = all
       publishSessions(all)
     }
+    logLine('host', `会话扫描完成 ${all.length} 条 ${Date.now() - at}ms`)
   } finally {
     scanning = false
     if (scanAgain) {
@@ -555,8 +580,11 @@ async function createSession(manager: SessionManager, ui: UiBridge): Promise<Ses
     agentDir: getAgentDir(),
     extensionFactories: [{ name: 'pigui-permission-gate', factory: permissionGate(ui), hidden: true }]
   })
-  await loader.reload()
-  return (await createAgentSession({ sessionManager: manager, cwd: dir, resourceLoader: loader })).session
+  // 扩展/技能/提示模板都在这步加载，实测 ~0.9s（大头是 jiti 编译 ~/.pi/agent 下的 TS 扩展）
+  await track('host', 'loader.reload', () => loader.reload())
+  return (await track('host', 'createAgentSession', () =>
+    createAgentSession({ sessionManager: manager, cwd: dir, resourceLoader: loader })
+  )).session
 }
 
 /** 建会话、订阅事件、挂 UI 桥；一个会话一份状态，切走不是 dispose */
@@ -581,7 +609,7 @@ async function mount(manager: SessionManager): Promise<Mounted> {
   }
   rec.detach = created.subscribe((ev) => onEvent(rec, ev))
   // mode="rpc" 让扩展走可编程的 ui.* 路径而不是 TUI 渲染
-  await created.bindExtensions({ uiContext: ui as never, mode: 'rpc' })
+  await track('host', 'bindExtensions', () => created.bindExtensions({ uiContext: ui as never, mode: 'rpc' }))
   mounted.set(manager.getSessionFile() ?? '', rec)
   return rec
 }
@@ -615,6 +643,7 @@ async function start(cwdOverride?: string): Promise<void> {
   // scanning 时不能报 loading=false，否则会把正在用的搜索状态清掉
   publishSessions(lastList, scanning)
   prune()
+  logLine('host', '首个会话就绪（渲染层此时才能用）')
 }
 
 async function open(path: string): Promise<void> {
@@ -799,6 +828,7 @@ async function handle(cmd: AgentCommand): Promise<void> {
   try {
     switch (cmd.type) {
       case 'init':
+        logLine('host', '收到 init 命令')
         loadProjects()
         // 扫会话列表要 ~850ms，和建会话并行，先用分批结果把侧栏填上
         void emitSessions()

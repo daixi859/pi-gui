@@ -16,7 +16,8 @@
 - ~~**P2** `compaction_end` 只推「上下文已压缩」~~ → 已带 `Xk → Yk tokens`。
 - ~~**P2** 图片没接~~ → `prompt { images }` → `session.prompt(text, { images })`。
 - **P3** 宿主崩溃后 `main/index.ts:19-21` 只发一条 error，不自动重启。
-- **P3** 会话归属判断靠 `SessionManager.listAll()` 全量扫 589 个文件，启动多花约 1s。
+- **P3** 会话归属判断靠 `SessionManager.listAll()` 全量扫文件，启动多花约 1s → **实测更新（2026-11-10）**：本机 712 条会话冷态首扫 3.3s，热态 1.3-2.7s（逐目录串行调 `listAll`；用单次 `SessionManager.listAll()` 跨目录并发可降到 ~0.9s）。
+- **P3** 启动耗时已埋点可复测（2026-11-10）：`npm run dev` 后看 `tmp/log/<时间戳>.log`，三端时间线在一个文件里（行首 `+Nms` 是各自进程 uptime）。典型分解：**宿主 SDK import ~2.0s**（cpu-prof 显示几乎全是 ESM 模块解析的 stat/lstat，337 个 js，无单一热点）→ `loader.reload` ~1.0s（6 个 TS 扩展 jiti 编译；`reload(noExtensions)` 只要 75ms）→ 会话扫描 1.3-2.7s。**渲染层 dev 首屏 ~0.5s，生产 0.47s**；曾测到 dev 6.0s：react-markdown 预打包 chunk 首次求值占 5.7s（LoAF 定位），后续因代码缓存不再复现——dev 冷启动慢属 Vite 一次性成本，打包版无此问题。分析脚本：`tmp/probe-startup*.mjs`、`tmp/analyze-prof.mjs`。
 
 ## 2. 跨进程协议 `src/shared/ipc.ts` / `preload`
 

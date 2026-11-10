@@ -5,6 +5,7 @@
  * 订阅在 createRoot 之前就位，首帧不会漏事件；HMR 再热重载也不会叠出第二个监听。
  */
 import type { AgentEvent } from '@shared/ipc'
+import { bootLog } from '../boot'
 import { engine, send } from './state'
 import { applyMessages } from './blocks'
 import { acceptRequest, clearTimers, flushSlot, pushToast } from './interaction'
@@ -14,13 +15,25 @@ function never(ev: never): never {
   throw new Error(`未处理的事件：${JSON.stringify(ev)}`)
 }
 
+/** 启动埋点用：首个事件、会话列表首次到齐各记一次，后面的增量不记 */
+let firstEvent = true
+let sessionsDone = false
+
 /** 一个事件 → 一次状态更新；不依赖任何 React 生命周期 */
 function dispatch(ev: AgentEvent): void {
+  if (firstEvent) {
+    firstEvent = false
+    bootLog(`收到宿主第一个事件 ${ev.type}`)
+  }
   switch (ev.type) {
     case 'messages':
       applyMessages(ev.delta, ev.path)
       return
     case 'sessions':
+      if (!sessionsDone && !ev.loading) {
+        sessionsDone = true
+        bootLog(`会话列表到齐 ${ev.sessions.length} 条`)
+      }
       engine.set({
         sessions: ev.sessions,
         projects: ev.projects,
