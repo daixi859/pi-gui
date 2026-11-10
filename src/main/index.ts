@@ -194,7 +194,6 @@ ipcMain.on('host:openAgentConfig', () => void shell.openPath(join(homedir(), '.p
 
 // 渲染层（sandbox）拿不到 clipboard / shell / dialog，统一从这走
 ipcMain.on('host:copy', (_e, text: string) => clipboard.writeText(text))
-ipcMain.on('host:openPath', (_e, path: string) => void shell.openPath(path))
 ipcMain.on('host:revealPath', (_e, path: string) => shell.showItemInFolder(path))
 ipcMain.on('host:openExternal', (_e, url: string) => {
   if (/^https?:\/\//.test(url)) void shell.openExternal(url)

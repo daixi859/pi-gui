@@ -64,7 +64,6 @@
 ## 8. 会话渲染 `src/renderer/src/components/blocks.tsx` / `DiffBlock.tsx`
 
 - ~~**P1** diff 块的「撤销」无 handler~~ → 已实现（宿主 `revertEdit` + `git apply -R`）。
-- ~~**P2** `FileBlock` 没有「打开」按钮实现~~ → 已接 `shell.openPath`。
 - ~~**P2** 长 diff 不截断~~ → 超 300 行截断并提示剩余行数。
 - ~~**P3** `TurnBlock` 折叠状态不记忆~~ → 按块 id 存 localStorage。
 

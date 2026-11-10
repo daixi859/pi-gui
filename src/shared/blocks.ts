@@ -54,14 +54,6 @@ export type Block =
       diff?: DiffBlock
     }
   | ({ kind: 'diff' } & DiffBlock)
-  | {
-      kind: 'file'
-      id: string
-      name: string
-      meta: string
-      /** 绝对路径；宿主能拿到时才给，有值才能「打开」 */
-      path?: string
-    }
   | { kind: 'system'; id: string; tone: SystemTone; text: string }
 
 export interface SessionMeta {

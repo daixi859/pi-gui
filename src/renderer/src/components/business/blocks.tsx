@@ -6,13 +6,9 @@ import { DiffBlock } from './DiffBlock'
 import {
   IconChevronDown,
   IconChevronRight,
-  IconFile,
   IconImage,
   IconSparkle
 } from '../base/icons'
-
-/** 渲染层不能直接用 shell / clipboard，全部过 preload 的主进程桥 */
-const host = (): Window['pi']['host'] | undefined => window.pi?.host
 
 function UserBlock({ text, images }: { text: string; images?: number }): ReactNode {
   return (
@@ -108,28 +104,6 @@ function ToolBlock({
   )
 }
 
-function FileBlock({ name, meta, path }: { name: string; meta: string; path?: string }): ReactNode {
-  return (
-    <div className="flex items-center gap-2 rounded-sm border border-edge px-4 py-2">
-      <div className="grid size-9 shrink-0 place-items-center rounded-sm bg-primary-1 text-link">
-        <IconFile className="size-[18px]" />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-sm">{name}</div>
-        <div className="text-xs text-muted">{meta}</div>
-      </div>
-      <button
-        type="button"
-        disabled={!path}
-        onClick={() => path && host()?.openPath(path)}
-        className="ml-auto flex shrink-0 items-center gap-1 rounded-sm border border-edge px-2 py-1 text-sm transition-colors hover:bg-sunken disabled:opacity-40 disabled:hover:bg-transparent"
-      >
-        打开
-      </button>
-    </div>
-  )
-}
-
 const TONES = {
   info: 'text-muted',
   warn: 'text-warn',
@@ -165,8 +139,6 @@ export function BlockView({ block }: { block: Block }): ReactNode {
           patch={block.patch}
         />
       )
-    case 'file':
-      return <FileBlock name={block.name} meta={block.meta} path={block.path} />
     case 'system':
       return <SystemBlock tone={block.tone} text={block.text} />
   }

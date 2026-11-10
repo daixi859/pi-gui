@@ -60,7 +60,6 @@ export const gallerySections = [
   { id: 'thinking', label: 'thinking 折叠 / 展开' },
   { id: 'tool', label: 'tool running / done / error' },
   { id: 'diff', label: 'diff 折叠 / 展开' },
-  { id: 'file', label: '文件卡' },
   { id: 'system', label: 'system 提示' }
 ] as const
 
@@ -103,7 +102,6 @@ export const galleryBlocks: Record<GallerySection, Block[]> = {
       ]
     }
   ],
-  file: [{ kind: 'file', id: 'g-f1', name: 'report_20260914.md', meta: '文档 · MD' }],
   system: [
     { kind: 'system', id: 'g-s1', tone: 'info', text: '上下文已压缩：12.4k → 3.1k tokens' },
     { kind: 'system', id: 'g-s2', tone: 'warn', text: '操作已中断' },

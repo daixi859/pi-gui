@@ -136,7 +136,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ store/             引擎状态的唯一入口（ADR-0013）
         │  ├─ state.ts        EngineState 形状 + zustand 实例 + send
         │  ├─ blocks.ts       MessageDelta → msgs{order,byId}，再派生成块
-        │  ├─ timeline.ts     消息 → 平铺块 + 回合段坐标 TurnSpan（tool 配对、diff 并工具行、file 卡）
+        │  ├─ timeline.ts     消息 → 平铺块 + 回合段坐标 TurnSpan（tool 配对、diff 并工具行）
         │  ├─ interaction.ts  ui 槽位、问卷回填、toast 计时
         │  ├─ engine.ts       宿主事件 dispatch + startEngine + HMR 退订
         │  └─ index.ts        动作层：组件只从这里 import
@@ -144,6 +144,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ useScrollRail.ts   滚动条贴到右边缘才露出滑块（WebKit 没有轨道 hover）
         ├─ drafts.ts          输入框草稿 store（按会话键，仅内存）
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
+        ├─ config/            渲染层通用配置表（非业务状态）：tools.ts 工具图标 + 中文动词 TOOL_META
         ├─ mock.ts            画廊样本数据（仅 Gallery 使用，不参与运行时）
         ├─ mockTimeline.ts    假流时间线数据（仅 transcript/MockStage 使用）
         ├─ util.ts            workTime 时长文案

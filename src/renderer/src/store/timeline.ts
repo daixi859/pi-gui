@@ -1,6 +1,6 @@
 /**
  * 消息 → Block 的派生（ADR-0014/0015）：宿主只搬运 pi 消息，转成什么样子在这里定。
- * 产出是平铺块 + 回合段坐标（TurnSpan）：tool 状态配对、diff / 文件卡从消息推导，
+ * 产出是平铺块 + 回合段坐标（TurnSpan）：tool 状态配对、diff 从消息推导，
  * 折叠的呈现（哪些收进折叠、收起时留什么）不在数据里，全部由组件按段坐标决定。
  * 流式中的 toolCall 只有名字（参数要等 message_end 才解析完），画成 pending 行。
  *
@@ -49,20 +49,6 @@ function parseDiff(diff: string, name: string): DiffBlock {
   }
 }
 
-/** read 打开过的文件补一张卡，limit 只为给出“前 N 行”的提示 */
-function fileBlock(path: string, limit: number): Block {
-  const name = path.split(/[\\/]/).pop() || path
-  const dot = name.lastIndexOf('.')
-  const ext = dot > 0 ? name.slice(dot + 1).toUpperCase() : '文件'
-  return {
-    kind: 'file',
-    id: `f-${++seq}-${name}`,
-    name,
-    meta: limit ? `${ext} · 前 ${limit} 行` : ext,
-    path
-  }
-}
-
 /* ---------------- 按消息 memo ----------------
  * assistant 的派生依赖它的 toolCall 配对结果（结果到达换引用才重派生），
  * 其余消息自包含，deps 为空。 */
@@ -93,7 +79,7 @@ function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[
     } else if (c.type === 'toolCall' && c.id) {
       const r = results.get(c.id)
       const details = r?.details as { diff?: unknown; patch?: unknown } | undefined
-      const args = c.arguments as { path?: unknown; limit?: unknown } | undefined
+      const args = c.arguments as { path?: unknown } | undefined
       const d =
         r && typeof details?.diff === 'string' && details.diff
           ? {
@@ -111,10 +97,6 @@ function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[
         // diff 属于它的工具行，派生时直接并进来
         ...(d ? { diff: d } : {})
       })
-      // read 成功时补一张文件卡，模型看到了什么用户也看得到
-      if (r && c.name === 'read' && !r.isError && typeof args?.path === 'string' && args.path) {
-        out.push(fileBlock(args.path, Number(args.limit ?? 0)))
-      }
     }
   })
   return out

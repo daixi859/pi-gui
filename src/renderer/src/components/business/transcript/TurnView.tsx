@@ -2,26 +2,16 @@ import { memo, useEffect, useState, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
 import { IconChevronDown, IconChevronRight, IconSpinner } from '../../base/icons'
 import { workTime } from '../../../util'
+import { toolMeta } from '../../../config/tools'
 import type { TurnActivity, TurnSpan } from '../../../store/timeline'
 import { Row, RowView } from './Transcript'
-
-/** 工具名 → 头上的中文动词 */
-const VERB: Record<string, string> = {
-  read: '阅读',
-  ls: '查看',
-  glob: '查找',
-  grep: '检索',
-  bash: '执行',
-  edit: '修改',
-  write: '写入'
-}
 
 /** live 段的活动文案：工具带参数摘要（参数没流完就省略号），思考 / 回复兜底 */
 function activityText(a: TurnActivity | undefined): string {
   if (!a) return '进行中'
   if (a.kind === 'thinking') return '思考中'
   if (a.kind === 'replying') return '回复中'
-  const verb = VERB[a.toolName ?? ''] ?? `调用 ${a.toolName}`
+  const verb = toolMeta(a.toolName ?? '')?.verb ?? `调用 ${a.toolName}`
   return a.detail ? `正在${verb} ${a.detail}` : `正在${verb}…`
 }
 

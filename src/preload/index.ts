@@ -22,7 +22,6 @@ contextBridge.exposeInMainWorld('pi', {
   },
   host: {
     copy: (text: string) => ipcRenderer.send('host:copy', text),
-    openPath: (path: string) => ipcRenderer.send('host:openPath', path),
     openExternal: (url: string) => ipcRenderer.send('host:openExternal', url),
     saveText: (name: string, text: string) => ipcRenderer.send('host:saveText', name, text),
     pickFiles: () => ipcRenderer.invoke('host:pickFiles') as Promise<string[]>,

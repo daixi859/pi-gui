@@ -10,8 +10,12 @@ import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from './blocks'
 /** 传输用的消息：pi 的 AgentMessage（含 pi-coding-agent 增补的 bashExecution / custom 等角色） */
 export type PiMessage = AgentMessage
 
-/** 消息 key：timestamp 字符串化。start → end → 落盘全程不变（ADR-0014），宿主与渲染层共用 */
-export const keyOf = (m: PiMessage): string => String(m.timestamp)
+/**
+ * 消息 key：普通消息用 timestamp 字符串化（start → end → 落盘全程不变，ADR-0014）；
+ * toolResult 用 toolCallId——同一毫秒返回的多个工具结果 timestamp 会撞车、互相覆盖。宿主与渲染层共用。
+ */
+export const keyOf = (m: PiMessage): string =>
+  m.role === 'toolResult' ? `tr-${m.toolCallId}` : String(m.timestamp)
 
 /** 可用模型：levels 为该模型支持的思考强度，已按 pi 的 ThinkingLevel 收敛 */
 export interface ModelOption {
@@ -61,7 +65,6 @@ export interface UiReply {
 /** 主进程能力：渲染层不能直接用 dialog / shell，要过这层 */
 export interface HostBridge {
   copy: (text: string) => void
-  openPath: (path: string) => void
   openExternal: (url: string) => void
   saveText: (defaultName: string, text: string) => void
   /** 弹文件选择框，返回选中的绝对路径；取消时为空数组 */
@@ -85,7 +88,7 @@ export interface PromptImage {
 }
 
 /**
- * 消息增量：key 是消息的 timestamp（字符串化），start → end → 落盘全程不变（ADR-0014）。
+ * 消息增量：key 见 keyOf（普通消息为 timestamp，toolResult 为 toolCallId），start → end → 落盘全程不变（ADR-0014）。
  * update 帧原样带整条 partial 消息（参数未解析完的 toolCall 由渲染层画成 pending），
  * 宿主不做内容过滤；顺序没变就不带 order，渲染层沿用旧数组引用。
  */

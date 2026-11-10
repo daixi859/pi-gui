@@ -1,13 +1,13 @@
 import { memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { Block } from '@shared/blocks'
-import { IconFile, IconSparkle, IconThinking } from '../../base/icons'
+import { IconSparkle, IconThinking } from '../../base/icons'
 import { MarkdownView } from '../../base/MarkdownView'
 import { workTime } from '../../../util'
 import { StepRow } from './tool/StepRow'
 import { toolView } from './tool/tools'
 
-/** 回合里的单步：思考 / 工具（diff 并在其字段里）/ 文件 / 提示。块引用不变就不重渲染 */
+/** 回合里的单步：思考 / 工具（diff 并在其字段里）/ 提示。块引用不变就不重渲染 */
 export const Step = memo(function Step({ block }: { block: Block }): ReactNode {
   switch (block.kind) {
     case 'thinking': {
@@ -31,8 +31,6 @@ export const Step = memo(function Step({ block }: { block: Block }): ReactNode {
     }
     case 'tool':
       return <StepRow {...toolView(block)} />
-    case 'file':
-      return <StepRow icon={IconFile} label="文件" detail={`${block.name} · ${block.meta}`} />
     case 'system':
       return (
         <div

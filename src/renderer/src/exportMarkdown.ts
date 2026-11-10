@@ -13,8 +13,6 @@ function line(b: Block): string {
       return `> 工具 \`${b.name}\` · ${b.state}${b.output ? `\n>\n> ${b.output.replace(/\n/g, '\n> ')}` : ''}`
     case 'diff':
       return `> 修改 \`${b.file}\` +${b.added} -${b.removed}`
-    case 'file':
-      return `> 文件 \`${b.name}\` · ${b.meta}`
     case 'system':
       return `> ${b.text}`
   }

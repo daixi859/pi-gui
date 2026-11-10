@@ -24,8 +24,8 @@
    `blocksFromEntries` 整体删除。
 3. **视图模型全部渲染层派生，不进协议**：
    - turn 折叠 / 展开 / 时长 = 组件内部状态 + 消息 timestamp 计算，切走丢失不管；
-   - tool running = 尚无配对 toolResult；error = `isError`；diff 卡 = `toolResult.details.diff`、
-     file 卡 = `toolCall.arguments.path` 派生（历史 diff 卡顺带修好）；
+   - tool running = 尚无配对 toolResult；error = `isError`；diff 卡 = `toolResult.details.diff` 派生（历史 diff 卡顺带修好）；
+     （file 卡已取消：read 的路径在工具行显示，不另派生块）；
    - streaming 光标 = `stopReason === 'pending'`；aborted = 轮末 assistant 的 `stopReason`。
 4. **宿主保留的职责**：60ms 合并 `message_update` 全量帧为增量；`uiRequest` / `uiReply` 原样；
    `toolStart` 事件删除（完整 `arguments` 本来就在消息里）。
