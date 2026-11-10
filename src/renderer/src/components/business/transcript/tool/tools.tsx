@@ -83,6 +83,7 @@ export function toolView(block: Tool): StepProps {
         children: out ? <Output text={out} /> : undefined
       }
     case 'bash':
+    case 'powershell':
       return {
         ...common,
         detail: str(a, 'command') ?? block.args,

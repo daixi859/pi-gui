@@ -1,5 +1,6 @@
 import type { Block, DiffLine } from '@shared/blocks'
 import { argDetail, type TurnActivity, type TurnSpan } from './store/timeline'
+import { liveReasoningDetail as liveDetail } from './util'
 
 /** 一帧：虚拟时刻 t（毫秒）对应的段结构。宿主每 60ms 推一次，这里照抄这个节奏 */
 export interface Frame {
@@ -111,16 +112,23 @@ class Script {
   }
 
   /** 按 60ms 一帧把文本吐出去，跟宿主的合帧节奏一致 */
-  private stream(build: (text: string, done: boolean, elapsed: number) => Block, text: string, ms: number): void {
+  private stream(
+    build: (text: string, done: boolean, elapsed: number) => Block,
+    text: string,
+    ms: number,
+    each?: (acc: string) => void
+  ): void {
     const count = Math.max(1, Math.round(ms / FLUSH))
     const size = Math.ceil(text.length / count)
     let id = ''
     for (let i = 0; i < count; i++) {
       this.t += ms / count
-      const b = build(text.slice(0, (i + 1) * size), i === count - 1, ms)
+      const acc = text.slice(0, (i + 1) * size)
+      const b = build(acc, i === count - 1, ms)
       // 第一帧插入，后面原地替换同一个 id
       if (id) this.patch(id, () => b)
       else id = this.push(b)
+      each?.(acc)
       this.flush()
     }
   }
@@ -155,7 +163,13 @@ class Script {
       (acc, done) =>
         ({ kind: 'thinking', id, text: acc, level: '最高', streaming: !done, durationMs: done ? ms : undefined }),
       text,
-      ms
+      ms,
+      // 段头跟着思考内容走：报此刻正在写的那一段，而不是干巴巴一句「思考中」
+      (acc) => {
+        if (!this.cur) return
+        const detail = liveDetail(acc)
+        this.cur.activity = { kind: 'thinking', ...(detail ? { detail } : {}) }
+      }
     )
   }
 

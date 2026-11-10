@@ -504,6 +504,9 @@ async function deleteSession(path: string): Promise<void> {
   publishSessions(lastList, scanning)
 }
 
+/** 目录并发数：瓶颈是逐文件 IO 等待，4 路即可叠起来 */
+const SCAN_CONCURRENCY = 4
+
 async function emitSessions(): Promise<void> {
   if (scanning) {
     scanAgain = true
@@ -523,27 +526,34 @@ async function emitSessions(): Promise<void> {
     // 当前目录排最前：进来先看到自己的会话，其余项目随后陆续填
     const mine = sessionDirName(cwd)
     dirs.sort((a, b) => Number(b.toLowerCase().endsWith(mine)) - Number(a.toLowerCase().endsWith(mine)))
-    const all: SessionInfo[] = []
-    for (const dir of dirs) {
-      // pi 要逐个头读 JSONL 才能拿到首条消息，一个项目几十个会话就要上百 ms
-      const one = Date.now()
-      all.push(
-        ...(await SessionManager.listAll(dir, (_loaded, _total, partial) => {
-          if (partial?.length && !scanAgain) publishSessions([...all, ...partial], true)
-        }))
-      )
-      const ms = Date.now() - one
-      // 只记慢目录：几十个会话的目录逐个打会把日志刷满
-      if (ms > 100) logLine('host', `扫描慢目录 ${dir} ${ms}ms`)
-      if (scanAgain) break
-      publishSessions(all, true)
+    // 按目录下标占位：合并顺序始终是「当前目录排最前」，与并发完成先后无关
+    const parts: SessionInfo[][] = dirs.map(() => [])
+    const all = (): SessionInfo[] => parts.flat()
+    let next = 0
+    const worker = async (): Promise<void> => {
+      while (next < dirs.length && !scanAgain) {
+        const i = next++
+        // pi 要逐个头读 JSONL 才能拿到首条消息，一个项目几十个会话就要上百 ms
+        const one = Date.now()
+        parts[i] = await SessionManager.listAll(dirs[i], (_loaded, _total, partial) => {
+          if (partial?.length && !scanAgain) {
+            parts[i] = [...partial]
+            publishSessions(all(), true)
+          }
+        })
+        const ms = Date.now() - one
+        // 只记慢目录：几十个会话的目录逐个打会把日志刷满
+        if (ms > 100) logLine('host', `扫描慢目录 ${dirs[i]} ${ms}ms`)
+        publishSessions(all(), true)
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, dirs.length) }, worker))
     // 扫描中途又被叫了一次（新会话刚落盘）：保留旧的全量，等下面重扫
     if (!scanAgain) {
-      lastList = all
-      publishSessions(all)
+      lastList = all()
+      publishSessions(lastList)
     }
-    logLine('host', `会话扫描完成 ${all.length} 条 ${Date.now() - at}ms`)
+    logLine('host', `会话扫描完成 ${all().length} 条 ${Date.now() - at}ms`)
   } finally {
     scanning = false
     if (scanAgain) {

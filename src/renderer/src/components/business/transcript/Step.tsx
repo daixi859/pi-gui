@@ -1,30 +1,40 @@
 import { memo, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { Block } from '@shared/blocks'
-import { IconSparkle, IconThinking } from '../../base/icons'
+import { IconSparkle } from '../../base/icons'
 import { MarkdownView } from '../../base/MarkdownView'
-import { workTime } from '../../../util'
+import { reasoningSummary, workTime } from '../../../util'
 import { StepRow } from './tool/StepRow'
 import { toolView } from './tool/tools'
+import { toolMeta } from '../../../config/tools'
 
 /** 回合里的单步：思考 / 工具（diff 并在其字段里）/ 提示。块引用不变就不重渲染 */
 export const Step = memo(function Step({ block }: { block: Block }): ReactNode {
   switch (block.kind) {
     case 'thinking': {
-      const meta = [
-        block.streaming ? '思考中…' : block.durationMs ? `持续 ${workTime(block.durationMs)}` : '',
-        block.level ?? ''
-      ].filter(Boolean)
+      // 摘要照 deepseek-harness：流式中只推「已完成段落首行」，落定给首行；全文在展开体里。
+      // 空思考（只有签名/空白）整行不渲染，和 harness 一样
+      if (block.text.trim() === '') return null
+      const running = block.streaming === true
+      const summary = reasoningSummary(block.text, running)
+      const meta = toolMeta('thinking')
+      // 档位一直报；耗时只在落定后报（摘要之后的 extra 插槽）
+      const info = [!running && block.durationMs ? `持续 ${workTime(block.durationMs)}` : '', block.level ?? '']
+        .filter(Boolean)
+        .join(' · ')
       return (
         <StepRow
-          icon={IconThinking}
-          label="思考"
-          detail={meta.join(' · ')}
-          state={block.streaming ? 'running' : undefined}
+          icon={meta?.icon ?? IconSparkle}
+          label={meta?.verb ?? '思考'}
+          live={running ? summary : undefined}
+          detail={running ? undefined : summary}
+          extra={info || undefined}
+          state={running ? 'running' : undefined}
+          streamSummary
+          keepSummaryWhenOpen={false}
+          stickyHeader
           children={
-            block.text ? (
-              <div className="text-xs leading-prose whitespace-pre-wrap text-muted">{block.text}</div>
-            ) : undefined
+            <div className="text-xs leading-prose whitespace-pre-wrap text-muted">{block.text}</div>
           }
         />
       )

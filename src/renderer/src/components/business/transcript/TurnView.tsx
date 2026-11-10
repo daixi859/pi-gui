@@ -1,28 +1,36 @@
-import { memo, useEffect, useState, type ReactNode } from 'react'
+import { memo, useState, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
-import { IconChevronDown, IconChevronRight, IconSpinner } from '../../base/icons'
+import { IconChevronDown, IconChevronRight } from '../../base/icons'
+import { Shimmer } from '../../base/Shimmer'
 import { workTime } from '../../../util'
 import { toolMeta } from '../../../config/tools'
 import type { TurnActivity, TurnSpan } from '../../../store/timeline'
 import { Row, RowView } from './Transcript'
 
-/** live 段的活动文案：工具带参数摘要（参数没流完就省略号），思考 / 回复兜底 */
+/**
+ * live 段的活动文案：动词 + 一行任务摘要，用同一个「 · 」分隔（照 deepseek-harness 的分组头）。
+ * 摘要来自此刻正在做的事：工具参数、正在写的思考段落；没有摘要时只报动词。
+ */
 function activityText(a: TurnActivity | undefined): string {
   if (!a) return '进行中'
-  if (a.kind === 'thinking') return '思考中'
-  if (a.kind === 'replying') return '回复中'
+  if (a.kind === 'thinking') return a.detail ? `正在思考 · ${a.detail}` : '正在思考'
+  if (a.kind === 'replying') return '正在回复'
   const verb = toolMeta(a.toolName ?? '')?.verb ?? `调用 ${a.toolName}`
-  return a.detail ? `正在${verb} ${a.detail}` : `正在${verb}…`
+  const label = `正在${verb}`
+  return a.detail ? `${label} · ${a.detail}` : label
 }
 
-/** live 段的走表时钟：独立组件每秒只重渲这一个数，派生与转录都不参与 */
-function RunClock({ startedAt }: { startedAt: number }): ReactNode {
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    const timer = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(timer)
-  }, [])
-  return <span className="text-faint">· {workTime(Date.now() - startedAt)}</span>
+/**
+ * live 段的状态行：只报「此刻在干什么」，整体流光。
+ * 不外挂走表——进行中的时长不是信息，每秒重渲一次也只为了让数字变；落定后的总时长由 turnTitle 给。
+ * 摘要随内容变长，始终单行：超出即省略号（照 deepseek-harness 分组头的 .label）。
+ */
+function LiveLine({ a }: { a: TurnActivity | undefined }): ReactNode {
+  return (
+    <Shimmer active className="min-w-0 flex-1">
+      <span className="block truncate">{activityText(a)}</span>
+    </Shimmer>
+  )
 }
 
 /** 落定后的状态文案：正常收工带定格时长（紧凑写法，如「3分15秒」），中断替换掉时长 */
@@ -31,7 +39,7 @@ function turnTitle(span: TurnSpan): string {
   return `已完成，用时 ${workTime(span.durationMs).replace(/ /g, '')}`
 }
 
-/** 折叠头：live 显示当前活动 + 走表，落定只留状态文案；统计与时长全来自段坐标 */
+/** 折叠头：箭头在前（与思考 / 工具行同一侧），live 显示当前活动，落定只留状态文案 */
 function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggle: () => void }): ReactNode {
   return (
     <button
@@ -40,10 +48,12 @@ function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggl
       aria-expanded={open}
       className="flex h-8 w-full items-center gap-1 border-b border-edge px-1 text-sm text-muted transition-colors hover:text-fg"
     >
-      <span>{span.live ? activityText(span.activity) : turnTitle(span)}</span>
-      {span.live ? <RunClock startedAt={span.startedAt} /> : null}
-      {span.live ? <IconSpinner className="size-3.5" /> : null}
-      {open ? <IconChevronDown className="size-3.5 text-faint" /> : <IconChevronRight className="size-3.5 text-faint" />}
+      {open ? (
+        <IconChevronDown className="size-3.5 shrink-0 text-faint" />
+      ) : (
+        <IconChevronRight className="size-3.5 shrink-0 text-faint" />
+      )}
+      {span.live ? <LiveLine a={span.activity} /> : turnTitle(span)}
     </button>
   )
 }
@@ -51,10 +61,8 @@ function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggl
 /** 无过程块（纯文本回合）：只给一行状态，不可折叠 */
 function TurnBare({ span }: { span: TurnSpan }): ReactNode {
   return (
-    <div className="flex h-8 w-full items-center gap-1 px-1 text-xs text-faint">
-      <span>{span.live ? activityText(span.activity) : turnTitle(span)}</span>
-      {span.live ? <RunClock startedAt={span.startedAt} /> : null}
-      {span.live ? <IconSpinner className="size-3.5" /> : null}
+    <div className="flex h-8 w-full items-center px-1 text-xs text-faint">
+      {span.live ? <LiveLine a={span.activity} /> : turnTitle(span)}
     </div>
   )
 }

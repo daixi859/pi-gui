@@ -8,6 +8,7 @@
  */
 import type { PiMessage } from '@shared/ipc'
 import { LEVEL_LABEL, type Block, type DiffBlock, type DiffLine, type SystemTone } from '@shared/blocks'
+import { liveReasoningDetail } from '../util'
 
 type Assistant = Extract<PiMessage, { role: 'assistant' }>
 type ToolResult = Extract<PiMessage, { role: 'toolResult' }>
@@ -71,9 +72,17 @@ function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[
   const out: Block[] = []
   const streaming = m.stopReason === 'pending'
   const level = LEVEL_LABEL[m.thinkingLevel ?? ''] ?? undefined
+  // 流式尾巴只有一个块是「正在跑」的（照 deepseek-harness）：思考行只看自己是不是最后一个
+  const last = m.content.length - 1
   m.content.forEach((c, i) => {
     if (c.type === 'thinking' && c.thinking) {
-      out.push({ kind: 'thinking', id: `th-${m.timestamp}-${i}`, text: c.thinking, level, streaming })
+      out.push({
+        kind: 'thinking',
+        id: `th-${m.timestamp}-${i}`,
+        text: c.thinking,
+        level,
+        streaming: streaming && i === last
+      })
     } else if (c.type === 'text' && c.text) {
       out.push({ kind: 'assistant', id: `a-${m.timestamp}-${i}`, text: c.text, streaming })
     } else if (c.type === 'toolCall' && c.id) {
@@ -272,7 +281,10 @@ function groupActivity(g: Group, results: Map<string, ToolResult>): TurnActivity
     }
     if (m.stopReason === 'pending') {
       const last = [...m.content].reverse().find((c) => c.type === 'thinking' || c.type === 'text')
-      return last?.type === 'thinking' ? { kind: 'thinking' } : { kind: 'replying' }
+      if (last?.type !== 'thinking') return { kind: 'replying' }
+      // 分组头报「此刻正在写的那一段」，与思考行自己的「已完成段落首行」刻意不同（照 deepseek-harness）
+      const detail = liveReasoningDetail(last.thinking ?? '')
+      return { kind: 'thinking', ...(detail ? { detail } : {}) }
     }
     return { kind: 'thinking' }
   }

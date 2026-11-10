@@ -81,6 +81,8 @@
   --color-add: var(--color-success-6);
   --color-del: var(--color-danger-6);
   --color-warn: var(--color-warning-6);
+  /* 运行中流光的亮带色：亮带扫过时文字比 muted 更实（浅底上是「加深」，不是提亮） */
+  --color-shimmer: var(--color-neutral-10);
 
   /* 透明黑蒙层：hover 用 tint，按压/常驻态用 tint-strong */
   --color-tint: rgb(0 0 0 / 0.04);
@@ -149,6 +151,53 @@
 }
 @utility pi-input {
   @apply rounded-sm border border-edge bg-panel/80 px-2 py-1 text-sm text-fg outline-none placeholder:text-faint focus:border-muted;
+}
+/* 运行中（思考 / 执行命令）：一次扫光，照 deepseek-harness 的 TextShimmer。
+   pi-shimmer 是结构常驻的外壳（inline-grid + max-width，两层共用一个坐标系），
+   pi-shimmer-content 是真文字（可选中、读屏可读），pi-shimmer-decoration 是 inert 装饰层，
+   里面 pi-sweep 带移动遮罩、pi-sweep-copy 反向平移相抵，字形不动。 */
+@utility pi-shimmer {
+  @apply relative inline-grid max-w-full min-w-0 align-top;
+  width: max-content;
+}
+@utility pi-shimmer-content {
+  @apply flex min-w-0 items-center;
+}
+@utility pi-shimmer-decoration {
+  @apply pointer-events-none absolute inset-0 overflow-clip select-none;
+}
+@utility pi-sweep {
+  @apply absolute inset-0 overflow-hidden;
+  color: var(--color-shimmer);
+  -webkit-mask-image: linear-gradient(105deg, transparent 0%, #000 40%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(105deg, transparent 0%, #000 40%, #000 60%, transparent 100%);
+  /* 起始位移写成静态值：animation-delay 的 0.3s 里还没进入首帧，
+     没有它副本会先按原位正对基础文字闪一下 */
+  transform: translateX(-100%);
+  animation: sweep-box 1.5s steps(48, end) 0.3s infinite;
+}
+/* 副本按基础层的同一套 flex 布局排，宽度铺满，字形才能逐字对齐 */
+@utility pi-sweep-copy {
+  @apply flex size-full min-w-0 items-center;
+  transform: translateX(100%);
+  animation: sweep-copy 1.5s steps(48, end) 0.3s infinite;
+}
+/* 亮带是唯一的着色来源：副本里的语义色（text-muted / text-del）让位，否则亮带扫不出来 */
+.pi-sweep * {
+  color: inherit !important;
+}
+/* 分隔点这类装饰块用背景色画，换成 currentColor 才跟着亮带走 */
+.pi-sweep [data-shimmer-decoration] {
+  background: currentColor;
+}
+/* 流式中摘要的右端渐隐：48px 内淡出，代替省略号（还没写完，不该读成「说完了」） */
+@utility pi-fade-end {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
+}
+/* 展开后钉在顶部的行头：要底色才盖得住滚过的正文（照 deepseek-harness 的 DisclosureRow） */
+@utility pi-sticky-head {
+  @apply sticky top-0 z-10 bg-canvas;
 }
 
 html,
@@ -306,6 +355,26 @@ body {
     opacity: 0;
   }
 }
+/* 亮带从左外侧扫到右外侧；叠层副本反向平移，两者相抵，字形不动（见 pi-sweep）。
+   66.67% 之后停住：扫一遍 + 停一拍的节奏，模型停顿时亮带也停下，读起来才像「在跑」 */
+@keyframes sweep-box {
+  0% {
+    transform: translateX(-100%);
+  }
+  66.6667%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes sweep-copy {
+  0% {
+    transform: translateX(100%);
+  }
+  66.6667%,
+  100% {
+    transform: translateX(-100%);
+  }
+}
 /* 三点呼吸：等模型/加载会话时的常驻指示 */
 .breathe {
   animation: breathe 1.2s ease-in-out infinite;
@@ -352,6 +421,14 @@ a:focus-visible,
   }
   .pi-menu {
     transition: none;
+  }
+  /* 只藏装饰层：真实文字与右端渐隐照常，运行状态仍看得出来 */
+  .pi-shimmer-decoration {
+    display: none;
+  }
+  .pi-sweep,
+  .pi-sweep-copy {
+    animation: none;
   }
 }
 

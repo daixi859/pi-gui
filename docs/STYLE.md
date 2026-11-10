@@ -85,6 +85,9 @@
 | `pi-menu` / `pi-menu-item` | 下拉容器（8px 圆角）/ 下拉项（28px 行高、项间距 2px、hover 4px 圆角） |
 | `pi-page` | 内容页容器（820px 最大宽 + 32px 横向内边距） |
 | `pi-input` | 单行输入框（含 placeholder / focus 描边） |
+| `pi-shimmer` / `pi-shimmer-content` / `pi-shimmer-decoration` / `pi-sweep` / `pi-sweep-copy` | 运行中文字的一次扫光：真实文字留在基础层（可选中、可读屏），之上叠 inert 装饰副本，移动遮罩扫出亮带，两层反向平移相抵使字形不动。业务代码不直接写类名，统一用 `components/base/Shimmer.tsx` 的 `<Shimmer active>`；包整条行头（标题 + 装饰圆点 + 摘要），落定即 `active={false}`。装饰点用 `data-shimmer-decoration` 让底色跟随亮带 |
+| `pi-fade-end` | 流式中文字的右端 48px 渐隐，代替省略号（内容还在写，不该读成「说完了」）；只用于思考摘要，非流式时仍用 `text-ellipsis` |
+| `pi-sticky-head` | 展开后钉在顶部的行头：粘性定位 + 画布底色（盖住滚过的正文）；只用于 `StepRow` 的 `stickyHeader` |
 
 语义类只装**结构与状态**，不装业务尺寸。业务差异继续用工具类叠加：`className="pi-card p-4 shadow-dialog"`。
 
@@ -100,6 +103,7 @@ className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
 - focus：输入类用 `border-muted`；按钮与可点行必须有 `focus-visible` 可见焦点（2px 环，offset 2px），不允许只剩浏览器默认。
 - disabled：`opacity-35`，并显式去掉 hover 底色（`disabled:hover:bg-transparent`）。
 - 动效只回应人的动作（展开、确认、状态变化），时长 120–180ms、ease-out；不做逐段入场、不做常驻漂浮动画。
+  - 唯一例外：`pi-sweep`（运行中文字的流光）是常驻循环，用来表达「还在跑」，1.5s 一轮，末尾 1/3 停住一拍（扫一遍、停一下），模型停顿时亮带也停，读起来才像在跑。
 - 尊重 `prefers-reduced-motion`：新动效必须在该媒体查询里关闭。
 - 可点区域 ≥24×24（`size-6`）；纯图标按钮必须有 `aria-label`。
 
