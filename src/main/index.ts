@@ -3,10 +3,7 @@ import { isAbsolute, join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import type { AgentCommand, AgentEvent } from '@shared/ipc'
-import { logLine, logStamp, sinceStart } from './log'
-
-// 主进程启动时间线全落在 tmp/log/<时间戳>.log，和宿主的 +Nms 对齐看
-logLine('main', 'index.js 开始求值')
+import { logStamp } from './log'
 
 let win: BrowserWindow | null = null
 let host: Electron.UtilityProcess | null = null
@@ -36,7 +33,6 @@ function spawnHost(): void {
   })
   host.stdout?.on('data', (d: Buffer) => console.log('[agent]', String(d).trim()))
   host.stderr?.on('data', (d: Buffer) => console.error('[agent]', String(d).trim()))
-  host.on('spawn', () => logLine('main', 'utilityProcess 已创建'))
   host.on('message', (msg: AgentEvent) => emit(msg))
   host.on('exit', (code) => {
     host = null
@@ -93,15 +89,8 @@ function createWindow(): void {
     if (EXTERNAL.test(url)) void shell.openExternal(url)
   })
   win.on('ready-to-show', () => {
-    logLine('main', '窗口 ready-to-show（首次可见）')
     win?.show()
   })
-  // 渲染层的 [boot] 埋点走 console，这里转发进同一个日志文件，时间线才能对上
-  win.webContents.on('console-message', (details) => {
-    const text = details.message
-    if (text.startsWith('[boot]')) logLine('renderer', text.slice(7))
-  })
-  win.webContents.on('did-finish-load', () => logLine('main', '渲染层 did-finish-load（JS 执行完）'))
   win.on('closed', () => {
     win = null
   })
@@ -224,7 +213,6 @@ ipcMain.on('host:saveText', async (_e, name: string, text: string) => {
 })
 
 app.whenReady().then(() => {
-  logLine('main', 'app ready')
   // 双击图标只开一个窗口，否则两个宿主抢同一批会话文件。
   // dev（有 ELECTRON_RENDERER_URL）不抢：它要和构建产物并行跑起来调试。
   if (!process.env.ELECTRON_RENDERER_URL && !app.requestSingleInstanceLock()) {
@@ -238,7 +226,6 @@ app.whenReady().then(() => {
   })
   // 宿主先起：它要花 ~1.7s 加载 pi SDK，和建窗/渲染层加载并行
   spawnHost()
-  logLine('main', '宿主已拉起，开始建窗')
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -246,7 +233,6 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  logLine('main', `window-all-closed，进程存活 +${sinceStart()}ms`)
   host?.kill()
   if (process.platform !== 'darwin') app.quit()
 })

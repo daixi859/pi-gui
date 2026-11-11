@@ -11,14 +11,13 @@ import { execFile } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { readdir } from 'node:fs/promises'
 import { basename, join, relative, resolve } from 'node:path'
-import {
-  createAgentSession,
-  DefaultResourceLoader,
-  getAgentDir,
-  SessionManager,
-  sessionEntryToContextMessages
-} from '@earendil-works/pi-coding-agent'
+import type * as Pi from '@earendil-works/pi-coding-agent'
 import type { ExtensionAPI, SessionInfo } from '@earendil-works/pi-coding-agent'
+
+// 打包版 bundle/index.js：逐文件 ESM 解析要 ~1.7s，打包后 ~0.2s，导出一致。
+// exports 字段只开放了 "." 与 "./rpc-entry"，所以按包入口的位置相对找。
+const { createAgentSession, DefaultResourceLoader, getAgentDir, SessionManager, sessionEntryToContextMessages } =
+  (await import(new URL('bundle/index.js', import.meta.resolve('@earendil-works/pi-coding-agent')).href)) as typeof Pi
 import {
   keyOf,
   type AccessMode,
@@ -32,18 +31,12 @@ import {
 } from '@shared/ipc'
 import { LEVEL_LABEL } from '@shared/blocks'
 import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
-import { logLine, sinceStart, track } from './log'
-
-// 埋点第一行：此时上面所有 import（含 pi SDK 约 12MB 的模块图）都已求值完毕，
-// 所以这个数就是「utilityProcess 起来了 + SDK 加载完」的合计耗时。
-logLine('host', `模块就绪（含 SDK import） +${sinceStart()}ms`)
-
 type Session = Awaited<ReturnType<typeof createAgentSession>>['session']
 
 /** 一个会话在宿主里的全部状态：切走后原样留着，后台继续跑，切回来直接恢复 */
 interface Mounted {
   session: Session
-  manager: SessionManager
+  manager: Pi.SessionManager
   detach: () => void
   cwd: string
   /** 会话消息：key 是 timestamp（start → end → 落盘不变，ADR-0014），按到达顺序存 */
@@ -513,7 +506,6 @@ async function emitSessions(): Promise<void> {
     return
   }
   scanning = true
-  const at = Date.now()
   // 上一批结果先顶上，免得重扫时侧栏一闪变空
   publishSessions(lastList, true)
   try {
@@ -533,17 +525,13 @@ async function emitSessions(): Promise<void> {
     const worker = async (): Promise<void> => {
       while (next < dirs.length && !scanAgain) {
         const i = next++
-        // pi 要逐个头读 JSONL 才能拿到首条消息，一个项目几十个会话就要上百 ms
-        const one = Date.now()
+        // pi 要逐个头读 JSONL 才能拿到首条消息
         parts[i] = await SessionManager.listAll(dirs[i], (_loaded, _total, partial) => {
           if (partial?.length && !scanAgain) {
             parts[i] = [...partial]
             publishSessions(all(), true)
           }
         })
-        const ms = Date.now() - one
-        // 只记慢目录：几十个会话的目录逐个打会把日志刷满
-        if (ms > 100) logLine('host', `扫描慢目录 ${dirs[i]} ${ms}ms`)
         publishSessions(all(), true)
       }
     }
@@ -553,7 +541,6 @@ async function emitSessions(): Promise<void> {
       lastList = all()
       publishSessions(lastList)
     }
-    logLine('host', `会话扫描完成 ${all().length} 条 ${Date.now() - at}ms`)
   } finally {
     scanning = false
     if (scanAgain) {
@@ -583,22 +570,20 @@ function levelsOf(model: { thinkingLevelMap?: Record<string, string | null>; rea
 }
 
 /** 默认 loader 之外多挂一个权限门扩展；其余扩展、技能、模板照旧从 ~/.pi/agent 加载 */
-async function createSession(manager: SessionManager, ui: UiBridge): Promise<Session> {
+async function createSession(manager: Pi.SessionManager, ui: UiBridge): Promise<Session> {
   const dir = manager.getCwd() || cwd
   const loader = new DefaultResourceLoader({
     cwd: dir,
     agentDir: getAgentDir(),
     extensionFactories: [{ name: 'pigui-permission-gate', factory: permissionGate(ui), hidden: true }]
   })
-  // 扩展/技能/提示模板都在这步加载，实测 ~0.9s（大头是 jiti 编译 ~/.pi/agent 下的 TS 扩展）
-  await track('host', 'loader.reload', () => loader.reload())
-  return (await track('host', 'createAgentSession', () =>
-    createAgentSession({ sessionManager: manager, cwd: dir, resourceLoader: loader })
-  )).session
+  // 扩展/技能/提示模板都在这步加载（大头是 jiti 编译 ~/.pi/agent 下的 TS 扩展）
+  await loader.reload()
+  return (await createAgentSession({ sessionManager: manager, cwd: dir, resourceLoader: loader })).session
 }
 
 /** 建会话、订阅事件、挂 UI 桥；一个会话一份状态，切走不是 dispose */
-async function mount(manager: SessionManager): Promise<Mounted> {
+async function mount(manager: Pi.SessionManager): Promise<Mounted> {
   const liveTools: string[] = []
   const ui = uiContextFor(liveTools)
   const created = await createSession(manager, ui)
@@ -619,7 +604,7 @@ async function mount(manager: SessionManager): Promise<Mounted> {
   }
   rec.detach = created.subscribe((ev) => onEvent(rec, ev))
   // mode="rpc" 让扩展走可编程的 ui.* 路径而不是 TUI 渲染
-  await track('host', 'bindExtensions', () => created.bindExtensions({ uiContext: ui as never, mode: 'rpc' }))
+  await created.bindExtensions({ uiContext: ui as never, mode: 'rpc' })
   mounted.set(manager.getSessionFile() ?? '', rec)
   return rec
 }
@@ -653,7 +638,6 @@ async function start(cwdOverride?: string): Promise<void> {
   // scanning 时不能报 loading=false，否则会把正在用的搜索状态清掉
   publishSessions(lastList, scanning)
   prune()
-  logLine('host', '首个会话就绪（渲染层此时才能用）')
 }
 
 async function open(path: string): Promise<void> {
@@ -838,7 +822,6 @@ async function handle(cmd: AgentCommand): Promise<void> {
   try {
     switch (cmd.type) {
       case 'init':
-        logLine('host', '收到 init 命令')
         loadProjects()
         // 扫会话列表要 ~850ms，和建会话并行，先用分批结果把侧栏填上
         void emitSessions()

@@ -53,16 +53,6 @@ export function logLine(tag: string, ...parts: unknown[]): void {
   }
 }
 
-/** 量一段异步操作的耗时，跑完（含抛错）都记一行：await track('host:init', 'loader.reload', () => loader.reload()) */
-export async function track<T>(tag: string, label: string, run: () => Promise<T>): Promise<T> {
-  const at = Date.now()
-  try {
-    return await run()
-  } finally {
-    logLine(tag, `${label} ${Date.now() - at}ms`)
-  }
-}
-
 /** 把流式 chunk 按行切好再落盘，避免一条日志被 TCP/管道的分块拆成多行 */
 export function drainLines(onLine: (line: string) => void): (chunk: Buffer) => void {
   let rest = ''
