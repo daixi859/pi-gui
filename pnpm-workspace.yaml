@@ -1,0 +1,32 @@
+# pnpm workspace：根目录是 Electron 应用本身（pi），子项目各自独立 package.json。
+# 根始终是 workspace 成员，这里只列子包。
+packages:
+  - conversation-block-react
+  - web-demo
+
+# 扁平化 node_modules（与 npm 时代一致）。scripts/pack.mjs 依赖扁平布局原样拷贝生产依赖，
+# 默认的符号链接布局（.pnpm 虚拟仓库）会让打包逻辑失效。
+# pnpm 10+ 的项目级设置只认本文件，不认 .npmrc。
+nodeLinker: hoisted
+
+# 共享依赖版本的唯一来源。子包与根用 "catalog:" 引用，升级只改这里。
+catalog:
+  "@tailwindcss/vite": ^4.3.3
+  "@types/node": ^26.6.6
+  "@types/react": ^19.3.0
+  "@types/react-dom": ^19.3.0
+  "@vitejs/plugin-react": ^6.1.2
+  clsx: ^2.1.1
+  react: ^19.3.1
+  react-dom: ^19.3.1
+  react-markdown: ^10.1.0
+  remark-gfm: ^4.0.1
+  tailwindcss: ^4.3.3
+  typescript: ^7.0.2
+  vite: ^8.3.5
+
+# 允许运行安装脚本的依赖：electron 下载运行时，protobufjs 有 postinstall，@google/genai 的 preinstall 为 no-op。
+allowBuilds:
+  '@google/genai': true
+  electron: true
+  protobufjs: true

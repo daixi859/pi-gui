@@ -5,11 +5,24 @@ Electron + React 的 pi agent 图形界面。**只做壳**：所有 agent 能力
 ## 命令
 
 ```bash
-npm run dev        # 开发（先确认没在跑：Get-Process electron | Stop-Process -Force）
-npm run typecheck  # 三端类型检查，改完必跑
+pnpm run dev        # 开发（先确认没在跑：Get-Process electron | Stop-Process -Force）
+pnpm run typecheck  # 三端类型检查，改完必跑
 ```
 
-无测试、无 lint、无 git。**没有版本控制**，改文件要精确替换并跑 `npm run typecheck`。
+包管理器是 **pnpm**（根 `package.json` 的 `packageManager` 固定版本），不要用 `npm install` / `npx`，否则会生成 `package-lock.json` 或破坏扁平布局。
+
+## 工作区（pnpm workspace）
+
+- 根目录就是 Electron 应用 `pi`，同时是 workspace 的一员。
+- 子项目列在 `pnpm-workspace.yaml` 的 `packages` 中：`conversation-block-react/`、`web-demo/`。各自有独立 `package.json`。
+- 共享依赖版本只在 `pnpm-workspace.yaml` 的 `catalog:` 里写一次，子包用 `"catalog:"` 引用。升级依赖只改这一处。
+- 子包命令用 `--filter`：`pnpm --filter web-demo dev`、`pnpm --filter conversation-block-react build`。
+- `pnpm-workspace.yaml` 里 `nodeLinker: hoisted` 不能删：`scripts/pack.mjs` 依赖扁平的 `node_modules` 原样拷贝生产依赖。
+- 安装脚本白名单在 `allowBuilds`（electron、protobufjs、@google/genai）。新增带安装脚本的依赖要同步加入。
+
+有测试脚本的只有 `conversation-block-react`（`pnpm --filter conversation-block-react check` 跑 reducer 校验，`lint` 用 oxlint）。根目录无测试、无 lint。
+
+项目有 git 仓库（根目录 `.git`）。改文件仍要精确替换，改完跑 `pnpm run typecheck`。
 
 ## 进程模型
 
@@ -65,4 +78,4 @@ npm run typecheck  # 三端类型检查，改完必跑
 
 **临时文件统一放项目根的 `tmp/`**（已被 `.gitignore` 忽略，可整体删除）：运行日志 `tmp/log/`、dev 输出 `tmp/dev.log`、临时截图与探针脚本。只有文档要引用的截图才进 `docs/screenshots/`。
 
-**原则上用户可以直接查看的不用启动无头浏览器截图验证**：改完跑 `npm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、用户无法判断的或跨进程改动时才需要启动验证。
+**原则上用户可以直接查看的不用启动无头浏览器截图验证**：改完跑 `pnpm run typecheck`，然后直接向用户确认效果即可。涉及 JS 复杂行为、用户无法判断的或跨进程改动时才需要启动验证。

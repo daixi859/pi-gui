@@ -1,8 +1,8 @@
 // 打绿色版：release/Pi/ 整个文件夹拷走就能双击 Pi.exe 跑，不依赖本仓库。
-// 用法：npm run release
+// 用法：pnpm run release
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, normalize, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -15,7 +15,7 @@ function run(cmd, args) {
 }
 
 console.log('› 构建')
-run('npx', ['electron-vite', 'build'])
+run('pnpm', ['exec', 'electron-vite', 'build'])
 
 // 只清 out 里的内容，保留 out 目录本身（它可能被占用或是有特殊权限的目录）
 console.log('› 清空', relative(root, out))
@@ -39,17 +39,25 @@ writeFileSync(
 // agent-host 在运行时 import pi SDK，所以生产依赖必须实打实躺在磁盘上。
 // 按本地 node_modules 的扁平化布局原样复制，离线也能打包。
 console.log('› 拷贝生产依赖（约 700MB，慢）')
-// npm ls 对 extraneous 包会返回非零，只要 stdout 有东西就照抄
-const list = spawnSync('npm', ['ls', '--omit=dev', '--all', '--parseable'], {
+// pnpm ls 对 extraneous 包会返回非零，只要 stdout 有东西就照抄。
+// pnpm-workspace.yaml 的 nodeLinker=hoisted 保证 node_modules 是扁平布局，这里的路径拷贝才成立。
+const list = spawnSync('pnpm', ['ls', '--prod', '--depth', 'Infinity', '--parseable'], {
   cwd: root,
   encoding: 'utf8',
   shell: true
 })
-const dirs = String(list.stdout ?? '')
-  .split('\n')
-  .map((s) => s.trim())
-  .filter((p) => p && p !== root && existsSync(p))
-if (!dirs.length) throw new Error('npm ls 没列出生产依赖：' + list.error)
+// 同一个包在输出里可能出现正/反斜杠两种写法，按规范化路径去重，避免重复拷贝。
+const dirs = [
+  ...new Set(
+    String(list.stdout ?? '')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((p) => p && existsSync(p))
+      .map((p) => normalize(p))
+      .filter((p) => p !== normalize(root))
+  )
+]
+if (!dirs.length) throw new Error('pnpm ls 没列出生产依赖：' + list.error)
 for (const dir of dirs) cpSync(dir, join(app, 'node_modules', relative(join(root, 'node_modules'), dir)), { recursive: true })
 
 console.log('› 写启动器')

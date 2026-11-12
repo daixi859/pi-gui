@@ -134,7 +134,7 @@ className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
 2. 需要新颜色/新阴影：加 `@theme` 变量，命名按角色（`--color-<role>`、`--shadow-<role>`），并在本文件补一行说明。
 3. 同一组合出现第 3 次：提 `pi-` 类；控件型组合优先落成基础组件而不是 `pi-` 类。
 4. 用「组件预览」页验证：改令牌实时看效果，「复制为 CSS」把最终值贴回 `@theme`。预览面板里改过的令牌会写进 `:root` 并存 localStorage，启动时（`main.tsx` 的 `initTokens()`）回放，所以改了就全局一直生效，不进预览页也一样；没改过的键不写内联，继续跟 `@theme` 走。想恢复默认点面板里的「重置」。
-5. 跑 `npm run typecheck`，截图确认视觉无回归（含焦点态、窄窗口）。
+5. 跑 `pnpm run typecheck`，截图确认视觉无回归（含焦点态、窄窗口）。
 
 ## 9. 反例
 

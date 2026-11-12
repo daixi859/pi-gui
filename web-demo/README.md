@@ -1,6 +1,6 @@
 # Pi Web Demo
 
-独立的 Vite + React + Tailwind 4 演示站，用来展示 PiGui 的页面外壳与对话块交互。它复用仓库根目录的依赖，不写入根 `package.json`，也不参与 Electron 构建。
+独立的 Vite + React + Tailwind 4 演示站，用来展示 PiGui 的页面外壳与对话块交互。它是 pnpm workspace 的子包（自己的 `web-demo/package.json`，依赖在仓库根统一安装），不参与 Electron 构建。
 
 数据来自本机 pi 会话历史，已转成静态 mock；不会真的执行命令或调用模型。
 
@@ -9,7 +9,8 @@
 在仓库根目录：
 
 ```bash
-npx vite --config web-demo/vite.config.ts
+pnpm install                          # 仓库根执行一次
+pnpm --filter web-demo dev
 ```
 
 打开 <http://localhost:5179>。端口固定为 5179，避免和 Electron 开发服务器冲突。
@@ -17,8 +18,8 @@ npx vite --config web-demo/vite.config.ts
 校验：
 
 ```bash
-npx tsc --noEmit -p web-demo/tsconfig.json
-npx vite build --config web-demo/vite.config.ts --outDir ../tmp/web-demo-dist
+pnpm --filter web-demo typecheck
+pnpm --filter web-demo exec vite build --outDir ../tmp/web-demo-dist
 ```
 
 ## 页面
