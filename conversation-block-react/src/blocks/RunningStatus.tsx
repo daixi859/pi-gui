@@ -13,7 +13,6 @@ const REST_PATH =
 export const RunningStatus = memo(function RunningStatus({ label, active = true }: { label?: string; active?: boolean }) {
   return (
     <div className="running" aria-live="polite">
-      <span className="runningDivider" aria-hidden="true" />
       <span className="runningContent">
         <span className="runningIcon" aria-hidden="true">
           <span className="runningWhaleAnimated" />
@@ -23,7 +22,6 @@ export const RunningStatus = memo(function RunningStatus({ label, active = true 
         </span>
         <TextShimmer active={active} className="runningText">{label ?? zh.running}</TextShimmer>
       </span>
-      <span className="runningTail" aria-hidden="true" />
     </div>
   )
 })

@@ -104,6 +104,7 @@ export const ToolRow = memo(function ToolRow({
         expandOnRowClick
         onToggle={toggle}
         running={running}
+        titleClassName="compactTitle"
         headerAccessory={accessory}
         collapsedContent={
           summary !== '' ? (

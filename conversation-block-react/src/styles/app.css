@@ -765,6 +765,18 @@ button {
   color: var(--dsw-alias-state-error-primary);
 }
 
+/* 思考行与工具行的表头（标题 + 摘要）统一 12px；分组标题不受影响。
+   标题 span 自带 font-size（DisclosureRow.module.css），需用 compactTitle 覆盖。 */
+.thinking [data-disclosure-header],
+.tool [data-disclosure-header] {
+  font-size: 12px;
+}
+
+.thinking .compactTitle,
+.tool .compactTitle {
+  font-size: 12px;
+}
+
 /* 细滚动条：分组体与思考体 */
 .groupBody,
 .thinkingBody {
@@ -1326,18 +1338,11 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 8px;
   padding: 10px 0 2px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
-}
-
-/* 尾线与左侧短线同宽，把「深度求索中，用时 X」夹在中间。 */
-.runningDivider,
-.runningTail {
-  flex: none;
-  width: 16px;
-  height: 1px;
-  background: var(--dsw-alias-border-l2);
+  font-size: 12px;
 }
 
 .runningContent {

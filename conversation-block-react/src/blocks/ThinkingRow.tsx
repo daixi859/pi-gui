@@ -67,6 +67,7 @@ export const ThinkingRow = memo(function ThinkingRow({ block }: { block: Thinkin
         expandOnRowClick
         onToggle={() => setOpen(value => !value)}
         running={streaming}
+        titleClassName="compactTitle"
         collapsedContent={summary !== '' ? <span className="toolSummary">{summary}</span> : null}
       >
         <div
