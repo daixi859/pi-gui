@@ -811,8 +811,8 @@ button {
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: 8px;
   color: var(--dsw-alias-label-tertiary);
@@ -887,6 +887,49 @@ button {
 
 .changesToggle:hover {
   color: var(--dsw-alias-label-secondary);
+}
+
+.changesRow:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 悬停预览卡的内容：路径头 + 与 .diff 同款的行列表。 */
+.changesPreview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-size: 12px;
+}
+
+.changesPreviewHead {
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.changesPreviewPath {
+  display: block;
+  overflow-x: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.changesPreviewBody {
+  min-height: 0;
+  padding: 8px 0;
+  overflow: auto;
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.changesPreviewNote {
+  margin: 0;
+  padding: 4px 12px;
+  color: var(--dsw-alias-label-quaternary);
 }
 
 .toolError {

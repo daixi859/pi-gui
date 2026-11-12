@@ -129,6 +129,8 @@ export const zh = {
     single: (name: string) => `已编辑 ${name}`,
     all: (count: number) => `全部 ${count} 个文件`,
     collapse: '收起',
+    noDiff: '没有可显示的改动',
+    truncated: (limit: number) => `仅显示前 ${limit} 行`,
   },
   running: 'Deep diving',
   gallery: {

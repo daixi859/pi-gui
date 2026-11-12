@@ -1,0 +1,37 @@
+/* Hover preview card: fixed above the page, menu-like surface, 100ms opacity fade. */
+.anchor {
+  display: block;
+  min-width: 0;
+}
+
+.card {
+  position: fixed;
+  z-index: 100;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-elevation-panel);
+  opacity: 1;
+  transition: opacity 100ms linear;
+}
+
+@starting-style {
+  .card {
+    opacity: 0;
+  }
+}
+
+.closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
