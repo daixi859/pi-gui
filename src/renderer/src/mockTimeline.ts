@@ -91,6 +91,7 @@ class Script {
         stepCount: seg.blocks.filter((b) => b.kind !== 'assistant').length,
         noteCount: seg.blocks.filter((b) => b.kind === 'assistant').length,
         toolCount: seg.blocks.filter((b) => b.kind === 'tool').length,
+        errorCount: seg.blocks.filter((b) => b.kind === 'tool' && b.state === 'error').length,
         live,
         ...(live ? { activity: seg.activity } : {}),
         aborted: seg.aborted

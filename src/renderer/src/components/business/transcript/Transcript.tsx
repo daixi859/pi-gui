@@ -80,14 +80,16 @@ export const Transcript = memo(function Transcript(): ReactNode {
 
 /** 给定段结构直接渲染：预览页的假流用，不碰引擎状态 */
 export const StaticTranscript = memo(function StaticTranscript({
-  turns
+  turns,
+  defaultOpen
 }: {
   turns: { span: TurnSpan; blocks: Block[] }[]
+  defaultOpen?: boolean
 }): ReactNode {
   return (
     <div className="space-y-4">
       {turns.map(({ span, blocks }) => (
-        <StaticTurn key={span.key} span={span} blocks={blocks} />
+        <StaticTurn key={span.key} span={span} blocks={blocks} defaultOpen={defaultOpen} />
       ))}
     </div>
   )

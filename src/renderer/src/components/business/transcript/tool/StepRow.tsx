@@ -1,8 +1,9 @@
-import { useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
+import { useEffect, useState, type ComponentType, type ReactNode, type SVGProps } from 'react'
 import { clsx } from 'clsx'
 import type { ToolState } from '@shared/blocks'
-import { IconChevronDown, IconChevronUp } from '../../../base/icons'
+import { IconCheck, IconChevronDown, IconChevronUp, IconClose } from '../../../base/icons'
 import { Shimmer } from '../../../base/Shimmer'
+import { Marquee } from '../../../base/Marquee'
 
 export type Ico = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -21,8 +22,10 @@ export interface StepProps {
   state?: ToolState
   /** 悬停显示完整文案 */
   title?: string
-  /** 流式文本：超宽时右端渐隐而不是省略号（只有思考摘要是「还在写」的文字） */
+  /** 流式思考：长摘要在视窗内连续滚动，落定后恢复单行省略 */
   streamSummary?: boolean
+  /** 收到失败结果时默认展开，错误原因不必再点一次才能看到 */
+  defaultOpen?: boolean
   /** 展开后是否保留摘要：思考展开后留摘要没有意义，工具行保留（照 deepseek-harness） */
   keepSummaryWhenOpen?: boolean
   /** 展开后把行头钉在顶部，长正文里收不起来时还能点到（照 deepseek-harness） */
@@ -47,13 +50,19 @@ export function StepRow({
   state,
   title,
   streamSummary = false,
+  defaultOpen = false,
   keepSummaryWhenOpen = true,
   stickyHeader = false,
   children
 }: StepProps): ReactNode {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const expandable = children !== undefined
   const running = state === 'running'
+
+  useEffect(() => {
+    if (state === 'error') setOpen(true)
+  }, [state])
+
   // live 传了空串 = 明确「现在没有一行可说」（思考还没写完一段），不回退到兜底文案
   const tail = running ? (live !== undefined ? live : '进行中…') : detail
   const showTail = tail !== undefined && tail !== '' && (keepSummaryWhenOpen || !open)
@@ -79,7 +88,8 @@ export function StepRow({
           文字短时亮带只扫过文字本身，长时收到可用宽度里 */}
       <Shimmer
         active={running}
-        className={clsx('min-w-0 text-xs', state === 'error' ? 'text-del' : 'text-muted')}
+        className={clsx('min-w-0 flex-1 text-xs', state === 'error' ? 'text-del' : 'text-muted')}
+        contentClassName={streamSummary ? 'min-h-4' : undefined}
       >
         <span className="shrink-0">{label}</span>
         {showTail ? (
@@ -89,28 +99,36 @@ export function StepRow({
               data-shimmer-decoration
               className="mx-2 size-0.5 shrink-0 rounded-pill bg-faint"
             />
-            <span
-              className={clsx(
-                'min-w-0 flex-1 overflow-hidden whitespace-nowrap',
-                mono && !running && 'font-mono',
-                // 流式中不做省略号，交给右端渐隐：文字还在写，末尾不该被读成「说完了」。
-                // 渐隐加在摘要盒子上，装饰副本里的同一个盒子也一起被裁（两层的摘要布局一致）
-                running && streamSummary ? 'pi-fade-end text-clip' : 'text-ellipsis'
-              )}
-            >
-              {tail}
-            </span>
+            {running && streamSummary ? (
+              <Marquee text={tail ?? ''} />
+            ) : (
+              <span className={clsx('min-w-0 flex-1 truncate', mono && !running && 'font-mono')}>{tail}</span>
+            )}
           </>
         ) : null}
         {extra ? <span className="ml-2 flex shrink-0 items-center gap-2">{extra}</span> : null}
       </Shimmer>
       {running ? <span className="sr-only">进行中</span> : null}
-      {state === 'error' ? <span className="sr-only">已失败</span> : null}
+      {state === 'done' ? (
+        <span className="flex shrink-0 text-faint" title="已完成" aria-label="已完成">
+          <IconCheck className="size-3.5" />
+        </span>
+      ) : null}
+      {state === 'error' ? (
+        <span className="flex shrink-0 text-del" title="执行失败" aria-label="执行失败">
+          <IconClose className="size-3.5" />
+        </span>
+      ) : null}
     </>
   )
 
   if (!expandable) {
-    return <div className="flex h-7 items-center gap-2 px-1">{head}</div>
+    return (
+      <div title={title} className="flex h-7 items-center gap-2 px-1">
+        {head}
+        <span className="min-w-0 flex-1" aria-hidden="true" />
+      </div>
+    )
   }
 
   return (
@@ -123,10 +141,11 @@ export function StepRow({
           open && stickyHeader && 'pi-sticky-head'
         )}
         aria-expanded={open}
+        title={title}
       >
         {head}
       </button>
-      {open ? <div className="mt-1">{children}</div> : null}
+      {open ? <div className="mt-1 mb-2 ml-2 border-l border-edge pl-4">{children}</div> : null}
     </div>
   )
 }

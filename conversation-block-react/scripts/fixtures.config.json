@@ -1,0 +1,60 @@
+[
+  {
+    "id": "normal",
+    "label": "普通回合",
+    "note": "DESIGN.md 的样本回合：17 次工具调用、18 段思考、1 次失败、1 次 edit。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-PiGui--/2026-11-09T01-38-30-163Z_01a1bdf4-f693-72b1-8f12-411b2c52a1c0.jsonl",
+    "from": 754,
+    "to": 807
+  },
+  {
+    "id": "error",
+    "label": "失败与重试",
+    "note": "「修复」回合：38 次工具调用、4 次 isError，验证失败行默认展开与红色状态。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-PiGui--/2026-11-09T01-38-30-163Z_01a1bdf4-f693-72b1-8f12-411b2c52a1c0.jsonl",
+    "from": 908,
+    "to": 1008
+  },
+  {
+    "id": "codemode",
+    "label": "嵌套调用",
+    "note": "codemode 回合：10 次调用里 8 次是 codemode，details.calls 带子调用状态与耗时。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-PiGui--/2026-11-02T02-05-18-731Z_01a19a00-fe0b-72b8-9ba6-5b2579fb30b5.jsonl",
+    "from": 1353,
+    "to": 1385
+  },
+  {
+    "id": "long-output",
+    "label": "超长输出",
+    "note": "单次工具结果约 40KB，验证折叠/截断与「展开全部」。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-PiGui--/2026-11-09T01-38-30-163Z_01a1bdf4-f693-72b1-8f12-411b2c52a1c0.jsonl",
+    "from": 33,
+    "to": 68
+  },
+  {
+    "id": "aborted",
+    "label": "中断",
+    "note": "真实 aborted 回合（113 次调用），为控制体积截断事件后注入 agent_settled(aborted)。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-tmp-deepseek--/2026-10-27T12-15-25-999Z_01a17d49-6b2f-779d-a812-d43a4a2dc2db.jsonl",
+    "from": 119,
+    "to": 457,
+    "maxEvents": 2400,
+    "aborted": true
+  },
+  {
+    "id": "multi-turn",
+    "label": "多回合",
+    "note": "两个连续回合，验证回合边界、段头文案与折叠状态互不影响。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--workspace-PiGui--/2026-11-02T02-05-18-731Z_01a19a00-fe0b-72b8-9ba6-5b2579fb30b5.jsonl",
+    "from": 1353,
+    "to": 1393
+  },
+  {
+    "id": "interleaved",
+    "label": "穿插汇报",
+    "note": "同一个回合里，思考、工具调用与简短的标准文本交替出现（10 段进度汇报），最后给出总结。",
+    "file": "C:/Users/DELL/.pi/agent/sessions/--D--pi--/2026-10-19T09-17-34-792Z_01a15373-b6c8-776c-b955-e4b9aeecd28c.jsonl",
+    "from": 451,
+    "to": 502
+  }
+]

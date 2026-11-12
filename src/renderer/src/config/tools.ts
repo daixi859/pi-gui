@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from 'react'
-import { IconEdit, IconEye, IconFolder, IconSearch, IconTerminal, IconThinking } from '../components/base/icons'
+import { IconEdit, IconEye, IconFolder, IconGlobe, IconSearch, IconTerminal, IconThinking } from '../components/base/icons'
 
 /** 工具的界面元数据：图标 + 中文动词（行首标签与进行中文案共用） */
 export interface ToolMeta {
@@ -17,6 +17,8 @@ export const TOOL_META: Record<string, ToolMeta> = {
   powershell: { icon: IconTerminal, verb: '执行' },
   edit: { icon: IconEdit, verb: '修改' },
   write: { icon: IconEdit, verb: '写入' },
+  web_search: { icon: IconSearch, verb: '搜索网页' },
+  web_fetch: { icon: IconGlobe, verb: '获取网页' },
   thinking: { icon: IconThinking, verb: '思考' }
 }
 

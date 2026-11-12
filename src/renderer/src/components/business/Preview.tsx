@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps }
 import { galleryBlocks, gallerySections, type GallerySection } from '../../mock'
 import { TranscriptStack } from './blocks'
 import { MockStage } from './transcript/MockStage'
+import { SessionBlockPreview } from './transcript/SessionBlockPreview'
 import { ComposerCard } from './Composer'
 import { AskCard } from './AskCard'
 import { UiPrompt } from './UiPrompt'
@@ -595,6 +596,9 @@ function DialogsDemo(): ReactNode {
 function TranscriptDemo(): ReactNode {
   return (
     <div className="flex flex-col gap-4">
+      <Section title="会话块设计稿 · 加载 / 完成 / 失败">
+        <SessionBlockPreview />
+      </Section>
       <Section title="mock 回放（脚本模拟 pi 工具调用，含延时）">
         <MockStage />
       </Section>

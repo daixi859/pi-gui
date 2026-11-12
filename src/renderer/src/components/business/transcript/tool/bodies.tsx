@@ -2,13 +2,24 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { DiffLine } from '@shared/blocks'
 
-/** 展开体的四种形态：纯输出、文件预览、终端、diff。都按数据类型复用，与工具名无关 */
+/** 展开体按结果类型复用；失败时保留工具原有形态，并明确标出失败。 */
 
 export function Output({ text }: { text: string }): ReactNode {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border border-edge px-2 py-1 font-mono text-xs leading-code whitespace-pre-wrap text-muted">
       {text}
     </pre>
+  )
+}
+
+export function ErrorBody({ output, children }: { output?: string; children?: ReactNode }): ReactNode {
+  return (
+    <div className="flex flex-col gap-1">
+      <div role="alert" className="text-xs text-del">
+        执行失败
+      </div>
+      {children ?? <Output text={output || '工具未返回错误详情。'} />}
+    </div>
   )
 }
 
@@ -51,11 +62,11 @@ export function FilePeek({ path }: { path: string }): ReactNode {
 }
 
 /** 终端：命令一行 + 输出，长命令在行内截断，卡片里给全文 */
-export function TerminalBody({ cmd, out }: { cmd: string; out?: string }): ReactNode {
+export function TerminalBody({ cmd, out, shell = 'bash' }: { cmd: string; out?: string; shell?: string }): ReactNode {
   return (
-    <div className="overflow-hidden rounded-md border border-edge text-muted">
+    <div className="overflow-hidden rounded-md border border-edge bg-sunken text-muted">
       <div className="flex gap-2 px-2 py-1 font-mono text-xs">
-        <span className="shrink-0 select-none text-faint">$</span>
+        <span className="shrink-0 select-none text-faint">{shell === 'powershell' ? 'PS >' : '$'}</span>
         <span className="break-all whitespace-pre-wrap">{cmd}</span>
       </div>
       {out ? (

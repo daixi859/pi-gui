@@ -195,6 +195,38 @@
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, black calc(100% - 48px), transparent);
 }
+/* 流式思考摘要：溢出时连续滚动，首尾各留一个字的渐隐，不滚动排版容器本身 */
+@utility pi-marquee {
+  @apply block min-w-0 flex-1 overflow-hidden whitespace-nowrap;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+}
+.pi-marquee-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+}
+.pi-marquee-segment {
+  flex-shrink: 0;
+  padding-right: 32px;
+}
+.pi-marquee-copy {
+  display: none;
+}
+.pi-marquee[data-overflow='true'] .pi-marquee-track {
+  animation: thought-marquee 12s linear infinite;
+}
+.pi-marquee[data-overflow='true'] .pi-marquee-copy {
+  display: block;
+}
+@keyframes thought-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
 /* 展开后钉在顶部的行头：要底色才盖得住滚过的正文（照 deepseek-harness 的 DisclosureRow） */
 @utility pi-sticky-head {
   @apply sticky top-0 z-10 bg-canvas;
@@ -427,8 +459,13 @@ a:focus-visible,
     display: none;
   }
   .pi-sweep,
-  .pi-sweep-copy {
+  .pi-sweep-copy,
+  .animate-spin,
+  .pi-marquee-track {
     animation: none;
+  }
+  .pi-marquee-copy {
+    display: none;
   }
 }
 

@@ -384,6 +384,15 @@ export const IconTerminal = (p: P) => (
   </svg>
 )
 
+/** 网页：经纬线 */
+export const IconGlobe = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="8" cy="8" r="6.5" />
+    <ellipse cx="8" cy="8" rx="3" ry="6.5" />
+    <path d="M1.5 8h13M2.75 4.5h10.5M2.75 11.5h10.5" />
+  </svg>
+)
+
 /** 阅读：眼睛 */
 export const IconEye = (p: P) => (
   <svg {...base(p)}>

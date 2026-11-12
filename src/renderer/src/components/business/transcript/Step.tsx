@@ -26,7 +26,7 @@ export const Step = memo(function Step({ block }: { block: Block }): ReactNode {
         <StepRow
           icon={meta?.icon ?? IconSparkle}
           label={meta?.verb ?? '思考'}
-          live={running ? summary : undefined}
+          live={running ? summary || '正在整理思路…' : undefined}
           detail={running ? undefined : summary}
           extra={info || undefined}
           state={running ? 'running' : undefined}

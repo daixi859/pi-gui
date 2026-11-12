@@ -24,3 +24,6 @@ Thumbs.db
 .playwright-mcp/
 *.png
 !docs/screenshots/**
+
+# 本项目截图（生成物）
+screenshots/

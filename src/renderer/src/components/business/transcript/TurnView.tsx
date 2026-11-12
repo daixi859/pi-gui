@@ -1,6 +1,6 @@
 import { memo, useState, type ReactNode } from 'react'
 import type { Block } from '@shared/blocks'
-import { IconChevronDown, IconChevronRight } from '../../base/icons'
+import { IconCheck, IconChevronDown, IconChevronRight, IconClose } from '../../base/icons'
 import { Shimmer } from '../../base/Shimmer'
 import { workTime } from '../../../util'
 import { toolMeta } from '../../../config/tools'
@@ -34,9 +34,23 @@ function LiveLine({ a }: { a: TurnActivity | undefined }): ReactNode {
 }
 
 /** 落定后的状态文案：正常收工带定格时长（紧凑写法，如「3分15秒」），中断替换掉时长 */
-function turnTitle(span: TurnSpan): string {
-  if (span.aborted) return '已中断'
-  return `已完成，用时 ${workTime(span.durationMs).replace(/ /g, '')}`
+function TurnStatus({ span }: { span: TurnSpan }): ReactNode {
+  const failed = span.errorCount > 0
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span className={failed ? 'flex shrink-0 text-del' : 'flex shrink-0 text-faint'}>
+        {failed || span.aborted ? <IconClose className="size-3.5" /> : <IconCheck className="size-3.5" />}
+      </span>
+      <span className={failed ? 'text-del' : undefined}>
+        {span.aborted ? '已中断' : failed ? `${span.errorCount} 个步骤失败` : '已完成'}
+      </span>
+      <span aria-hidden="true" className="size-0.5 shrink-0 rounded-pill bg-faint" />
+      <span className="shrink-0 text-xs">{workTime(span.durationMs).replace(/ /g, '')}</span>
+      {span.toolCount ? (
+        <span className="ml-auto shrink-0 text-xs">{span.toolCount} 次工具调用</span>
+      ) : null}
+    </span>
+  )
 }
 
 /** 折叠头：箭头在前（与思考 / 工具行同一侧），live 显示当前活动，落定只留状态文案 */
@@ -53,7 +67,7 @@ function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggl
       ) : (
         <IconChevronRight className="size-3.5 shrink-0 text-faint" />
       )}
-      {span.live ? <LiveLine a={span.activity} /> : turnTitle(span)}
+      {span.live ? <LiveLine a={span.activity} /> : <TurnStatus span={span} />}
     </button>
   )
 }
@@ -62,7 +76,7 @@ function TurnHead({ span, open, toggle }: { span: TurnSpan; open: boolean; toggl
 function TurnBare({ span }: { span: TurnSpan }): ReactNode {
   return (
     <div className="flex h-8 w-full items-center px-1 text-xs text-faint">
-      {span.live ? <LiveLine a={span.activity} /> : turnTitle(span)}
+      {span.live ? <LiveLine a={span.activity} /> : <TurnStatus span={span} />}
     </div>
   )
 }
@@ -87,13 +101,13 @@ function turnHead(span: TurnSpan, open: boolean, toggle: () => void): ReactNode 
  * 折叠态存本地：切会话、重开后保持原样。key 用段 key（user 消息 timestamp），
  * 同一回合从 live 到落定命中同一条记录。
  */
-function useTurnChoice(span: TurnSpan): { open: boolean; toggle: () => void } {
+function useTurnChoice(span: TurnSpan, defaultOpen?: boolean): { open: boolean; toggle: () => void } {
   const storeKey = `pi.turn.${span.key}`
   const [choice, setChoice] = useState<boolean | null>(() => {
     const saved = localStorage.getItem(storeKey)
     return saved === null ? null : saved === '1'
   })
-  const open = choice ?? span.live
+  const open = choice ?? defaultOpen ?? span.live
   const toggle = (): void => {
     localStorage.setItem(storeKey, open ? '0' : '1')
     setChoice(!open)
@@ -123,18 +137,28 @@ export const TurnSection = memo(function TurnSection({ span }: { span: TurnSpan 
 })
 
 /** 静态版段容器：预览假流直接吃块数组，不碰引擎状态 */
-export const StaticTurn = memo(function StaticTurn({ span, blocks }: { span: TurnSpan; blocks: Block[] }): ReactNode {
-  const { open, toggle } = useTurnChoice(span)
+export const StaticTurn = memo(function StaticTurn({
+  span,
+  blocks,
+  defaultOpen
+}: {
+  span: TurnSpan
+  blocks: Block[]
+  /** 设计稿默认展示工具过程；运行页仍遵循 live 展开、落定收起的记忆策略。 */
+  defaultOpen?: boolean
+}): ReactNode {
+  const { open, toggle } = useTurnChoice(span, defaultOpen)
+  const expanded = open
   const byId = new Map(blocks.map((b) => [b.id, b]))
   const user = span.userId ? byId.get(span.userId) : undefined
   return (
     <div>
-      {user ? <RowView block={user} open={open} /> : null}
-      {turnHead(span, open, toggle)}
-      <TurnBody open={open}>
+      {user ? <RowView block={user} open={expanded} /> : null}
+      {turnHead(span, expanded, toggle)}
+      <TurnBody open={expanded}>
         {span.ids.map((id) => {
           const b = byId.get(id)
-          return b ? <RowView key={id} block={b} open={open} /> : null
+          return b ? <RowView key={id} block={b} open={expanded} /> : null
         })}
       </TurnBody>
     </div>

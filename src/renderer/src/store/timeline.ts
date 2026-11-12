@@ -236,6 +236,8 @@ export interface TurnSpan {
   /** 文本块数（中间文本 + 答案），> 1 且无过程块才有纯时长行 */
   noteCount: number
   toolCount: number
+  /** 已收到 isError 的工具数；折叠时也不能吞掉失败 */
+  errorCount: number
   live: boolean
   /** live 段当前活动；落定后无 */
   activity?: TurnActivity
@@ -306,6 +308,7 @@ function sameSpan(p: TurnSpan, t: TurnSpan): boolean {
     p.stepCount === t.stepCount &&
     p.noteCount === t.noteCount &&
     p.toolCount === t.toolCount &&
+    p.errorCount === t.errorCount &&
     sameActivity(p.activity, t.activity) &&
     p.ids.length === t.ids.length &&
     p.ids.every((id, i) => id === t.ids[i])
@@ -348,6 +351,7 @@ export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): 
       stepCount: items.filter((b) => b.kind !== 'assistant').length,
       noteCount: items.filter((b) => b.kind === 'assistant').length,
       toolCount: items.filter((b) => b.kind === 'tool').length,
+      errorCount: items.filter((b) => (b.kind === 'tool' && b.state === 'error') || (b.kind === 'system' && b.tone === 'error')).length,
       live,
       ...(live ? { activity: groupActivity(g, results) } : {}),
       aborted: g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')

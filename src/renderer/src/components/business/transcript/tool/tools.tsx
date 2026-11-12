@@ -1,7 +1,7 @@
 import type { Block } from '@shared/blocks'
 import { IconWrench } from '../../../base/icons'
 import { toolMeta } from '../../../../config/tools'
-import { DiffLines, FilePeek, Output, TerminalBody } from './bodies'
+import { DiffLines, ErrorBody, FilePeek, Output, TerminalBody } from './bodies'
 import type { StepProps } from './StepRow'
 
 type Tool = Extract<Block, { kind: 'tool' }>
@@ -40,17 +40,18 @@ function count(text: string | undefined): number {
  * 一次工具调用要显示的完整信息。图标与标签查 config/tools.ts 的 TOOL_META（通用表）；
  * switch 只写每个工具独有的参数解读与展开体。外壳只在 StepRow 里装配一次。
  */
-export function toolView(block: Tool): StepProps {
+function describeTool(block: Tool): StepProps {
   const a = parse(block.args)
-  const path = str(a, 'path') ?? str(a, 'file_path')
+  const path = str(a, 'path') ?? str(a, 'file_path') ?? str(a, 'filePath')
   const name = base(path)
   const out = block.output
   const hits = count(out)
   const meta = toolMeta(block.name)
   const common = {
     icon: meta?.icon ?? FALLBACK_ICON,
-    label: meta?.verb ?? block.name,
-    state: block.state
+    label: meta?.verb ?? (block.name || '工具'),
+    state: block.state,
+    title: block.args || undefined
   }
 
   switch (block.name) {
@@ -59,7 +60,7 @@ export function toolView(block: Tool): StepProps {
         ...common,
         detail: name,
         title: path,
-        children: path ? <FilePeek path={path} /> : undefined
+        children: out ? <Output text={out} /> : path ? <FilePeek path={path} /> : undefined
       }
     case 'ls':
       return {
@@ -88,7 +89,7 @@ export function toolView(block: Tool): StepProps {
         ...common,
         detail: str(a, 'command') ?? block.args,
         mono: true,
-        children: <TerminalBody cmd={str(a, 'command') ?? block.args} out={out} />
+        children: <TerminalBody cmd={str(a, 'command') ?? block.args} out={out} shell={block.name} />
       }
     case 'write':
     case 'edit': {
@@ -112,11 +113,29 @@ export function toolView(block: Tool): StepProps {
       }
     }
     default:
-      // 没认领的工具：等宽的命令/模式优先，原文兜底
+      // 扩展工具不硬编码进宿主：显示原始名称与通用参数，结果仍能展开。
       return {
         ...common,
-        detail: str(a, 'command') ?? str(a, 'pattern') ?? block.args,
+        detail: str(a, 'query') ?? str(a, 'url') ?? str(a, 'command') ?? str(a, 'pattern') ?? block.args,
         children: out ? <Output text={out} /> : undefined
       }
+  }
+}
+
+/** 行头显示当前参数而不是泛化的「进行中」；失败直接展开真实 toolResult。 */
+export function toolView(block: Tool): StepProps {
+  const view = describeTool(block)
+  return {
+    ...view,
+    live: block.state === 'running' ? (view.detail ?? '准备参数…') : undefined,
+    defaultOpen: block.state === 'error',
+    children:
+      block.state === 'error' ? (
+        <ErrorBody output={block.output}>
+          {view.children && block.output ? view.children : <Output text={block.output || '工具未返回错误详情。'} />}
+        </ErrorBody>
+      ) : (
+        view.children
+      )
   }
 }
