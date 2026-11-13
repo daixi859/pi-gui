@@ -2,8 +2,6 @@
 export const zh = {
   appTitle: '会话块',
   appSubtitle: 'pi 事件流 → 对话块复刻',
-  tabs: { player: '回放', gallery: '状态画廊' },
-  theme: { system: '跟随系统', light: '浅色', dark: '深色' },
   fixture: '夹具',
   player: {
     play: '播放',
@@ -132,17 +130,7 @@ export const zh = {
     noDiff: '没有可显示的改动',
     truncated: (limit: number) => `仅显示前 ${limit} 行`,
   },
-  running: 'Deep diving',
-  gallery: {
-    title: '状态画廊',
-    note: '同一套块组件，用纯 props 渲染每种终态；不经过事件回放。',
-    toolStates: '工具行状态',
-    thinking: '思考行',
-    assistant: '助手文本',
-    turn: '回合头',
-    system: '系统行',
-    nested: '嵌套调用 / 超长输出',
-  },
+  running: '正在工作中…',
 } as const
 
 export type Copy = typeof zh

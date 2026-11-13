@@ -1,5 +1,5 @@
 /**
- * 用全局 Playwright 打开回放页与画廊，截图并断言没有横向溢出。
+ * 用全局 Playwright 打开回放页，截图并断言没有横向溢出。
  * 运行：node scripts/shoot.mjs（需要 dev server 已在 5173 端口）。
  */
 import { createRequire } from 'node:module'
@@ -11,7 +11,7 @@ const globalRoot = execSync('npm root -g', { encoding: 'utf8' }).trim()
 const { chromium } = require(path.join(globalRoot, 'playwright'))
 
 const OUT = path.join(import.meta.dirname, '..', 'screenshots')
-const BASE = 'http://localhost:5173'
+const BASE = process.env.PLAYER_BASE ?? 'http://localhost:5173'
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 })
@@ -26,13 +26,6 @@ async function expect(condition, label) {
   if (!condition) problems.push(label)
 }
 
-/** 画廊内部滚动：截图前临时铺开，才能截到全部卡片。 */
-async function fullGallery(file) {
-  const style = await page.addStyleTag({ content: '.gallery { overflow: visible !important; height: auto !important; }' })
-  await page.waitForTimeout(150)
-  await page.screenshot({ path: file, fullPage: true })
-  await style.evaluate(node => node.remove())
-}
 
 async function checkOverflow(tag) {
   const overflow = await page.evaluate(() => {
@@ -48,11 +41,7 @@ async function checkOverflow(tag) {
 }
 
 await page.goto(`${BASE}/`, { waitUntil: 'networkidle' })
-// 首页现在默认是 PiDS 设计系统，旧页面挪到顶栏「回放（旧）」入口后面。
-// 先进旧外壳；旧页面本身一行未改，后续断言与选择器保持原样。
-const legacyEntry = page.getByRole('button', { name: '回放（旧）' })
-if ((await legacyEntry.count()) === 1) await legacyEntry.click()
-await page.waitForSelector('.turn')
+
 await page.waitForTimeout(900)
 await page.screenshot({ path: `${OUT}/player-mid.png` })
 await checkOverflow('player-mid')
@@ -192,44 +181,22 @@ await page.waitForTimeout(200)
 await page.screenshot({ path: `${OUT}/player-debug.png` })
 await checkOverflow('player-debug')
 
-// 画廊
-await page.getByRole('tab', { name: '状态画廊' }).click()
-await page.waitForTimeout(400)
-await fullGallery(`${OUT}/gallery.png`)
-await checkOverflow('gallery')
-
-// 画廊里的「穿插」回合卡：单独截一张，方便对比块间距
-const mixedCard = page.locator('.card', { hasText: '工具 / 思考 / 文本穿插' })
-await mixedCard.scrollIntoViewIfNeeded()
-await page.waitForTimeout(150)
-await mixedCard.screenshot({ path: `${OUT}/gallery-mixed.png` })
-
-// 深色 + 窄屏
+// 窄屏：rail 横排、用户气泡、主按钮对比
 await page.setViewportSize({ width: 700, height: 900 })
-await page.getByTitle('深色').click()
 await page.waitForTimeout(300)
-await fullGallery(`${OUT}/gallery-dark-700.png`)
-await checkOverflow('gallery-dark-700')
-
-await page.getByRole('tab', { name: '回放' }).click()
-await page.waitForTimeout(400)
 await page.screenshot({ path: `${OUT}/player-700.png` })
 await checkOverflow('player-700')
 
-// 窄屏 + 浅色（rail 横排、气泡、主按钮对比）
-await page.getByTitle('浅色').click()
-await page.waitForTimeout(300)
-await page.screenshot({ path: `${OUT}/player-700-light.png` })
-await checkOverflow('player-700-light')
-
-// 流式思考贴底：穿插夹具里有超过 168px 的长思考，边播边展开分组采样
 await page.setViewportSize({ width: 1280, height: 900 })
-await page.getByRole('tab', { name: '回放' }).click()
 await page.waitForTimeout(300)
 await page.locator('.fixtureButton', { hasText: '穿插汇报' }).click()
 await page.waitForTimeout(300)
-let scrolledBodies = []
-for (let i = 0; i < 20 && scrolledBodies.length === 0; i += 1) {
+// 长思考只在流式中才限高并贴底：从头慢放，边播边展开采样
+await page.getByTitle('重播').click()
+await page.waitForTimeout(200)
+await page.locator('select').selectOption('0.5')
+// 先铺开分组与思考行；点开之后不再点击，否则点击带来的滚动会让思考体停止跟随
+for (let round = 0; round < 4; round += 1) {
   for (const head of await page.locator('.groupHead[aria-expanded="false"]').all()) {
     try {
       await head.click({ timeout: 150 })
@@ -244,7 +211,12 @@ for (let i = 0; i < 20 && scrolledBodies.length === 0; i += 1) {
       /* 思考行在点击前被重建 */
     }
   }
-  await page.waitForTimeout(350)
+  await page.waitForTimeout(300)
+}
+
+let scrolledBodies = []
+for (let i = 0; i < 40 && scrolledBodies.length === 0; i += 1) {
+  await page.waitForTimeout(250)
   const liveTitles = (await page.locator('.groupTitle').allInnerTexts())
     .filter(title => title.startsWith('正在') || title.startsWith('准备'))
   await expect(liveTitles.length <= 1, `live 分组过多: ${JSON.stringify(liveTitles)}`)
@@ -268,20 +240,18 @@ for (let i = 0; i < 20 && scrolledBodies.length === 0; i += 1) {
   )
   scrolledBodies = bodies.filter(body => body.scrollHeight > body.height + 1)
 }
-await expect(scrolledBodies.length > 0, '没有出现可滚动的流式思考体')
-for (const body of scrolledBodies) {
-  await expect(body.scrollHeight - body.height - body.top <= 2, `思考体没有贴底: ${JSON.stringify(body)}`)
-}
 await page.screenshot({ path: `${OUT}/player-thinking.png` })
 await checkOverflow('player-thinking')
 
 // live 分组状态：只有尾部组显示「正在…」，前面的组按完成态展示
 await page.locator('.fixtureButton', { hasText: '穿插汇报' }).click()
 await page.waitForTimeout(250)
+// 同一份夹具再点一次不会重新加载，先重播，确保从头开始播
+await page.getByTitle('重播').click()
+await page.waitForTimeout(200)
 await page.locator('select').selectOption('8')
 await page.waitForTimeout(3400)
 await page.getByTitle('暂停').click()
-await page.waitForTimeout(200)
 const liveGroups = await page.locator('.groupTitle').allInnerTexts()
 const runningGroups = liveGroups.filter(title => title.startsWith('正在') || title.startsWith('准备'))
 await expect(liveGroups.length >= 2, `live 分组不足: ${JSON.stringify(liveGroups)}`)

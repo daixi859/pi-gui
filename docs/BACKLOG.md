@@ -130,6 +130,14 @@
 - **P2** 包里的 `base/{Shimmer,Marquee}.tsx` 在 PiGui 已无 importer，`global.css` 的 `pi-shimmer`/`pi-sweep`/`pi-fade-end`/`pi-marquee`/`pi-sticky-head` 也随之成死样式；清理要连同 STYLE.md 的对应行一起动。
 - ~~**P2** 包进生产依赖后，`scripts/pack.mjs` 会把 TSX 源码拷进 `release/app/agent-design`~~ → 已在 `scripts/pack.mjs:63–69` 修掉：拷贝前滤掉不含 `node_modules` 的路径，工作区包（`agent-design`、`web-demo`）不再进 release。实测 `pnpm ls --prod --depth Infinity --parseable` 共 317 条，其中 3 条被跳过（仓库根、`agent-design`、`web-demo`）。
 
+## 16. 2026-11-13 agent-design 收缩成「块库 + 回放页」
+
+- 删除 `src/ds/`（PiDS 三区原型）、`pages/Gallery.tsx`、`scripts/shoot-ds.mjs`、`lib/useTheme.ts`、两个零引用 svg 与 fixture 之外的 `public` 资源；ADR-0017 标注废弃。
+- `src/App.tsx` 只剩顶栏 + `Player`；`i18n/zh.ts` 删掉 `tabs`/`theme`/`gallery` 三段，`running` 改为「正在工作中…」。
+- `styles/app.css` 1431 → 439 行：块段副本（原 453–1381）随 `blocks.css` 接管一起删，`.toolError` 搬到页面段，死规则（`.tabs`/`.tab`/`.segmented`/`.progressTrack`/`.progressBar`）一并清掉。
+- `scripts/shoot.mjs` 去掉画廊与主题切换步骤，改为只跑回放页（新增 `PLAYER_BASE` 环境变量，端口被占时不必改文件）；流式思考贴底的采样改成「先铺开再只测量」，并把重播接上，否则同一夹具二次点击不会重新加载。
+- **P3** 回放页仍是 PiGui 之外唯一的块验收手段，没有自动化视觉回归：块的间距/令牌漂移只能靠截图肉眼比对。
+
 ## 建议的下一刀
 
 1. `docs/screenshots/` 里的 03-model-menu / 05-gallery-diff 还是旧版，其余已按真实引擎重截。

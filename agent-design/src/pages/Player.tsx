@@ -263,7 +263,7 @@ export function Player() {
                     <dd>{replay.state.turns.at(-1)?.status ?? '—'}</dd>
                   </div>
                 </dl>
-                {meta?.note !== undefined && <p className="galleryNote">{meta.note}</p>}
+                {meta?.note !== undefined && <p className="note">{meta.note}</p>}
               </div>
             </div>
           )}

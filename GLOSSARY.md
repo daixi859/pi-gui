@@ -32,7 +32,7 @@ Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking
 
 `agent-design` 包里的块组件子路径，是对话正文的唯一实现：`import { TurnView } from 'agent-design/blocks'` 引入组件，同时引入块的类型定义与文案。它自带 `blocks.css`（作用域 `.pi-blocks`，只声明块自己消费的变量），不带来宿主的全局样式。
 
-`agent-design` 因此同时是「块组件库」与「设计验收场」：验收场（回放页 / 状态画廊）用纯 props 渲染同一套块，是块的对照物而非第二份实现（ADR-0018）。
+`agent-design` 因此同时是「块组件库」与「设计验收场」：验收场只剩回放页（`pages/Player.tsx`），按事件时间轴回放真实会话，用纯 props 渲染同一套块，是块的对照物而非第二份实现（ADR-0018）。
 
 ## System 提示
 
@@ -72,13 +72,7 @@ Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking
 
 样式的唯一来源：颜色、字号、圆角、间距都定义成 CSS 变量，组件只引用令牌类名，不写具体数值。
 
-术语本身不绑定刻度——两套并存：宿主旧规范（`--dsw-*`，间距 2/4/8/16、圆角 4/8/16、字号 12/14，见 `docs/STYLE.md`）与 PiDS（`--pi-*`，见下条与 ADR-0017）。说「令牌」时必须指明是哪一套。
-
-## PiDS（pi 设计系统）
-
-`agent-design/src/ds/` 里的设计系统，服务对象是「pi agent 桌面客户端」这一件事：规范页、基础组件、高保真三区。它是一套**并行**系统而非宿主的升级版——令牌前缀 `--pi-*`、作用域 `.pi-root`、三层（primitive → semantic → component）、CSS Modules，与宿主 `--dsw-*` 零交集。
-
-PiDS 的三层不是三个文件夹，而是三档「谁可以引用谁」：primitive 只给 semantic 用，component 只做控件几何，界面层只引用 semantic 与 component。跳过中间层直接写 primitive，等于把语义判断散进组件。
+术语本身不绑定刻度。本项目现在只有一套：宿主规范（`--dsw-*`，间距 2/4/8/16、圆角 4/8/16、字号 12/14，见 `docs/STYLE.md`）。对话块把自成一套的 `--dsw-*` / `--app-*` 值**重新声明**在 `.pi-blocks` 作用域内（`agent-design/src/blocks/blocks.css`），那是包内自持而非第二套规范。
 
 ## 基础组件（Base Component）
 

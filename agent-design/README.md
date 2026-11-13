@@ -1,48 +1,35 @@
-# agent-design · 对话块组件库 + 设计验收场
+# agent-design · 对话块组件库 + 回放验收场
 
-> **这个包有两个身份。** `src/blocks/` 是 PiGui 对话正文的**唯一实现**，作为生产依赖被 `import { TurnView } from 'agent-design/blocks'` 引入（ADR-0018）；`src/ds/` 与下面的回放页 / 状态画廊则是设计验收场，不属于 PiGui 的运行时。
+> **这个包只有一个实现。** `src/blocks/` 是 PiGui 对话正文的**唯一实现**，作为生产依赖被 `import { TurnView } from 'agent-design/blocks'` 引入（ADR-0018）。包内其余部分是它的验收场：把 pi 的 JSON 事件流归约成块，按时间轴回放真实会话，不经过 PiGui 的宿主与 store。
 >
-> 改块 = 改 PiGui 的主界面。改动后跑 `pnpm run typecheck`，并在验收场与 PiGui 各看一眼。
+> 改块 = 改 PiGui 的主界面。改动后跑 `pnpm run typecheck`（仓库根），并在回放页与 PiGui 各看一眼。
 
-把 pi 的 JSON 事件流（`pi --mode json` / 会话 `.jsonl`）归约成三层对话块（总行 → 分组 → 行），并用同一套块组件做两件事：
+## 三层结构
 
-- **回放**：按事件时间轴播放真实会话，含思考、工具行、失败重试、中断、子调用、超长输出，以及「工具 / 思考 / 标准文本」交替出现的回合；过程按 assistant 文本切成可独立开合的分组。
-- **状态画廊**：纯 props 渲染每种终态，不经过事件流，用来单独调块的样子。
+总行（耗时 / 状态）→ 分组（两段 assistant 文本之间的思考与工具）→ 行（思考 / 工具 / 系统）。折叠总行只隐藏分组，assistant 文本永远常显。
 
-以上两页现在归入「旧页面」：默认入口是 PiDS（见下节），旧页从顶栏最右进入，保留着作对照。它们同时是 `src/blocks/` 的验收场——块改了什么，这里能直接看到，且不经过 PiGui 的宿主与 store。
-
-## PiDS（`src/ds/`）
-
-PiDS 是 pi agent 桌面客户端自己的设计系统，与宿主的 `docs/STYLE.md` 规范**并行而不继承**——决策与理由见 `docs/adr/0017-pi-design-system.md`。三个分区：
-
-| 分区 | 入口 | 内容 |
+| 层 | 组件 | 说明 |
 | --- | --- | --- |
-| 规范 | `src/ds/spec/SpecPage.tsx` | 九章：立场 / 色彩 / 字体 / 间距与布局 / 圆角描边层级 / 图标 / 动效 / 可访问性 / 组件速查。色值与对比度**运行时**从计算样式读出，改令牌页面立刻变 |
-| 基础组件 | `src/ds/showcase/ShowcasePage.tsx` | 26 篇组件文档（动作 / 输入 / 浮层 / 展示四组），每篇六项：何时用与不用、状态矩阵、尺寸变体、props 表、键盘与 ARIA、深浅双主题并排 |
-| 高保真 | `src/ds/surfaces/SurfacesPage.tsx` | 五面：主对话壳 / 起始页 / 设置页 / 浮层演示 / 空态与异常 |
+| 总行 | `blocks/TurnView.tsx` | 用户气泡、`已完成，用时 X`、`pi.fold.*` 折叠记忆；live 时尾部是 `RunningStatus` |
+| 分组 | `blocks/ProcessGroup.tsx` | 24px 整行按钮，组头按类别汇总，组体限高内滚、运行中贴底 |
+| 行 | `blocks/ThinkingRow.tsx` `blocks/ToolRow.tsx` `blocks/SystemRow.tsx` `blocks/AssistantText.tsx` | 每行默认收起，整行可点 |
+| 汇总 | `blocks/ChangedFiles.tsx` | 回合尾的文件改动卡，悬停预览 diff |
 
-```
-src/ds/
-  tokens/tokens.css      # 三层令牌：primitive → semantic → component，深色同名重绑
-  base.css               # .pi-root 子树的重置、焦点、滚动条、reduced-motion
-  theme/PiRoot.tsx       # 令牌作用域 + 主题上下文 + 浮层传送门宿主（PiPortal）
-  components/            # Button / controls / overlays / display（CSS Modules）
-  shell/DsShell.tsx      # 三区导航外壳 + 旧页出口
-  icons/DsIcon.tsx       # 16px 网格、1.5px 描边的手绘图标
-  lib/                   # OKLCH 解析与对比度计算、浮层定位与焦点陷阱
-  spec/ showcase/ surfaces/
+## 包入口
+
+```ts
+import { TurnView, type Turn, type ConversationState } from 'agent-design/blocks'
 ```
 
-三条硬规则：
+`src/blocks/index.ts` 被导入时会**自己管副作用**：注入 `blocks.css`，调用一次 `installIconSprite()`（幂等、没有 `document` 就跳过）。使用方只需给容器加 `pi-blocks` 类——所有令牌（`--dsw-*` / `--app-*` / 字体 / 字号刻度 / elevation）都重新声明在 `.pi-blocks` 作用域内，不进 `:root`、不碰 `body`。
 
-- 组件 CSS 只用 semantic 与 component 层令牌；出现 `--pi-n-*` / `--pi-a-*` / `--pi-sp-*` 这类 primitive 名即视为越层。
-- 浮层一律 `<PiPortal>`，不用 `document.body`——令牌只在 `.pi-root` 内，传送到 body 会全部掉出作用域。
-- 对比度改动必须回报规范页：正文与次要文字 ≥ 4.5:1、边框与图标 ≥ 3:1，页面会自己飘红。
+宿主需要自己提供、由块通过 props 注入的三件事：
 
-```bash
-pnpm --filter agent-design dev      # 默认进 PiDS 规范页
-node agent-design/scripts/shoot-ds.mjs   # PiDS 验收：截图 + 焦点/动效/令牌导出/溢出断言
-```
+- `renderMarkdown(text, streaming)` —— 默认用 `react-markdown` + `remark-gfm`；PiGui 注入自己的 shiki 高亮实现。
+- `renderImages(sources)` —— 用户消息里的图片；默认画 `<img className="userImage">`。
+- `now` —— live 回合的走表时间。库不自建定时器，PiGui 在正文层挂 1 秒 tick，回放页按回放时钟走、暂停即冻结。
+
+块内文案全部来自 `src/i18n/zh.ts`（随包导出 `zh`），不接收 labels 注入。
 
 ## 运行
 
@@ -70,7 +57,6 @@ pnpm --filter agent-design build
 | `player-end.png` | 跳末尾，过程收起 + 答案常显 |
 | `player-expanded.png` | 展开过程块 |
 | `player-error.png` | 失败与重试夹具（错误行默认展开） |
-| `player-expanded.png` | 展开总行：分组标题按类别汇总，文本常显 |
 | `player-group.png` | 展开一个分组：组体限高内滚，行距 4px |
 | `player-interleaved.png` | 「穿插汇报」回合：分组与进度文本交替 |
 | `player-thinking.png` | 长思考流式中：展开思考体贴底，看得到最新几行 |
@@ -78,23 +64,7 @@ pnpm --filter agent-design build
 | `player-live-groups.png` | live 回合：前面的分组是完成态，只有尾部组显示「正在…」 |
 | `player-group-open.png` | 穿插回合里展开一个含工具的分组 |
 | `player-debug.png` | 底部调试抽屉（最近事件 + 归约统计） |
-| `gallery.png` / `gallery-dark-700.png` | 状态画廊，浅色 1280 / 深色 700 |
-| `gallery-mixed.png` | 画廊里的穿插回合卡（默认展开） |
-| `player-700.png` / `player-700-light.png` | 窄屏深色 / 浅色 |
-
-PiDS 的截图由 `shoot-ds.mjs` 输出，前缀 `ds-`：
-
-| 文件 | 场景 |
-| --- | --- |
-| `ds-spec-cover.png` | 规范页首屏：目录 + 立场章 |
-| `ds-spec-color.png` / `ds-spec-a11y.png` | 色彩章（运行时色值与对比度）、可访问性章 |
-| `ds-spec-space.png` / `ds-spec-icons.png` / `ds-spec-motion.png` | 间距、图标、动效三章 |
-| `ds-components-button.png` / `ds-components-dark.png` | 组件页 Button 文档、深色态 |
-| `ds-light-chat.png` / `ds-light-start.png` / `ds-light-settings.png` | 高保真：主对话壳、起始页、设置页 |
-| `ds-light-overlays.png` / `ds-light-dialog.png` / `ds-light-toast.png` | 高保真：浮层演示、确认弹窗、Toast |
-| `ds-light-palette.png` / `ds-light-states.png` | 命令面板、空态与异常六宫格 |
-| `ds-surface-chat-collapsed.png` | 侧栏收起态 |
-| `ds-surface-chat-dark.png` / `ds-surface-chat-900.png` | 深色主对话壳、900px 窄屏 |
+| `player-700.png` | 窄屏 700px：rail 横排、气泡与主按钮对比 |
 
 ## 目录
 
@@ -103,20 +73,18 @@ scripts/
   build-fixtures.mjs   # 会话 jsonl → 夹具（裁剪事件、压输出、补 dt/durationMs）
   fixtures.config.json # 每份夹具的源文件与行区间
   check-reducer.mjs    # 无 DOM 归约校验
-  shoot.mjs            # 旧两页（回放 / 状态画廊）的 Playwright 截图与断言
-  shoot-ds.mjs         # PiDS 的 Playwright 验收（三区全量 + 断言）
+  shoot.mjs            # 回放页的 Playwright 截图与断言
 src/
-  ds/                  # PiDS：令牌、基础组件、规范页、高保真（见上节）
-  reducer/             # PiEvent 类型 + 纯 reducer（状态机）
-  blocks/              # 对话块：TurnView / ProcessGroup / thinking、tool、assistant、system 行
-                       #   + index.ts（包入口 agent-design/blocks）、tools.ts（工具元数据）、blocks.css
+  blocks/              # 对话块：TurnView / ProcessGroup / 行组件（包入口 agent-design/blocks）
+                       #   + index.ts（桶）、tools.ts（工具元数据四表合一）、blocks.css（令牌 + 样式）
   primitives/          # 块的内脏：DisclosureRow / TextShimmer / StateDot / HoverPreview
   icons/               # 图标 artwork + sprite 注入（导入 blocks 时自动执行一次）
   i18n/                # 块内文案（唯一文案源，随包导出）
-  lib/                 # 回放时钟、主题、折叠、格式化
-  styles/              # 验收场外壳与 PiDS 之外的旧样式（app.css 只剩外壳段）
-  pages/               # 旧：Player（回放 + 调试） / Gallery（状态画廊）——块的验收场
-public/fixtures/       # 7 份夹具 + index.json
+  lib/                 # 回放时钟、折叠记忆、格式化
+  styles/              # 回放页外壳样式（app.css）；块样式已搬到 blocks/blocks.css
+  pages/               # Player（回放 + 调试抽屉）——块的验收场
+  reducer/             # PiEvent 类型 + 纯 reducer（状态机）
+public/fixtures/       # 夹具 json + index.json
 ```
 
 ## 数据流
@@ -136,21 +104,19 @@ ID 约定：
 
 ## 渲染决策
 
-- **三层结构**：总行（耗时/状态）→ 分组（assistant 文本之间的思考/工具）→ 行。折叠总行只隐藏分组，所有 assistant 文本（包括中途汇报）常显；最终答案只是 `final` 的那一段。
-- **总行**：全宽 33px、底部分隔线，只显示「已完成，用时 X」或「已停止」；时长数字等宽 tabular，可折叠时才出现 chevron。右侧不再放工具数/失败数。live 期间不渲染；尾部是鲸鱼 +「正在工作中，用时 X」（与品牌无关的中性文案：PiGui 是 pi agent 客户端，不是 DeepSeek harness），时间按宿主的 1 秒时钟走，回放页则按回放时钟走、暂停即冻结。
-- **分组**：24px 整行按钮，图标按组内次数最多的类别选，悬停/展开时淡出成 chevron，运行中整行扫光。收起标题按次数取前 3 类、无计数：`已读取文件` / `已读取文件并搜索代码`（第二项去掉共用「已」）/ `执行了命令，已读取文件，已搜索代码等`（超过 3 类加「等」）；整组没有工具时显示「已完成分析」。live 时只有**最后一个分组**显示「正在读取文件 · 路径 / 正在运行命令 · 命令」；被文本切开的前序分组已经完成，按类别摘要展示，不再全部显示「正在分析请求」。
-- **分组容器**：展开后标题底部 8px，组内行距 4px；组体 `max-height: min(400px, 50vh)` 内滚，触顶/触底各有 24px 渐隐，滚动条 6px。运行中的组展开时自动贴底，读者上滚后停止跟随；落定后从顶部开始读。分组成员按原顺序，`codemode` 有子调用时只按子调用类别计数。开合状态按夹具 id 隔离。
-- **思考行**：默认收起，和 harness 一致。运行中标题是「思考」，摘要取最新「已完成段落」的首行并扫光；落定后显示「已思考 · X 秒」+ 首行摘要。手动展开后正文超过 168px 会自动贴底（顶部渐隐），读者上滚停止跟随。整行可点，图标只是装饰。
-- **工具行**：整行点击开合（右侧时长/状态不参与），默认一律收起，包括失败和修改；`preparing/running` 用文字跑马灯（深黑高光（暗色主题为浅色高光）扫过标题与摘要，`--app-shimmer`，1.15s 线性循环），不再显示 loading 圆圈；`ok/error/stopped` 保留状态圆点；失败行展开后红显；`edit/write` 完成态在时长旁显示 `+N −M`；diff 行号进 gutter，`+/-` 只留标记列。body 头部的状态文案（退出码/中断）不参与压缩，避免被长命令挤成竖排。
+- **总行**：全宽 33px、底部分隔线，只显示「已完成，用时 X」或「已停止」；时长数字等宽 tabular，可折叠时才出现 chevron。右侧不放工具数/失败数。live 期间不渲染；尾部是鲸鱼 +「正在工作中，用时 X」（与品牌无关的中性文案：PiGui 是 pi agent 客户端，不是 DeepSeek harness），时间按宿主的 1 秒时钟走，回放页则按回放时钟走、暂停即冻结。
+- **分组**：24px 整行按钮，图标按组内次数最多的类别选（`blocks/tools.ts` 的 kind），悬停/展开时淡出成 chevron，运行中整行扫光。收起标题按次数取前 3 类、无计数：`已读取文件` / `已读取文件并搜索代码`（第二项去掉共用「已」）/ `执行了命令，已读取文件，已搜索代码等`（超过 3 类加「等」）；整组没有工具时显示「已完成分析」。live 时只有**最后一个分组**显示「正在读取文件 · 路径 / 正在运行命令 · 命令」；被文本切开的前序分组已经完成，按类别摘要展示，不再全部显示「正在分析请求」。
+- **分组容器**：展开后标题底部 8px，组内行距 4px；组体 `max-height: min(400px, 50vh)` 内滚，触顶/触底各有 24px 渐隐，滚动条 6px。运行中的组展开时自动贴底，读者上滚后停止跟随；落定后从顶部开始读。分组成员按原顺序，`codemode` 有子调用时只按子调用类别计数。开合状态按 `useFold(scope, key)` 存进 localStorage（`pi.fold.<scope>.<key>`）。
+- **思考行**：默认收起。运行中标题是「思考」，摘要取最新「已完成段落」的首行并扫光；落定后显示「已思考 · X 秒」+ 首行摘要。手动展开后正文超过 168px 会自动贴底（顶部渐隐），读者上滚停止跟随。整行可点，图标只是装饰。思考不带档位——档位输入在宿主，块不显示。
+- **工具行**：整行点击开合（右侧时长/状态不参与），默认一律收起，包括失败和修改；`preparing/running` 用文字跑马灯（`--app-shimmer`，1.15s 线性循环），不再显示 loading 圆圈；`ok/error/stopped` 保留状态圆点；失败行展开后红显；`edit/write` 完成态在时长旁显示 `+N −M`；diff 行号进 gutter，`+/-` 只留标记列。body 头部的状态文案（退出码/中断）不参与压缩，避免被长命令挤成竖排。
 - **长输出**：超过 24 行只渲染头部，按钮展开全部；单条工具结果在夹具阶段截到 16k 字符。
 - **答案与穿插**：pi 在每次工具调用前都会带一段 assistant text（`stopReason: toolUse`）。所有文本按事件顺序切分过程：文本前、两段文本之间、最后一段文本到结尾各成一组；只有最后一段标 `final`。折叠总行后仍能读完整的汇报节奏，展开后每组可单独看细节。`interleaved` 夹具取自真实会话（9 段中途文本 → 10 个分组）。
 - **回合尾改动**：落定后从本轮成功的 `edit/write` 块汇总改动文件，单文件显示「已编辑 文件名」，多文件列出路径与增删行数（超过 4 行折叠）；`write` 没有 diff 时用写入内容行数近似新增，同一回合里被命令删除的临时文件不计入。
-- **主题**：跟随系统 / 浅色 / 深色，记在 localStorage；浅色与深色的主按钮、用户气泡、diff 前景色、跑马灯高光各有一组 `--app-*` token（harness 的 `brand-primary-invert` 在两种主题下同色，直接用会黑底黑字/白底白字）。
 
 ## 已知取舍
 
-- 工具名到 variant 的映射是白名单（grep/glob、read/ls、powershell/bash/cmd、write、edit、codemode），未收录的显示原名 + 原始参数。
-- 行内代码/代码块用 `<pre>` + 等宽字体，没有接 shiki；diff 也没有做语法高亮，只做行级着色。
+- 工具名到 kind / 动词的映射是白名单（`src/blocks/tools.ts`），后缀规则兜底（`*_inspect` → 检索、`terminal_*` → 命令、`subagent_*` → 子智能体），未收录的显示原名 + 原始参数。
+- diff 只做行级着色，没有语法高亮；Markdown 里的代码块由宿主注入的 `renderMarkdown` 决定（PiGui 用 shiki，回放页用纯 `<pre>`）。
 - 夹具里的 `dt` 是按会话时间戳重建的回放节奏，不是模型真实 token 间隔；`aborted` 为控制体积截断过事件并注入了 `agent_settled(aborted)`。
-- 画廊里的展示块是手写常量（`NOW` 固定），修改块形状时需同步 `Gallery.tsx`。
+- 暗色主题在 PiGui 里尚未接入（宿主还没有深色）；回放页跟随系统，块令牌因此同时给了浅色与深色两组兜底值。
 - pi 的 `agent-summary` custom 条目没有进夹具；分组与标题都从 block 顺序现算，保证与回放看到的内容一致。

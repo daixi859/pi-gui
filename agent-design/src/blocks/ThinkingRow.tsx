@@ -1,6 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { DisclosureRow } from '../primitives/DisclosureRow'
-import { TextShimmer } from '../primitives/TextShimmer'
 import { IconThinkOutlineRegular } from '../icons'
 import { zh } from '../i18n/zh'
 import { formatDuration } from '../lib/format'
@@ -83,19 +82,3 @@ export const ThinkingRow = memo(function ThinkingRow({ block }: { block: Thinkin
     </div>
   )
 })
-
-/** 折叠态单行摘要的独立版本，Gallery 用。 */
-export function ThinkingCollapsed({ text, streaming, durationMs }: { text: string; streaming: boolean; durationMs?: number }) {
-  const line = text.split('\n').map(s => s.trim()).find(Boolean) ?? ''
-  return (
-    <DisclosureRow
-      icon={<IconThinkOutlineRegular size={14} />}
-      title={streaming ? zh.block.thinking : zh.block.thoughtFor(formatDuration(durationMs))}
-      open={false}
-      expandable={false}
-      onToggle={() => undefined}
-      running={streaming}
-      collapsedContent={<TextShimmer active={streaming} className="toolSummary">{line}</TextShimmer>}
-    />
-  )
-}
