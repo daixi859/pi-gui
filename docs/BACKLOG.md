@@ -128,7 +128,7 @@
 - `store/timeline.ts` 直接产包的 `Turn`/`Block`；`TurnSpan`、`stepCount`/`noteCount`、`mock.ts`、`mockTimeline.ts`、`config/tools.ts`、`blocks.tsx`、`DiffBlock.tsx` 与 `transcript/` 的旧组件全部删除。
 - 工具元数据四表（`TOOL_META`/`VARIANTS`/`TITLES`/`TOOL_KIND`/`ICONS`）合成包里的 `blocks/tools.ts` 一张表，组头图标与行标题同源。
 - **P2** 包里的 `base/{Shimmer,Marquee}.tsx` 在 PiGui 已无 importer，`global.css` 的 `pi-shimmer`/`pi-sweep`/`pi-fade-end`/`pi-marquee`/`pi-sticky-head` 也随之成死样式；清理要连同 STYLE.md 的对应行一起动。
-- ~~**P2** 包进生产依赖后，`scripts/pack.mjs` 会把 TSX 源码拷进 `release/app/agent-design`~~ → 已在 `scripts/pack.mjs:63–69` 修掉：拷贝前滤掉不含 `node_modules` 的路径，工作区包（`agent-design`、`web-demo`）不再进 release。实测 `pnpm ls --prod --depth Infinity --parseable` 共 317 条，其中 3 条被跳过（仓库根、`agent-design`、`web-demo`）。
+- ~~**P2** 包进生产依赖后，`scripts/pack.mjs` 会把 TSX 源码拷进 `release/app/agent-design`~~ → 已在 `scripts/pack.mjs:63–69` 修掉：拷贝前滤掉不含 `node_modules` 的路径，工作区包（`agent-design`）不再进 release。实测 `pnpm ls --prod --depth Infinity --parseable` 共 317 条，其中 2 条被跳过（仓库根、`agent-design`）。
 
 ## 16. 2026-11-13 agent-design 收缩成「块库 + 回放页」
 
