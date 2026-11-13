@@ -5,7 +5,40 @@
 - **回放**：按事件时间轴播放真实会话，含思考、工具行、失败重试、中断、子调用、超长输出，以及「工具 / 思考 / 标准文本」交替出现的回合；过程按 assistant 文本切成可独立开合的分组。
 - **状态画廊**：纯 props 渲染每种终态，不经过事件流，用来单独调块的样子。
 
-样式 token、图标 sprite、`DisclosureRow` / `TextShimmer` / `StateDot` / 鲸鱼指示器均从 harness 搬来，块组件的 props 形状也贴着 harness 的 `ToolRowState` / `AgentChatData`，方便之后整体搬回宿主。
+以上两页现在归入「旧页面」：默认入口是 PiDS（见下节），旧页从顶栏最右进入，保留着作对照。
+
+## PiDS（`src/ds/`）
+
+PiDS 是 pi agent 桌面客户端自己的设计系统，与宿主的 `docs/STYLE.md` 规范**并行而不继承**——决策与理由见 `docs/adr/0017-pi-design-system.md`。三个分区：
+
+| 分区 | 入口 | 内容 |
+| --- | --- | --- |
+| 规范 | `src/ds/spec/SpecPage.tsx` | 九章：立场 / 色彩 / 字体 / 间距与布局 / 圆角描边层级 / 图标 / 动效 / 可访问性 / 组件速查。色值与对比度**运行时**从计算样式读出，改令牌页面立刻变 |
+| 基础组件 | `src/ds/showcase/ShowcasePage.tsx` | 26 篇组件文档（动作 / 输入 / 浮层 / 展示四组），每篇六项：何时用与不用、状态矩阵、尺寸变体、props 表、键盘与 ARIA、深浅双主题并排 |
+| 高保真 | `src/ds/surfaces/SurfacesPage.tsx` | 五面：主对话壳 / 起始页 / 设置页 / 浮层演示 / 空态与异常 |
+
+```
+src/ds/
+  tokens/tokens.css      # 三层令牌：primitive → semantic → component，深色同名重绑
+  base.css               # .pi-root 子树的重置、焦点、滚动条、reduced-motion
+  theme/PiRoot.tsx       # 令牌作用域 + 主题上下文 + 浮层传送门宿主（PiPortal）
+  components/            # Button / controls / overlays / display（CSS Modules）
+  shell/DsShell.tsx      # 三区导航外壳 + 旧页出口
+  icons/DsIcon.tsx       # 16px 网格、1.5px 描边的手绘图标
+  lib/                   # OKLCH 解析与对比度计算、浮层定位与焦点陷阱
+  spec/ showcase/ surfaces/
+```
+
+三条硬规则：
+
+- 组件 CSS 只用 semantic 与 component 层令牌；出现 `--pi-n-*` / `--pi-a-*` / `--pi-sp-*` 这类 primitive 名即视为越层。
+- 浮层一律 `<PiPortal>`，不用 `document.body`——令牌只在 `.pi-root` 内，传送到 body 会全部掉出作用域。
+- 对比度改动必须回报规范页：正文与次要文字 ≥ 4.5:1、边框与图标 ≥ 3:1，页面会自己飘红。
+
+```bash
+pnpm --filter agent-design dev      # 默认进 PiDS 规范页
+node agent-design/scripts/shoot-ds.mjs   # PiDS 验收：截图 + 焦点/动效/令牌导出/溢出断言
+```
 
 ## 运行
 
@@ -45,6 +78,20 @@ pnpm --filter agent-design build
 | `gallery-mixed.png` | 画廊里的穿插回合卡（默认展开） |
 | `player-700.png` / `player-700-light.png` | 窄屏深色 / 浅色 |
 
+PiDS 的截图由 `shoot-ds.mjs` 输出，前缀 `ds-`：
+
+| 文件 | 场景 |
+| --- | --- |
+| `ds-spec-cover.png` | 规范页首屏：目录 + 立场章 |
+| `ds-spec-color.png` / `ds-spec-a11y.png` | 色彩章（运行时色值与对比度）、可访问性章 |
+| `ds-spec-space.png` / `ds-spec-icons.png` / `ds-spec-motion.png` | 间距、图标、动效三章 |
+| `ds-components-button.png` / `ds-components-dark.png` | 组件页 Button 文档、深色态 |
+| `ds-light-chat.png` / `ds-light-start.png` / `ds-light-settings.png` | 高保真：主对话壳、起始页、设置页 |
+| `ds-light-overlays.png` / `ds-light-dialog.png` / `ds-light-toast.png` | 高保真：浮层演示、确认弹窗、Toast |
+| `ds-light-palette.png` / `ds-light-states.png` | 命令面板、空态与异常六宫格 |
+| `ds-surface-chat-collapsed.png` | 侧栏收起态 |
+| `ds-surface-chat-dark.png` / `ds-surface-chat-900.png` | 深色主对话壳、900px 窄屏 |
+
 ## 目录
 
 ```
@@ -52,15 +99,17 @@ scripts/
   build-fixtures.mjs   # 会话 jsonl → 夹具（裁剪事件、压输出、补 dt/durationMs）
   fixtures.config.json # 每份夹具的源文件与行区间
   check-reducer.mjs    # 无 DOM 归约校验
-  shoot.mjs            # Playwright 截图与断言
+  shoot.mjs            # 旧两页（回放 / 状态画廊）的 Playwright 截图与断言
+  shoot-ds.mjs         # PiDS 的 Playwright 验收（三区全量 + 断言）
 src/
+  ds/                  # PiDS：令牌、基础组件、规范页、高保真（见上节）
   reducer/             # PiEvent 类型 + 纯 reducer（状态机）
-  blocks/              # 三层：turn（总行）/ ProcessGroup（分组）/ thinking、tool、assistant、system 行
-  primitives/          # 搬来的 DisclosureRow / TextShimmer / StateDot
-  icons/               # 图标 artwork + sprite 注入
-  lib/                 # 回放时钟、主题、折叠、格式化
-  pages/               # Player（回放 + 调试） / Gallery（状态画廊）
-  styles/              # harness token（design-platform/base）+ 应用层 app.css
+  blocks/              # 旧：三层 turn / ProcessGroup / thinking、tool、assistant、system 行
+  primitives/          # 旧：搬来的 DisclosureRow / TextShimmer / StateDot
+  icons/               # 旧：图标 artwork + sprite 注入
+  lib/                 # 旧：回放时钟、主题、折叠、格式化
+  pages/               # 旧：Player（回放 + 调试） / Gallery（状态画廊）
+  styles/              # 旧：harness token（design-platform/base）+ 应用层 app.css
 public/fixtures/       # 7 份夹具 + index.json
 ```
 

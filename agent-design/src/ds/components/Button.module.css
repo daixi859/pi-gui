@@ -1,0 +1,226 @@
+/* PiDS Button / IconButton / ButtonGroup —— 外观只写在这里。 */
+
+.root {
+  --btn-h: var(--pi-control-h-md);
+  --btn-px: var(--pi-sp-12);
+  --btn-fs: var(--pi-fs-13);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pi-sp-8);
+  height: var(--btn-h);
+  padding-inline: var(--btn-px);
+  border: 1px solid transparent;
+  border-radius: var(--pi-r-8);
+  background: transparent;
+  font: inherit;
+  font-size: var(--btn-fs);
+  font-weight: var(--pi-fw-medium);
+  line-height: var(--pi-lh-tight);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  flex: none;
+  transition:
+    background-color var(--pi-dur-micro) var(--pi-ease),
+    border-color var(--pi-dur-micro) var(--pi-ease),
+    color var(--pi-dur-micro) var(--pi-ease),
+    opacity var(--pi-dur-micro) var(--pi-ease);
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--pi-focus);
+  outline-offset: 2px;
+}
+
+.root[data-full-width] {
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.root[data-size='sm'] {
+  --btn-h: var(--pi-control-h-sm);
+  --btn-px: var(--pi-sp-8);
+  --btn-fs: var(--pi-fs-12);
+  gap: var(--pi-sp-4);
+  border-radius: var(--pi-r-4);
+}
+
+.root[data-size='lg'] {
+  --btn-h: var(--pi-control-h-lg);
+  --btn-px: var(--pi-sp-16);
+  --btn-fs: var(--pi-fs-13);
+}
+
+.root[data-size='xl'] {
+  --btn-h: var(--pi-control-h-xl);
+  --btn-px: var(--pi-sp-16);
+  --btn-fs: var(--pi-fs-14);
+}
+
+/* ---------- primary：页面上最多一个 ---------- */
+.root[data-variant='primary'] {
+  background: var(--pi-accent-solid);
+  border-color: var(--pi-accent-solid);
+  color: var(--pi-on-accent);
+}
+
+.root[data-variant='primary']:hover:not(:disabled),
+[data-force='hover'] .root[data-variant='primary']:not(:disabled) {
+  background: var(--pi-accent-solid-hover);
+  border-color: var(--pi-accent-solid-hover);
+}
+
+.root[data-variant='primary']:active:not(:disabled),
+[data-force='active'] .root[data-variant='primary']:not(:disabled) {
+  background: var(--pi-accent-solid-press);
+  border-color: var(--pi-accent-solid-press);
+}
+
+/* ---------- secondary：默认动作 ---------- */
+.root[data-variant='secondary'] {
+  background: var(--pi-panel);
+  border-color: var(--pi-edge);
+  color: var(--pi-fg);
+}
+
+.root[data-variant='secondary']:hover:not(:disabled),
+[data-force='hover'] .root[data-variant='secondary']:not(:disabled) {
+  background: var(--pi-sunken);
+  border-color: var(--pi-edge);
+}
+
+.root[data-variant='secondary']:active:not(:disabled),
+[data-force='active'] .root[data-variant='secondary']:not(:disabled) {
+  background: var(--pi-sunken-deep);
+}
+
+/* ---------- ghost：工具栏、行内动作 ---------- */
+.root[data-variant='ghost'] {
+  background: transparent;
+  color: var(--pi-fg-2);
+}
+
+.root[data-variant='ghost']:hover:not(:disabled),
+[data-force='hover'] .root[data-variant='ghost']:not(:disabled) {
+  background: var(--pi-hover);
+  color: var(--pi-fg);
+}
+
+.root[data-variant='ghost']:active:not(:disabled),
+[data-force='active'] .root[data-variant='ghost']:not(:disabled) {
+  background: var(--pi-press);
+}
+
+/* ---------- danger：破坏性动作，默认仍是描边风格 ---------- */
+.root[data-variant='danger'] {
+  background: var(--pi-panel);
+  border-color: var(--pi-edge);
+  color: var(--pi-danger);
+}
+
+.root[data-variant='danger']:hover:not(:disabled),
+[data-force='hover'] .root[data-variant='danger']:not(:disabled) {
+  background: var(--pi-danger-tint);
+  border-color: var(--pi-danger);
+}
+
+.root[data-variant='danger']:active:not(:disabled),
+[data-force='active'] .root[data-variant='danger']:not(:disabled) {
+  background: var(--pi-danger-tint);
+}
+
+/* ---------- 禁用：降低不透明度并关掉指针，不换色 ---------- */
+.root:disabled,
+.root[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.root[data-loading] {
+  cursor: progress;
+}
+
+/* 图标尺寸跟随字形，不由外部数值指定，避免同一排按钮图标大小不一。 */
+.root svg {
+  flex: none;
+  color: currentColor;
+}
+
+/* 加载中保留原有宽度：内容转成透明，占位不塌。 */
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+
+.root[data-loading] .label {
+  visibility: hidden;
+}
+
+.spinner {
+  position: absolute;
+  animation: pi-spin 640ms linear infinite;
+}
+
+.root[data-loading] {
+  position: relative;
+}
+
+@keyframes pi-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ---------- IconButton：正方形，无 label ---------- */
+.icon {
+  --btn-px: 0;
+  width: var(--btn-h);
+  gap: 0;
+}
+
+/* ---------- ButtonGroup：相连按钮共享外框 ---------- */
+.group {
+  display: inline-flex;
+  flex: none;
+}
+
+.group > .root {
+  border-radius: 0;
+}
+
+.group > .root + .root {
+  margin-inline-start: -1px;
+}
+
+.group > .root:first-child {
+  border-start-start-radius: var(--pi-r-8);
+  border-end-start-radius: var(--pi-r-8);
+}
+
+.group > .root:last-child {
+  border-start-end-radius: var(--pi-r-8);
+  border-end-end-radius: var(--pi-r-8);
+}
+
+.group > .root:hover,
+.group > .root:focus-visible,
+.group > .root[aria-pressed='true'] {
+  z-index: 1;
+}
+
+.group > .root[aria-pressed='true'] {
+  background: var(--pi-accent-tint);
+  border-color: var(--pi-accent);
+  color: var(--pi-on-accent-tint);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

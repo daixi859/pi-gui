@@ -1,0 +1,285 @@
+/* ============================================================================
+ * Pi Design System — 令牌层
+ *
+ * 三层结构：
+ *   1. primitive  原始色阶与刻度（--pi-n-*、--pi-a-*、--pi-fs-*、--pi-sp-*）
+ *   2. semantic   语义（--pi-canvas、--pi-fg-2、--pi-accent-solid …）组件只读这层
+ *   3. component  组件尺度（--pi-control-h、--pi-focus-ring …）
+ *
+ * 全部声明在 `.pi-root` 上（不是 :root，也不是 body）：
+ *   - `--dsw-*` 声明在 body 上，body 会吃掉同名 :root 变量；`.pi-root` 在 body 之下，
+ *     用独立前缀 `--pi-` 与 `--dsw-*` / `--ds-*` / `--app-*` 三套零冲突。
+ *   - 主题是 `.pi-root[data-pi-theme='dark']`，与设计原型包既有的
+ *     `body[data-ds-dark-theme]` 互不干扰，同一页面里可以并存。
+ *
+ * 颜色以 OKLCH 定义（感知均匀，调色阶时明度单调），行尾注释是等价的 HEX，
+ * 供不认识 oklch() 的工具和人工核对使用。全部取值已逐对验过 WCAG AA。
+ * ========================================================================== */
+
+.pi-root {
+  /* ---------- 1. primitive · 中性色阶（色相 262，几乎无彩） ---------- */
+  --pi-n-0: oklch(1 0 262); /* #ffffff */
+  --pi-n-25: oklch(0.99 0.0015 262); /* #fbfcfd */
+  --pi-n-50: oklch(0.98 0.002 262); /* #f8f8fa */
+  --pi-n-100: oklch(0.962 0.003 262); /* #f1f2f4 */
+  --pi-n-150: oklch(0.94 0.004 262); /* #eaebee */
+  --pi-n-200: oklch(0.915 0.005 262); /* #e1e3e6 */
+  --pi-n-250: oklch(0.885 0.006 262); /* #d7d9dd */
+  --pi-n-300: oklch(0.85 0.007 262); /* #cbced2 */
+  --pi-n-400: oklch(0.76 0.008 262); /* #aeb1b6 */
+  --pi-n-500: oklch(0.64 0.009 262); /* #898c92 */
+  --pi-n-600: oklch(0.55 0.01 262); /* #6e7278 */
+  --pi-n-700: oklch(0.45 0.011 262); /* #52555c */
+  --pi-n-800: oklch(0.35 0.01 262); /* #383b40 */
+  --pi-n-850: oklch(0.29 0.009 262); /* #292b30 */
+  --pi-n-900: oklch(0.235 0.008 262); /* #1c1e22 */
+  --pi-n-950: oklch(0.185 0.007 262); /* #111316 */
+  --pi-n-975: oklch(0.155 0.006 262); /* #0b0c0f */
+  --pi-n-1000: oklch(0 0 262); /* #000000 */
+
+  /* ---------- 1. primitive · 强调色（唯一彩色强调，色相 258） ---------- */
+  --pi-a-300: oklch(0.84 0.1 258); /* #a8c8fa */
+  --pi-a-400: oklch(0.72 0.13 258); /* #70a6f5 */
+  --pi-a-500: oklch(0.62 0.15 258); /* #4885df */
+  --pi-a-550: oklch(0.56 0.16 258); /* #3072d0 */
+  --pi-a-600: oklch(0.5 0.16 258); /* #1d60bc */
+  --pi-a-650: oklch(0.45 0.16 258); /* #0850ab */
+  --pi-a-700: oklch(0.43 0.14 258); /* #144c9b */
+  --pi-a-750: oklch(0.78 0.12 258); /* #87b9ff */
+
+  /* ---------- 1. primitive · 语义色（各自一个可当文本用的深色 + 一个暗色主题用的浅色） ---------- */
+  --pi-s-success: oklch(0.53 0.14 155); /* #008246 */
+  --pi-s-success-lift: oklch(0.78 0.14 155); /* #63d18f */
+  --pi-s-warning: oklch(0.55 0.13 75); /* #9d6400 */
+  --pi-s-warning-lift: oklch(0.8 0.13 80); /* #e9b452 */
+  --pi-s-danger: oklch(0.53 0.19 25); /* #c2272d */
+  --pi-s-danger-lift: oklch(0.72 0.16 25); /* #f97770 */
+  --pi-s-info: oklch(0.52 0.14 250); /* #116bb5 */
+  --pi-s-info-lift: oklch(0.75 0.12 250); /* #70b3f7 */
+
+  /* ---------- 1. primitive · 字号（8 档，行高按用途 1.5 / 1.6 / 1.75） ---------- */
+  /* 11 档只给「等宽微标签」：令牌名、十六进制值、代码语言标、差异计数。
+     它不是正文档位，普通文本一律 12 起。 */
+  --pi-fs-11: 11px;
+  --pi-fs-12: 12px;
+  --pi-fs-13: 13px;
+  --pi-fs-14: 14px;
+  --pi-fs-16: 16px;
+  --pi-fs-20: 20px;
+  --pi-fs-24: 24px;
+  --pi-fs-28: 28px;
+
+  --pi-lh-tight: 1.5; /* 控件内文字 */
+  --pi-lh-ui: 1.6; /* 界面文本 */
+  --pi-lh-prose: 1.75; /* 长文与 Markdown */
+
+  --pi-fw-medium: 500;
+  --pi-fw-semibold: 600;
+
+  --pi-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  /* 显式排掉裸 monospace 尾部：Windows 上中文会回退到 SimSun，出现方框与宽窄不一。 */
+  --pi-font-mono: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', 'SF Mono', Consolas,
+    'Liberation Mono', 'PingFang SC', 'Microsoft YaHei';
+
+  /* ---------- 1. primitive · 间距（4px 基准；2 只用于微调） ---------- */
+  --pi-sp-2: 2px;
+  --pi-sp-4: 4px;
+  --pi-sp-8: 8px;
+  --pi-sp-12: 12px;
+  --pi-sp-16: 16px;
+  --pi-sp-20: 20px;
+  --pi-sp-24: 24px;
+  --pi-sp-32: 32px;
+  --pi-sp-40: 40px;
+  --pi-sp-48: 48px;
+
+  /* ---------- 1. primitive · 圆角 ---------- */
+  --pi-r-4: 4px;
+  --pi-r-8: 8px;
+  --pi-r-12: 12px;
+  --pi-r-16: 16px;
+  --pi-r-full: 999px;
+
+  /* ---------- 1. primitive · 动效 ---------- */
+  --pi-dur-micro: 90ms;
+  --pi-dur-base: 140ms;
+  --pi-dur-enter: 200ms;
+  /* 唯一循环动效：运行指示器的扫光。比交互动效长得多，单独一档 */
+  --pi-dur-sweep: 1200ms;
+  --pi-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---------- 1. primitive · 版式宽度 ---------- */
+  --pi-w-prose: 820px;
+  --pi-w-dialog: 440px;
+  --pi-w-sidebar: 262px;
+  /* 布局常量：顶栏高度、输入卡、设置页两级栏宽、命令面板、组件页左列表。 */
+  --pi-h-bar: 44px;
+  --pi-w-composer: 672px;
+  --pi-w-palette: 520px;
+  --pi-w-settings-nav: 196px;
+  --pi-w-settings-pane: 620px;
+  --pi-w-rail: 208px;
+  --pi-w-doc-nav: 200px;
+
+  /* ==========================================================================
+   * 2. semantic · 浅色主题
+   * ======================================================================== */
+
+  --pi-canvas: var(--pi-n-25);
+  --pi-panel: var(--pi-n-0);
+  --pi-raised: var(--pi-n-0); /* 卡片/浮层表面 */
+  --pi-sunken: var(--pi-n-100); /* 输入底、代码块、表头 */
+  --pi-sunken-deep: var(--pi-n-150); /* 嵌在 sunken 里的再下一层 */
+  --pi-select: var(--pi-n-100); /* 选中行底色 */
+  --pi-hover: oklch(0.235 0.008 262 / 6%); /* 中性悬停蒙层 */
+  --pi-press: oklch(0.235 0.008 262 / 10%); /* 按下蒙层 */
+  --pi-scrim: oklch(0.235 0.008 262 / 28%); /* 弹窗遮罩 */
+
+  --pi-edge-subtle: var(--pi-n-150); /* 分组内分隔，几乎不抢注意力 */
+  --pi-edge: var(--pi-n-200); /* 常规描边 */
+  --pi-edge-strong: var(--pi-n-500); /* 焦点、可交互控件的边界（≥3:1） */
+
+  --pi-fg: var(--pi-n-900); /* 14.9–16.7:1 */
+  --pi-fg-2: var(--pi-n-700); /* 6.7–7.5:1 */
+  --pi-fg-3: oklch(0.52 0.01 262); /* #66696f · 4.9–5.5:1，最次要的正文 */
+  --pi-fg-disabled: var(--pi-n-400); /* 只用于禁用态，不承载信息 */
+
+  --pi-accent: var(--pi-a-600); /* 文本与图标，6.08:1 on white */
+  --pi-accent-solid: var(--pi-a-600); /* 实心按钮底 */
+  --pi-accent-solid-hover: var(--pi-a-650);
+  --pi-accent-solid-press: var(--pi-a-700);
+  --pi-on-accent: var(--pi-n-0); /* 实心按钮上的字：6.08:1 */
+  --pi-accent-tint: oklch(0.965 0.035 258); /* 选中行/徽标底 */
+  --pi-on-accent-tint: var(--pi-a-700);
+
+  --pi-success: var(--pi-s-success);
+  --pi-success-tint: oklch(0.965 0.035 155);
+  --pi-on-success-tint: oklch(0.45 0.12 155);
+  --pi-warning: var(--pi-s-warning);
+  --pi-warning-tint: oklch(0.965 0.035 75);
+  --pi-on-warning-tint: oklch(0.47 0.11 75);
+  --pi-danger: var(--pi-s-danger);
+  --pi-danger-tint: oklch(0.965 0.035 25);
+  --pi-on-danger-tint: oklch(0.45 0.16 25);
+  --pi-info: var(--pi-s-info);
+  --pi-info-tint: oklch(0.965 0.035 250);
+  --pi-on-info-tint: oklch(0.45 0.12 250);
+
+  --pi-focus: var(--pi-a-600);
+  --pi-selection: oklch(0.8 0.08 258);
+
+  /* 阴影：描边承担分离，阴影只补一点悬浮感；暗色主题几乎不用阴影。 */
+  --pi-shadow-hairline: 0 0 0 0.5px var(--pi-edge-subtle);
+  --pi-shadow-card: 0 1px 2px oklch(0.235 0.008 262 / 5%), 0 2px 8px oklch(0.235 0.008 262 / 3%);
+  --pi-shadow-pop: 0 2px 6px oklch(0.235 0.008 262 / 6%), 0 8px 24px oklch(0.235 0.008 262 / 8%);
+  --pi-shadow-dialog: 0 6px 16px oklch(0.235 0.008 262 / 8%), 0 24px 64px oklch(0.235 0.008 262 / 14%);
+  --pi-shadow-thumb: 0 1px 2px oklch(0.235 0.008 262 / 25%); /* 开关滑块这类极小浮动件 */
+
+  /* Tooltip 在两种主题下都反色：它必须比周围任何表面都更重。 */
+  --pi-tip-bg: oklch(0.235 0.008 262 / 96%);
+  --pi-tip-fg: var(--pi-n-0);
+
+  /* 色卡描边：色块本身可能是纯白，靠这条 1px 半透明线才看得出边界。 */
+  --pi-swatch-edge: oklch(0.235 0.008 262 / 10%);
+
+  /* ==========================================================================
+   * 3. component · 组件尺度（所有组件只引这些，不写裸数值）
+   * ======================================================================== */
+
+  --pi-control-h-sm: 24px;
+  --pi-control-h-md: 28px;
+  --pi-control-h-lg: 32px;
+  --pi-control-h-xl: 36px;
+  --pi-hit-min: 24px; /* 可点区下限（WCAG 2.5.8） */
+
+  /* 勾选框 / 单选框的方块尺寸：16 见方，图标 12 留 2px 内边。 */
+  --pi-choice-box: 16px;
+
+  /* 头像三档：sm 用于行内（会话列表），md 用于侧栏底，lg 用于设置页账户块。 */
+  --pi-avatar-sm: 20px;
+  --pi-avatar-md: 28px;
+  --pi-avatar-lg: 36px;
+  /* 徽标 / 标签 / 键位的高度：与字号 11 和 12 配套的两档。 */
+  --pi-badge-h-sm: 16px;
+  --pi-badge-h-md: 18px;
+  --pi-chip-h: 20px;
+  /* 空态插画位：一个圆里放图标的方寸之地。 */
+  --pi-empty-mark: 40px;
+
+  --pi-ring: 0 0 0 2px var(--pi-panel), 0 0 0 4px var(--pi-focus);
+  --pi-ring-inset: inset 0 0 0 2px var(--pi-focus);
+
+  /* 开关：轨道 32×18、滑块 14，滑块行程 = 32 − 2×2 − 14。 */
+  --pi-switch-w: 32px;
+  --pi-switch-h: 18px;
+  --pi-switch-thumb: 14px;
+  --pi-switch-travel: 14px;
+  /* 关闭态的轨道底：比 edge 重一档，开关必须在未选中时也看得出是个控件。 */
+  --pi-switch-track: var(--pi-n-300);
+  --pi-switch-thumb-bg: var(--pi-n-0);
+
+  color-scheme: light;
+}
+
+/* ==========================================================================
+ * 2'. semantic · 深色主题（同名重绑，组件一行都不用改）
+ * ======================================================================== */
+.pi-root[data-pi-theme='dark'] {
+  color-scheme: dark;
+
+  --pi-canvas: oklch(0.175 0.006 262); /* #0f1113 */
+  --pi-panel: oklch(0.215 0.007 262); /* #18191d */
+  --pi-raised: oklch(0.255 0.008 262); /* #212327 */
+  --pi-sunken: oklch(0.155 0.006 262); /* #0b0c0f */
+  --pi-sunken-deep: oklch(0.13 0.005 262);
+  --pi-select: oklch(0.27 0.008 262);
+  --pi-hover: oklch(1 0 262 / 7%);
+  --pi-press: oklch(1 0 262 / 12%);
+  --pi-scrim: oklch(0.1 0.004 262 / 62%);
+
+  --pi-edge-subtle: oklch(0.3 0.009 262); /* #2b2e32 */
+  --pi-edge: oklch(0.36 0.009 262); /* #3b3d42 */
+  --pi-edge-strong: oklch(0.52 0.01 262); /* #66696f */
+
+  --pi-fg: oklch(0.955 0.004 262); /* #eff0f3 · 13.8–16.6:1 */
+  --pi-fg-2: oklch(0.79 0.008 262); /* #b8bbc0 · 8.2–9.8:1 */
+  --pi-fg-3: oklch(0.66 0.009 262); /* #8f9298 · 5.1–6.1:1 */
+  --pi-fg-disabled: oklch(0.45 0.01 262);
+
+  --pi-accent: var(--pi-a-400); /* #70a6f5 · 7.08:1 on dark panel */
+  --pi-accent-solid: var(--pi-a-400);
+  --pi-accent-solid-hover: var(--pi-a-750);
+  --pi-accent-solid-press: var(--pi-a-300);
+  --pi-on-accent: oklch(0.2 0.01 262); /* 7.29:1 on a-400 */
+  --pi-accent-tint: oklch(0.3 0.06 258);
+  --pi-on-accent-tint: oklch(0.88 0.06 258);
+
+  --pi-success: var(--pi-s-success-lift);
+  --pi-success-tint: oklch(0.29 0.05 155);
+  --pi-on-success-tint: oklch(0.85 0.1 155);
+  --pi-warning: var(--pi-s-warning-lift);
+  --pi-warning-tint: oklch(0.29 0.05 75);
+  --pi-on-warning-tint: oklch(0.87 0.1 80);
+  --pi-danger: var(--pi-s-danger-lift);
+  --pi-danger-tint: oklch(0.29 0.06 25);
+  --pi-on-danger-tint: oklch(0.85 0.1 25);
+  --pi-info: var(--pi-s-info-lift);
+  --pi-info-tint: oklch(0.29 0.05 250);
+  --pi-on-info-tint: oklch(0.86 0.08 250);
+
+  --pi-focus: var(--pi-a-400);
+  --pi-selection: oklch(0.45 0.1 258);
+
+  /* 深色下阴影几乎不可见，靠描边分离；这里只留极淡的近距投影。 */
+  --pi-shadow-hairline: 0 0 0 0.5px var(--pi-edge-subtle);
+  --pi-shadow-card: 0 1px 2px oklch(0 0 0 / 40%);
+  --pi-shadow-pop: 0 2px 8px oklch(0 0 0 / 45%), 0 8px 24px oklch(0 0 0 / 40%);
+  --pi-shadow-dialog: 0 8px 24px oklch(0 0 0 / 50%), 0 24px 64px oklch(0 0 0 / 45%);
+  --pi-shadow-thumb: 0 1px 2px oklch(0 0 0 / 50%);
+
+  --pi-tip-bg: oklch(0.86 0.006 262 / 96%);
+  --pi-tip-fg: var(--pi-n-950);
+
+  --pi-swatch-edge: oklch(1 0 262 / 14%);
+}

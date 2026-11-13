@@ -1,0 +1,330 @@
+/* PiDS 表单控件：Input / Textarea / Select / Checkbox / Radio / Switch。
+   六个控件共享同一套高度、描边、焦点环与禁用表现，尺寸对不齐是表单感崩坏的头号原因。 */
+
+/* ---------- 共用外壳 ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  min-width: 0;
+}
+
+.label {
+  color: var(--pi-fg-2);
+  font-size: var(--pi-fs-13);
+  font-weight: var(--pi-fw-medium);
+  line-height: var(--pi-lh-tight);
+}
+
+.hint {
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-12);
+  line-height: var(--pi-lh-ui);
+}
+
+.hint[data-invalid] {
+  color: var(--pi-danger);
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+  height: var(--pi-control-h-md);
+  padding-inline: var(--pi-sp-8);
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-r-8);
+  background: var(--pi-panel);
+  color: var(--pi-fg);
+  font: inherit;
+  font-size: var(--pi-fs-13);
+  line-height: var(--pi-lh-tight);
+  min-width: 0;
+  transition:
+    border-color var(--pi-dur-micro) var(--pi-ease),
+    background-color var(--pi-dur-micro) var(--pi-ease),
+    box-shadow var(--pi-dur-micro) var(--pi-ease);
+}
+
+.control[data-size='sm'] {
+  height: var(--pi-control-h-sm);
+  font-size: var(--pi-fs-12);
+  border-radius: var(--pi-r-4);
+}
+
+.control[data-size='lg'] {
+  height: var(--pi-control-h-lg);
+  font-size: var(--pi-fs-14);
+}
+
+.control:hover:not([data-disabled]):not(:focus-within) {
+  border-color: var(--pi-edge-strong);
+}
+
+/* 焦点环画在容器上而不是 input 上：输入框嵌在容器里，容器才是视觉边界。 */
+.control:focus-within {
+  border-color: var(--pi-focus);
+  box-shadow: var(--pi-ring-inset);
+}
+
+.control[data-invalid] {
+  border-color: var(--pi-danger);
+}
+
+.control[data-invalid]:focus-within {
+  box-shadow: inset 0 0 0 2px var(--pi-danger);
+}
+
+.control[data-disabled] {
+  background: var(--pi-sunken);
+  color: var(--pi-fg-disabled);
+  cursor: not-allowed;
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--pi-fg-3);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+}
+
+/* 数值/搜索这类原生控件在 Firefox 与 Safari 还会画内部小按钮，统一关掉。 */
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pi-sp-4);
+  color: var(--pi-fg-3);
+  flex: none;
+}
+
+.textarea {
+  height: auto;
+  align-items: stretch;
+  padding: var(--pi-sp-8);
+  min-height: 76px;
+  resize: none;
+}
+
+.textarea .input {
+  resize: none;
+}
+
+/* ---------- 选择器（原生 select 收掉系统外观） ---------- */
+.selectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.select {
+  appearance: none;
+  width: 100%;
+  padding-inline-end: var(--pi-sp-24);
+  cursor: pointer;
+}
+
+.selectArrow {
+  position: absolute;
+  inset-inline-end: var(--pi-sp-8);
+  display: inline-flex;
+  color: var(--pi-fg-3);
+  pointer-events: none;
+}
+
+/* ---------- Checkbox / Radio ---------- */
+.choice {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--pi-sp-8);
+  cursor: pointer;
+  min-height: var(--pi-hit-min);
+  padding-block: 2px;
+}
+
+.choice[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 原生 input 只做可访问性载体：视觉由后面的 span 画，事件与表单语义仍是原生的。 */
+.box {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--pi-choice-box);
+  height: var(--pi-choice-box);
+  margin-block-start: 1px;
+  border: 1px solid var(--pi-edge-strong);
+  border-radius: var(--pi-r-4);
+  background: var(--pi-panel);
+  color: var(--pi-on-accent);
+  transition:
+    background-color var(--pi-dur-micro) var(--pi-ease),
+    border-color var(--pi-dur-micro) var(--pi-ease);
+}
+
+.markRadio {
+  border-radius: var(--pi-r-full);
+}
+
+.box:checked + .mark {
+  background: var(--pi-accent-solid);
+  border-color: var(--pi-accent-solid);
+}
+
+.box:indeterminate + .mark {
+  background: var(--pi-accent-solid);
+  border-color: var(--pi-accent-solid);
+}
+
+.box:focus-visible + .mark {
+  outline: 2px solid var(--pi-focus);
+  outline-offset: 2px;
+}
+
+.choice:hover .box:not(:disabled) + .mark {
+  border-color: var(--pi-accent);
+}
+
+/* 单选选中是实心圆点，不做对勾。 */
+.radioDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--pi-r-full);
+  background: var(--pi-on-accent);
+  opacity: 0;
+}
+
+.box:checked + .mark .radioDot {
+  opacity: 1;
+}
+
+.choiceText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--pi-fs-13);
+  line-height: var(--pi-lh-ui);
+}
+
+.choiceLabel {
+  color: var(--pi-fg);
+}
+
+.choiceDesc {
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-12);
+}
+
+/* ---------- Switch ---------- */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+  cursor: pointer;
+  min-height: var(--pi-hit-min);
+}
+
+.switchTrack {
+  position: relative;
+  display: inline-block;
+  width: var(--pi-switch-w);
+  height: var(--pi-switch-h);
+  flex: none;
+  border-radius: var(--pi-r-full);
+  background: var(--pi-switch-track);
+  transition: background-color var(--pi-dur-base) var(--pi-ease);
+}
+
+.switchThumb {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  width: var(--pi-switch-thumb);
+  height: var(--pi-switch-thumb);
+  border-radius: var(--pi-r-full);
+  background: var(--pi-switch-thumb-bg);
+  box-shadow: var(--pi-shadow-thumb);
+  transition: transform var(--pi-dur-base) var(--pi-ease);
+}
+
+.switchTrack[data-on] {
+  background: var(--pi-accent-solid);
+}
+
+.switchTrack[data-on] .switchThumb {
+  transform: translateX(var(--pi-switch-travel));
+}
+
+.box:focus-visible + .switchTrack {
+  outline: 2px solid var(--pi-focus);
+  outline-offset: 2px;
+}
+
+.switch[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ---------- 搜索型输入（带前导图标） ---------- */
+.leading {
+  display: inline-flex;
+  color: var(--pi-fg-3);
+  flex: none;
+}
+
+/* ---------- 输入组：前后缀贴在同一个框上 ---------- */
+.group {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.group > .control {
+  border-radius: 0;
+}
+
+.group > .control:first-child {
+  border-start-start-radius: var(--pi-r-8);
+  border-end-start-radius: var(--pi-r-8);
+}
+
+.group > .control:last-child {
+  border-start-end-radius: var(--pi-r-8);
+  border-end-end-radius: var(--pi-r-8);
+}
+
+.group > * + * {
+  margin-inline-start: -1px;
+}

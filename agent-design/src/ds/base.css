@@ -1,0 +1,75 @@
+/* ============================================================================
+ * PiDS 基座：只作用于 `.pi-root` 子树。
+ *
+ * 为什么不写全局 `body`：这个包与旧 Player/Gallery 共用同一张页面和同一个样式表，
+ * 任何全局选择器都会改到旧页面。全部规则挂在 `.pi-root` 下，
+ * 新系统能看到旧页面，旧页面看不到新系统。
+ * ========================================================================== */
+
+.pi-root {
+  height: 100%;
+  min-height: 0;
+  background: var(--pi-canvas);
+  color: var(--pi-fg);
+  font-family: var(--pi-font-ui);
+  font-size: var(--pi-fs-14);
+  line-height: var(--pi-lh-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-synthesis-weight: none;
+}
+
+/* 只在新系统里收掉浏览器默认外观差异；旧页面不受影响。 */
+.pi-root,
+.pi-root *,
+.pi-root *::before,
+.pi-root *::after {
+  box-sizing: border-box;
+}
+
+.pi-root * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pi-edge) transparent;
+}
+
+.pi-root ::selection {
+  background: var(--pi-selection);
+}
+
+/* 键盘焦点统一外观。只在 :focus-visible 出现，鼠标点击不出圈。 */
+.pi-root :focus-visible {
+  outline: 2px solid var(--pi-focus);
+  outline-offset: 2px;
+}
+
+/* 系统级 reduced-motion：所有过渡与动画瞬时完成，而不是「变慢」。 */
+@media (prefers-reduced-motion: reduce) {
+  .pi-root *,
+  .pi-root *::before,
+  .pi-root *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 通用无障碍工具类：只在新系统里可用。 */
+.pi-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 浮层挂载点：不生成盒子，但仍在 `.pi-root` 子树里，
+   因此挂上来的浮层照常继承 `--pi-*` 令牌。
+   （直接挂 document.body 会让浮层落在令牌作用域外。） */
+.pi-portal {
+  display: contents;
+}

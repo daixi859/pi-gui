@@ -1,0 +1,263 @@
+/* PiDS 文档外壳：顶栏 + 左侧 rail + 内容舞台。 */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--pi-canvas);
+  color: var(--pi-fg);
+  font-family: var(--pi-font-ui);
+  font-size: var(--pi-fs-14);
+}
+
+/* ---------------- 顶栏 ---------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-12);
+  flex: none;
+  height: var(--pi-h-bar);
+  padding-inline: var(--pi-sp-12);
+  border-block-end: 1px solid var(--pi-edge);
+  background: var(--pi-panel);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+  min-width: 0;
+}
+
+/* 品牌标记：全站唯一的「记忆点」图形，占 20×20 */
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--pi-r-4);
+  background: var(--pi-accent-solid);
+  color: var(--pi-on-accent);
+}
+
+.brandName {
+  color: var(--pi-fg);
+  font-size: var(--pi-fs-13);
+  font-weight: var(--pi-fw-semibold);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.brandVersion {
+  color: var(--pi-fg-3);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-11);
+  white-space: nowrap;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.topDivider {
+  width: 1px;
+  height: 16px;
+  flex: none;
+  background: var(--pi-edge);
+}
+
+/* 主题切换：三段图标按钮，选中态用 accent-tint 标记 */
+.themeSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--pi-r-8);
+  background: var(--pi-sunken);
+}
+
+.themeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pi-r-4);
+  background: transparent;
+  color: var(--pi-fg-3);
+  cursor: pointer;
+  transition: color var(--pi-dur-micro) var(--pi-ease), background var(--pi-dur-micro) var(--pi-ease);
+}
+
+.themeButton:hover {
+  color: var(--pi-fg);
+  background: var(--pi-hover);
+}
+
+.themeButton[data-active] {
+  color: var(--pi-on-accent-tint);
+  background: var(--pi-accent-tint);
+}
+
+/* 旧版对照 tab：风格刻意低调，表明它们是遗留内容 */
+.legacyTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--pi-r-8);
+  background: var(--pi-sunken);
+}
+
+.legacyTab {
+  padding: 3px var(--pi-sp-8);
+  border: 0;
+  border-radius: var(--pi-r-4);
+  background: transparent;
+  color: var(--pi-fg-3);
+  font: inherit;
+  font-size: var(--pi-fs-12);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--pi-dur-micro) var(--pi-ease), background var(--pi-dur-micro) var(--pi-ease);
+}
+
+.legacyTab:hover {
+  color: var(--pi-fg);
+  background: var(--pi-hover);
+}
+
+.legacyTab[data-active] {
+  color: var(--pi-fg);
+  background: var(--pi-raised);
+  box-shadow: var(--pi-shadow-hairline);
+}
+
+/* ---------------- 主体 ---------------- */
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-20);
+  flex: none;
+  width: var(--pi-w-rail);
+  padding: var(--pi-sp-12) var(--pi-sp-8);
+  border-inline-end: 1px solid var(--pi-edge-subtle);
+  background: var(--pi-canvas);
+  overflow-y: auto;
+}
+
+/* 分区导航项：高度 28，图标 15，选中用左侧强调条而不是整块底色——
+   整块底色在 208px 宽的 rail 里会显得很重。 */
+.railItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+  width: 100%;
+  height: 28px;
+  padding-inline: var(--pi-sp-8);
+  border: 0;
+  border-radius: var(--pi-r-8);
+  background: transparent;
+  color: var(--pi-fg-2);
+  font: inherit;
+  font-size: var(--pi-fs-13);
+  text-align: start;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--pi-dur-micro) var(--pi-ease), background var(--pi-dur-micro) var(--pi-ease);
+}
+
+.railItem:hover {
+  color: var(--pi-fg);
+  background: var(--pi-hover);
+}
+
+.railItem[data-active] {
+  color: var(--pi-fg);
+  background: var(--pi-select);
+  font-weight: var(--pi-fw-medium);
+}
+
+.railItem[data-active]::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 7px;
+  width: 2px;
+  border-radius: var(--pi-r-full);
+  background: var(--pi-accent);
+}
+
+.railItem:disabled {
+  color: var(--pi-fg-disabled);
+  cursor: default;
+  background: transparent;
+}
+
+.railLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railFoot {
+  margin-block-start: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-4);
+  padding: var(--pi-sp-8);
+  border-radius: var(--pi-r-8);
+  background: var(--pi-sunken);
+}
+
+.railFootText {
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-11);
+  line-height: var(--pi-lh-ui);
+}
+
+.stage {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 窄屏：rail 收成图标条（只留图标与提示），保证内容区不被挤扁 */
+@media (max-width: 900px) {
+  .rail {
+    width: 52px;
+    padding-inline: var(--pi-sp-4);
+    align-items: center;
+  }
+
+  .railFoot {
+    display: none;
+  }
+
+  .railLabel {
+    display: none;
+  }
+
+  .brandName,
+  .brandVersion,
+  .legacyTab {
+    display: none;
+  }
+}

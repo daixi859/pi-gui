@@ -1,0 +1,466 @@
+/* 组件详情页骨架：左侧组件列表 + 右侧文档。 */
+
+.page {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ---------------- 左侧列表 ---------------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-16);
+  flex: none;
+  width: var(--pi-w-doc-nav);
+  padding: var(--pi-sp-24) var(--pi-sp-12) var(--pi-sp-24) var(--pi-sp-16);
+  border-inline-end: 1px solid var(--pi-edge-subtle);
+  overflow-y: auto;
+}
+
+.listGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.listGroupLabel {
+  padding-inline: var(--pi-sp-8);
+  padding-block-end: var(--pi-sp-4);
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-11);
+  font-weight: var(--pi-fw-medium);
+  letter-spacing: 0.04em;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+  width: 100%;
+  height: 28px;
+  padding-inline: var(--pi-sp-8);
+  border: 0;
+  border-radius: var(--pi-r-8);
+  background: transparent;
+  color: var(--pi-fg-2);
+  font: inherit;
+  font-size: var(--pi-fs-13);
+  text-align: start;
+  cursor: pointer;
+  transition: color var(--pi-dur-micro) var(--pi-ease), background var(--pi-dur-micro) var(--pi-ease);
+}
+
+.listItem:hover {
+  color: var(--pi-fg);
+  background: var(--pi-hover);
+}
+
+.listItem[data-active] {
+  color: var(--pi-fg);
+  background: var(--pi-select);
+  font-weight: var(--pi-fw-medium);
+}
+
+.listItemIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--pi-fg-3);
+}
+
+.listItem[data-active] .listItemIcon {
+  color: var(--pi-accent);
+}
+
+/* ---------------- 右侧文档 ---------------- */
+
+.doc {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding: var(--pi-sp-40) var(--pi-sp-48) calc(var(--pi-sp-48) * 2);
+}
+
+.docInner {
+  max-width: 880px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-32);
+}
+
+/* 文档头 */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  padding-block-end: var(--pi-sp-16);
+  border-block-end: 1px solid var(--pi-edge);
+}
+
+.headTop {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-8);
+}
+
+.headIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--pi-r-8);
+  background: var(--pi-accent-tint);
+  color: var(--pi-on-accent-tint);
+}
+
+.headName {
+  margin: 0;
+  color: var(--pi-fg);
+  font-size: var(--pi-fs-24);
+  font-weight: var(--pi-fw-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.headSummary {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--pi-fg-2);
+  font-size: var(--pi-fs-14);
+  line-height: var(--pi-lh-prose);
+}
+
+.headMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pi-sp-8);
+  padding-block-start: var(--pi-sp-4);
+}
+
+/* 区块 */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-12);
+  scroll-margin-block-start: var(--pi-sp-16);
+}
+
+.blockTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--pi-sp-8);
+  margin: 0;
+  color: var(--pi-fg);
+  font-size: var(--pi-fs-16);
+  font-weight: var(--pi-fw-semibold);
+  line-height: var(--pi-lh-tight);
+}
+
+.blockNote {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--pi-fg-2);
+  font-size: var(--pi-fs-13);
+  line-height: var(--pi-lh-prose);
+}
+
+/* 用途 / 不用 两栏 */
+.useGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--pi-sp-12);
+}
+
+.useCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  padding: var(--pi-sp-12) var(--pi-sp-16);
+  border: 1px solid var(--pi-edge-subtle);
+  border-radius: var(--pi-r-12);
+  background: var(--pi-panel);
+}
+
+.useCard[data-tone='avoid'] {
+  border-color: var(--pi-edge);
+}
+
+.useCardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-4);
+  font-size: var(--pi-fs-12);
+  font-weight: var(--pi-fw-semibold);
+}
+
+.useCard[data-tone='use'] .useCardTitle {
+  color: var(--pi-success);
+}
+
+.useCard[data-tone='avoid'] .useCardTitle {
+  color: var(--pi-danger);
+}
+
+.useList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-4);
+  margin: 0;
+  padding-inline-start: var(--pi-sp-16);
+  color: var(--pi-fg-2);
+  font-size: var(--pi-fs-13);
+  line-height: var(--pi-lh-ui);
+}
+
+/* 状态矩阵：自动铺列，每格自带标签 */
+.stateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--pi-sp-8);
+}
+
+.stateCell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  padding: var(--pi-sp-12);
+  border: 1px solid var(--pi-edge-subtle);
+  border-radius: var(--pi-r-8);
+  background: var(--pi-panel);
+}
+
+.stateStage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: var(--pi-sp-8);
+  border-radius: var(--pi-r-4);
+  background: var(--pi-canvas);
+}
+
+.stateLabel {
+  color: var(--pi-fg);
+  font-size: var(--pi-fs-12);
+  font-weight: var(--pi-fw-medium);
+}
+
+.stateNote {
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-11);
+  line-height: var(--pi-lh-ui);
+}
+
+/* 尺寸变体 */
+.sizeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pi-sp-16);
+  padding: var(--pi-sp-16);
+  border: 1px solid var(--pi-edge-subtle);
+  border-radius: var(--pi-r-12);
+  background: var(--pi-panel);
+}
+
+.sizeItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pi-sp-8);
+}
+
+.sizeLabel {
+  color: var(--pi-fg-3);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-11);
+}
+
+/* 状态矩阵：强制渲染「键盘聚焦」那一格。base.css 只在 :focus-visible 时出圈，
+   文档里无法自动获得焦点，所以用一个等价类把同一套视觉画出来。 */
+.forceRing,
+.forceRing * {
+  outline: 2px solid var(--pi-focus);
+  outline-offset: 2px;
+}
+
+/* 表格：props 与键盘 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pi-fs-13);
+}
+
+.table th {
+  padding: var(--pi-sp-8);
+  border-block-end: 1px solid var(--pi-edge);
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-12);
+  font-weight: var(--pi-fw-medium);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--pi-sp-8);
+  border-block-end: 1px solid var(--pi-edge-subtle);
+  color: var(--pi-fg-2);
+  vertical-align: top;
+  line-height: var(--pi-lh-ui);
+}
+
+.table tr:last-child td {
+  border-block-end: 0;
+}
+
+.propName {
+  color: var(--pi-fg);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-12);
+  white-space: nowrap;
+}
+
+.propType {
+  color: var(--pi-fg-2);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-11);
+  word-break: break-word;
+}
+
+.propDefault {
+  color: var(--pi-fg-3);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-11);
+  white-space: nowrap;
+}
+
+.keyKeys {
+  color: var(--pi-fg);
+  font-family: var(--pi-font-mono);
+  font-size: var(--pi-fs-12);
+  white-space: nowrap;
+}
+
+/* 双主题并排 */
+.themeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--pi-sp-12);
+}
+
+.themePane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  padding: var(--pi-sp-16);
+  border: 1px solid var(--pi-edge-subtle);
+  border-radius: var(--pi-r-12);
+  overflow: hidden;
+}
+
+/* 内层 PiRoot 需要撑满面板；并排时必须显式给高度，
+   否则 flex:1 在无高度的祖先里会被算成 0。 */
+.themePaneInner {
+  flex: 1 1 auto;
+  min-height: 132px;
+  padding: var(--pi-sp-16);
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-r-8);
+  background: var(--pi-canvas);
+  color: var(--pi-fg);
+  font-family: var(--pi-font-ui);
+  font-size: var(--pi-fs-14);
+  line-height: var(--pi-lh-ui);
+}
+
+.themeLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-sp-4);
+  color: var(--pi-fg-3);
+  font-size: var(--pi-fs-12);
+  font-weight: var(--pi-fw-medium);
+}
+
+/* 实现备注 */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-sp-8);
+  margin: 0;
+  padding: var(--pi-sp-12) var(--pi-sp-16);
+  border: 1px solid var(--pi-edge-subtle);
+  border-radius: var(--pi-r-8);
+  background: var(--pi-sunken);
+  list-style: none;
+}
+
+.note {
+  display: flex;
+  gap: var(--pi-sp-8);
+  color: var(--pi-fg-2);
+  font-size: var(--pi-fs-12);
+  line-height: var(--pi-lh-prose);
+}
+
+.noteMark {
+  flex: none;
+  color: var(--pi-fg-3);
+  font-family: var(--pi-font-mono);
+}
+
+/* 空态（没有选中组件时） */
+.placeholder {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pi-sp-48);
+}
+
+/* 范围徽标：P0 已交付。 */
+.scopeBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding-inline: var(--pi-sp-8);
+  border-radius: var(--pi-r-full);
+  background: var(--pi-accent-tint);
+  color: var(--pi-on-accent-tint);
+  font-size: var(--pi-fs-11);
+  font-weight: var(--pi-fw-semibold);
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 1080px) {
+  .themeRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .list {
+    width: 52px;
+    padding-inline: var(--pi-sp-4);
+    align-items: center;
+  }
+
+  .listGroupLabel,
+  .listItem span:not(.listItemIcon) {
+    display: none;
+  }
+
+  .listItem {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .doc {
+    padding-inline: var(--pi-sp-24);
+  }
+}
