@@ -11,7 +11,7 @@ import {
 import { zh } from '../i18n/zh'
 import { describeEvent, formatClock, formatDuration } from '../lib/format'
 import { useReplay } from '../lib/useReplay'
-import { TurnView } from '../blocks/TurnView'
+import { TurnView } from '../blocks'
 import type { Fixture, FixtureEvent } from '../reducer/types'
 
 interface FixtureMeta {
@@ -192,7 +192,7 @@ export function Player() {
           {error !== null && <div className="empty">{error}</div>}
           {error === null && fixture === null && <div className="empty">{zh.player.loading}</div>}
           {fixture !== null && (
-            <div className="transcript">
+            <div className="transcript pi-blocks">
               {replay.state.turns.length === 0 && <div className="empty">{zh.player.noFixture}</div>}
               {replay.state.turns.map(turn => (
                 <TurnView

@@ -4,7 +4,8 @@ import { IconChevronDownOutlineRegular, IconChevronUpOutlineRegular } from '../i
 import { zh } from '../i18n/zh'
 import { HoverPreview } from '../primitives/HoverPreview'
 import type { ConversationState, ToolBlock, Turn } from '../reducer/types'
-import { parseDiff, variantOf, type DiffLine } from './toolModel'
+import { parseDiff, type DiffLine } from './toolModel'
+import { toolKind } from './tools'
 
 export interface ChangedFile {
   readonly path: string
@@ -38,15 +39,15 @@ export function turnChanges(turn: Turn, state: ConversationState): readonly Chan
   for (const id of turn.blockIds) {
     const block = state.blocks[id]
     if (block === undefined || block.kind !== 'tool' || block.state !== 'ok') continue
-    const variant = variantOf(block.name)
-    if (variant !== 'edit' && variant !== 'write') continue
+    const kind = toolKind(block.name)
+    if (kind !== 'edit' && kind !== 'write') continue
     const path = pathOf(block)
     if (path === undefined) continue
     const diff = parseDiff((block.details as { diff?: unknown } | undefined)?.diff)
     let added = diff.added
     let removed = diff.removed
     let lines: readonly DiffLine[] = diff.lines
-    if (added === 0 && removed === 0 && variant === 'write') {
+    if (added === 0 && removed === 0 && kind === 'write') {
       // pi 的 write 没有 diff，用写入内容近似「新增」，每行都按新增渲染。
       const content = typeof block.args === 'object' && block.args !== null
         ? (block.args as Record<string, unknown>).content
@@ -76,7 +77,7 @@ function deletedPaths(turn: Turn, state: ConversationState, files: ReadonlyMap<s
   for (const id of turn.blockIds) {
     const block = state.blocks[id]
     if (block === undefined || block.kind !== 'tool' || block.state !== 'ok') continue
-    if (variantOf(block.name) !== 'bash') continue
+    if (toolKind(block.name) !== 'commands') continue
     const args = block.args
     if (args === undefined || args === null || typeof args !== 'object') continue
     const command = (args as Record<string, unknown>).command ?? (args as Record<string, unknown>).cmd

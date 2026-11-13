@@ -38,6 +38,8 @@ writeFileSync(
 
 // agent-host 在运行时 import pi SDK，所以生产依赖必须实打实躺在磁盘上。
 // 按本地 node_modules 的扁平化布局原样复制，离线也能打包。
+// 工作区内的本地包（agent-design）例外：它只在构建期被 vite 打进 out/，
+// 运行时不需要，拷进去只会把 TSX 源码带进 release。
 console.log('› 拷贝生产依赖（约 700MB，慢）')
 // pnpm ls 对 extraneous 包会返回非零，只要 stdout 有东西就照抄。
 // pnpm-workspace.yaml 的 nodeLinker=hoisted 保证 node_modules 是扁平布局，这里的路径拷贝才成立。
@@ -58,7 +60,13 @@ const dirs = [
   )
 ]
 if (!dirs.length) throw new Error('pnpm ls 没列出生产依赖：' + list.error)
-for (const dir of dirs) cpSync(dir, join(app, 'node_modules', relative(join(root, 'node_modules'), dir)), { recursive: true })
+// 只拷 node_modules 里的真依赖；工作区内联的包（路径不含 node_modules）跳过。
+const inNodeModules = (p) => p.split(/[\\/]/).includes('node_modules')
+const runtimeDirs = dirs.filter(inNodeModules)
+for (const skipped of dirs.filter((p) => !inNodeModules(p))) {
+  console.log('  · 跳过工作区包（构建期已打入 out/）：', relative(root, skipped))
+}
+for (const dir of runtimeDirs) cpSync(dir, join(app, 'node_modules', relative(join(root, 'node_modules'), dir)), { recursive: true })
 
 console.log('› 写启动器')
 writeFileSync(join(out, '启动 Pi.cmd'), '@echo off\r\nstart "" "%~dp0Pi.exe"\r\n')

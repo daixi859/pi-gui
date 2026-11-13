@@ -1,9 +1,5 @@
 import type { Block, ConversationState, ToolBlock, Turn } from '../reducer/types'
-import { TurnView } from '../blocks/TurnView'
-import { ToolRow } from '../blocks/ToolRow'
-import { ThinkingRow } from '../blocks/ThinkingRow'
-import { AssistantText } from '../blocks/AssistantText'
-import { SystemRow } from '../blocks/TurnView'
+import { AssistantText, SystemRow, ThinkingRow, ToolRow, TurnView } from '../blocks'
 import { zh } from '../i18n/zh'
 
 let seq = 0
@@ -291,7 +287,7 @@ const LIVE_STATE = makeState(LIVE_BLOCKS, {
 /** 状态画廊：纯 props 渲染每种终态，不经过事件回放。 */
 export function Gallery() {
   return (
-    <div className="gallery">
+    <div className="gallery pi-blocks">
       <div className="galleryInner">
         <p className="galleryNote">{zh.gallery.note}</p>
 

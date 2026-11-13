@@ -1,0 +1,1044 @@
+/*
+ * 对话块样式。从 agent-design/src/styles/app.css 的块段落（453–1381 行）切出，
+ * 只作用于 .pi-blocks 作用域：宿主把 <div class="pi-blocks"> 包在对话正文外层即可，
+ * 不引入任何全局元素规则（body/html/*）、不依赖 body 上的主题属性。
+ *
+ * 块用到的设计令牌在此按作用域重新声明：宿主不装 design-platform.css 时，
+ * 缺一个令牌就会退化成无边框。取值固定为浅色主题（PiGui 当前只有浅色）。
+ */
+.pi-blocks {
+  --pi-font-text: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --pi-font-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo,
+    Courier, 'PingFang SC', 'Microsoft YaHei';
+
+  /* 字体与字号 */
+  --dsw-font-family: var(--pi-font-text);
+  --ds-font-family-code: var(--pi-font-code);
+  --app-mono: var(--pi-font-code);
+  --dsh-content-font-size: 14px;
+  --dsh-content-font-delta: 0px;
+  --dsh-content-font-size-secondary: 13px;
+  --dsh-content-font-delta-secondary: 0px;
+  --dsh-code-font-size: 11px;
+  --dsh-code-font-delta: 0px;
+  --dsw-font-markdown-h1-font-size: 21px;
+  --dsw-font-markdown-h2-font-size: 19px;
+  --dsw-font-markdown-h3-font-size: 18px;
+
+  /* 圆角 */
+  --app-radius: 10px;
+  --dsw-radius-lg: 16px;
+
+  /* 品牌与气泡 */
+  --app-bubble: #eef0f4;
+  --app-diff-add-fg: #167c3c;
+  --app-diff-del-fg: #bd2c22;
+  --app-shimmer: color-mix(in srgb, #05070a 88%, transparent);
+
+  /* 语义令牌（浅色） */
+  --dsw-alias-label-primary: rgb(15, 17, 21);
+  --dsw-alias-label-primary-foreground: rgb(255, 255, 255);
+  --dsw-alias-label-secondary: rgb(97, 102, 107);
+  --dsw-alias-label-tertiary: rgb(129, 133, 140);
+  /* 设计平台没有四级文字令牌，块里引用过三处，统一降到三级色。 */
+  --dsw-alias-label-quaternary: rgb(129, 133, 140);
+  --dsw-alias-label-shimmer: color-mix(in srgb, rgb(0, 0, 0) 30%, transparent);
+  --dsw-alias-brand-text: rgb(15, 17, 21);
+  --dsw-alias-bg-layer-1: rgb(255, 255, 255);
+  --dsw-alias-bg-layer-2: rgb(255, 255, 255);
+  --dsw-alias-bg-skeleton: rgba(0, 0, 0, 0.04);
+  --dsw-alias-border-l1: rgba(0, 0, 0, 0.04);
+  --dsw-alias-border-l2: rgba(0, 0, 0, 0.1);
+  --dsw-alias-border-l3: rgba(0, 0, 0, 0.12);
+  --dsw-alias-border-l4: rgba(0, 0, 0, 0.16);
+  --dsw-alias-interactive-bg-hover: rgba(38, 49, 72, 0.06);
+  --dsw-alias-file-diff-added-bg: rgb(230, 244, 231);
+  --dsw-alias-file-diff-deleted-bg: rgb(252, 230, 226);
+  --dsw-alias-state-success-primary: rgb(34, 197, 94);
+  --dsw-alias-state-error-primary: rgb(236, 19, 19);
+  --dsw-alias-state-error-secondary: rgb(242, 90, 90);
+  --dsw-alias-state-idle-primary: rgb(212, 212, 212);
+  --dsw-alias-state-warn-primary: rgb(245, 158, 11);
+
+  /* 文件类型图标色 */
+  --dsw-static-deepseek-450: rgb(86, 134, 254);
+  --dsw-static-deepseek-500: rgb(65, 118, 230);
+  --dsw-static-green-500: rgb(34, 197, 94);
+  --dsw-static-amber-400: rgb(247, 173, 49);
+  --dsw-static-amber-500: rgb(245, 158, 11);
+  --dsw-static-neutral-bluish-300: rgb(207, 211, 214);
+  --dsw-static-red-600: rgb(236, 19, 19);
+
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  font-size: var(--dsh-content-font-size);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+
+  /* 宿主的 box-sizing 重置不一定覆盖到这里。 */
+  box-sizing: border-box;
+}
+
+.pi-blocks *,
+.pi-blocks *::before,
+.pi-blocks *::after {
+  box-sizing: border-box;
+}
+
+/* elevation 必须逐元素声明：继承下来的是在祖先上已替换完的值，
+   组件重绑 --dsw-elevation-stroke-color 就进不去了。 */
+.pi-blocks,
+.pi-blocks * {
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l4);
+  --dsw-elevation-stroke: 0 0 0 0.5px var(--dsw-elevation-stroke-color);
+  --dsw-elevation-panel: var(--dsw-elevation-stroke), 0 3px 8px 0 rgba(0, 0, 0, 0.03),
+    0 0 16px 0 rgba(0, 0, 0, 0.02);
+  --dsw-elevation-prominent: var(--dsw-elevation-stroke), 0 3px 8px 0 rgba(0, 0, 0, 0.04),
+    0 0 20px 0 rgba(0, 0, 0, 0.05);
+  --dsw-elevation-soft: var(--dsw-elevation-stroke), 0 4px 16px 0 rgba(0, 0, 0, 0.03),
+    0 0 24px 0 rgba(0, 0, 0, 0.03);
+}
+
+/* ---------- 回合 ---------- */
+
+.pi-blocks .turn {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 4px;
+}
+
+.pi-blocks .turn + .turn {
+  border-top: 1px solid var(--dsw-alias-border-l3);
+  margin-top: 14px;
+  padding-top: 18px;
+}
+
+/* 总行：只显示耗时/状态，全宽 + 底部分隔线，整行可点。 */
+.pi-blocks .turnHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 33px;
+  padding: 0 0 8px;
+  border: none;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 100ms ease;
+}
+
+.pi-blocks .turnHead:hover:not(:disabled) {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pi-blocks .turnHead:disabled {
+  cursor: default;
+}
+
+.pi-blocks .turnHeadText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-blocks .turnNumber {
+  font-family: var(--app-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-blocks .turnHeadChevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  transition: transform 100ms ease;
+}
+
+.pi-blocks .turnHead[data-open] .turnHeadChevron {
+  transform: rotate(180deg);
+}
+
+.pi-blocks .user + .turnHead {
+  margin-top: 12px;
+}
+
+/* 文本与分组之间 12px；折叠只移除分组，文本保持原位。 */
+.pi-blocks .turnFlow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pi-blocks .turnHead + .turnFlow {
+  padding-top: 16px;
+}
+
+.pi-blocks .user + .turnFlow {
+  margin-top: 12px;
+}
+
+/* ---------- 分组 ---------- */
+
+.pi-blocks .processGroup {
+  min-width: 0;
+}
+
+.pi-blocks .groupHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 100ms ease;
+}
+
+.pi-blocks .groupHead:hover {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pi-blocks .groupHead[aria-expanded='true'] {
+  padding-bottom: 8px;
+}
+
+.pi-blocks .groupLeading {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.pi-blocks .groupLeading svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pi-blocks .groupIcon,
+.pi-blocks .groupChevron {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 100ms ease;
+}
+
+.pi-blocks .groupIcon {
+  opacity: 1;
+}
+
+.pi-blocks .groupChevron {
+  opacity: 0;
+}
+
+.pi-blocks .groupHead:hover .groupIcon,
+.pi-blocks .groupHead:focus-visible .groupIcon,
+.pi-blocks .groupHead[aria-expanded='true'] .groupIcon {
+  opacity: 0;
+}
+
+.pi-blocks .groupHead:hover .groupChevron,
+.pi-blocks .groupHead:focus-visible .groupChevron,
+.pi-blocks .groupHead[aria-expanded='true'] .groupChevron {
+  opacity: 1;
+}
+
+.pi-blocks .groupTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 组体限高内滚，触顶/触底各有 24px 渐隐。 */
+.pi-blocks .groupBody {
+  max-height: min(400px, 50vh);
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.pi-blocks .groupBody[data-fade-up] {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 100%);
+}
+
+.pi-blocks .groupBody[data-fade-down] {
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 24px), transparent 100%);
+}
+
+.pi-blocks .groupBody[data-fade-up][data-fade-down] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 24px,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+}
+
+.pi-blocks .groupContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.pi-blocks .groupContent > * + * {
+  margin-top: 4px;
+}
+
+/* ---------- 用户块 ---------- */
+
+.pi-blocks .user {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 2px 0 10px;
+}
+
+.pi-blocks .userBubble {
+  max-width: min(92%, 620px);
+  padding: 9px 14px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--app-bubble);
+  color: var(--dsw-alias-label-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.pi-blocks .userImages {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pi-blocks .userImage {
+  max-width: 220px;
+  max-height: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l3);
+}
+
+/* ---------- 思考 ---------- */
+
+.pi-blocks .thinking {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pi-blocks .thinkingBody {
+  padding: 2px 0 4px 22px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pi-blocks .thinkingBody[data-fade] {
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+/* 流式贴底后，旧内容在上方被裁掉，渐隐放在顶部而不是底部。 */
+.pi-blocks .thinkingBody[data-fade-top] {
+  mask-image: linear-gradient(180deg, transparent 0, #000 24px);
+}
+
+/* ---------- 工具 ---------- */
+
+.pi-blocks .tool {
+  min-width: 0;
+}
+
+.pi-blocks .toolSummary {
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .toolSummary[data-mono] {
+  font-family: var(--app-mono);
+  font-size: 12px;
+}
+
+.pi-blocks .toolSummary[data-strong] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pi-blocks .toolAccessory {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-blocks .diffStat {
+  display: inline-flex;
+  gap: 4px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+}
+
+.pi-blocks .diffAdd {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.pi-blocks .diffDel {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* 思考行与工具行的表头（标题 + 摘要）统一 12px；分组标题不受影响。
+   标题 span 自带 font-size（DisclosureRow.module.css），需用 compactTitle 覆盖。 */
+.pi-blocks .thinking [data-disclosure-header],
+.pi-blocks .tool [data-disclosure-header] {
+  font-size: 12px;
+}
+
+.pi-blocks .thinking .compactTitle,
+.pi-blocks .tool .compactTitle {
+  font-size: 12px;
+}
+
+/* 细滚动条：分组体与思考体 */
+.pi-blocks .groupBody,
+.pi-blocks .thinkingBody {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dsw-alias-border-l3) transparent;
+}
+
+.pi-blocks .groupBody::-webkit-scrollbar,
+.pi-blocks .thinkingBody::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.pi-blocks .groupBody::-webkit-scrollbar-track,
+.pi-blocks .thinkingBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pi-blocks .groupBody::-webkit-scrollbar-thumb,
+.pi-blocks .thinkingBody::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--dsw-alias-border-l3);
+}
+
+/* ---------- 回合尾部的文件改动 ---------- */
+
+.pi-blocks .changes {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.pi-blocks .changesHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.pi-blocks .changesTile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .changesTitles {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pi-blocks .changesTitle {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-blocks .changesCounts {
+  display: inline-flex;
+  gap: 6px;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .changesList {
+  margin: 0;
+  padding: 0;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  list-style: none;
+}
+
+.pi-blocks .changesRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.pi-blocks .changesPath {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-blocks .changesToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pi-blocks .changesToggle:hover {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pi-blocks .changesRow:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 悬停预览卡的内容：路径头 + 与 .diff 同款的行列表。 */
+.pi-blocks .changesPreview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-size: 12px;
+}
+
+.pi-blocks .changesPreviewHead {
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.pi-blocks .changesPreviewPath {
+  display: block;
+  overflow-x: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.pi-blocks .changesPreviewBody {
+  min-height: 0;
+  padding: 8px 0;
+  overflow: auto;
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.pi-blocks .changesPreviewNote {
+  margin: 0;
+  padding: 4px 12px;
+  color: var(--dsw-alias-label-quaternary);
+}
+
+.pi-blocks .toolError {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.pi-blocks .toolBody {
+  margin: 4px 0 6px 22px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: var(--app-radius);
+  background: var(--dsw-alias-bg-layer-1);
+  overflow: hidden;
+}
+
+.pi-blocks .toolBodyHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l3);
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.pi-blocks .toolBodyHead[data-error] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.pi-blocks .toolBodyLabel,
+.pi-blocks .toolBodyMeta {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* 命令/路径可以很长：只让它压缩换行，别把状态文案挤成竖排 */
+.pi-blocks .toolBodyHead > span:not(.toolBodyLabel,
+.pi-blocks .toolBodyMeta,
+.pi-blocks .spacer,
+.pi-blocks .diffStats) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pi-blocks .code {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 420px;
+  overflow: auto;
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--dsw-alias-label-secondary);
+  tab-size: 2;
+  white-space: pre;
+}
+
+.pi-blocks .code[data-wrap] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pi-blocks .codeMore {
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+  border-top: 1px solid var(--dsw-alias-border-l3);
+}
+
+.pi-blocks .linkButton {
+  border: none;
+  background: none;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--dsw-alias-brand-text);
+  cursor: pointer;
+}
+
+.pi-blocks .linkButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.pi-blocks .diff {
+  margin: 0;
+  padding: 8px 0;
+  max-height: 420px;
+  overflow: auto;
+  font-family: var(--app-mono);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.pi-blocks .diffLine {
+  display: flex;
+  white-space: pre;
+}
+
+.pi-blocks .diffLine[data-kind='add'] {
+  background: var(--dsw-alias-file-diff-added-bg);
+  color: var(--app-diff-add-fg);
+}
+
+.pi-blocks .diffLine[data-kind='remove'] {
+  background: var(--dsw-alias-file-diff-deleted-bg);
+  color: var(--app-diff-del-fg);
+}
+
+.pi-blocks .diffNum {
+  flex: none;
+  width: 40px;
+  padding-right: 8px;
+  text-align: right;
+  color: var(--dsw-alias-label-quaternary);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.pi-blocks .diffMarker {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  color: var(--dsw-alias-label-tertiary);
+  user-select: none;
+}
+
+.pi-blocks .diffLine[data-kind='gap'] {
+  color: var(--dsw-alias-label-quaternary);
+}
+
+.pi-blocks .diffLine[data-kind='gap'] .diffNum,
+.pi-blocks .diffLine[data-kind='gap'] .diffText {
+  opacity: 0.6;
+}
+
+.pi-blocks .diffText {
+  flex: 1;
+  padding-right: 12px;
+}
+
+.pi-blocks .diffStats {
+  display: flex;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-blocks .diffAdded {
+  color: var(--app-diff-add-fg);
+}
+
+.pi-blocks .diffRemoved {
+  color: var(--app-diff-del-fg);
+}
+
+.pi-blocks .subCalls {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.pi-blocks .subCall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  min-width: 0;
+}
+
+.pi-blocks .subCallName {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .subCallArgs {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--app-mono);
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .subCallTime {
+  flex: none;
+  margin-left: auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---------- 助手文本 ---------- */
+
+.pi-blocks .assistant {
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+}
+
+.pi-blocks .assistant[data-final] {
+  padding: 2px 0 6px;
+}
+
+/* 流式光标挂在最后一个块级元素尾部，避免多出一行 */
+.pi-blocks .assistant[data-streaming] > :last-child::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  border-radius: 1px;
+  background: var(--dsw-alias-label-primary);
+  animation: caret 1s steps(2, start) infinite;
+}
+
+.pi-blocks .assistantFoot {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: -2px;
+  border-radius: 1px;
+  background: var(--dsw-alias-label-primary);
+  animation: caret 1s steps(2, start) infinite;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---------- Markdown ---------- */
+
+.pi-blocks .md {
+  font-family: var(--dsw-font-family);
+  font-size: var(--dsh-content-font-size, 14px);
+  line-height: 1.8;
+  color: var(--dsw-alias-label-primary);
+  overflow-wrap: anywhere;
+}
+
+.pi-blocks .md > :first-child {
+  margin-top: 0;
+}
+
+.pi-blocks .md > :last-child {
+  margin-bottom: 0;
+}
+
+.pi-blocks .md p,
+.pi-blocks .md ul,
+.pi-blocks .md ol,
+.pi-blocks .md pre,
+.pi-blocks .md blockquote,
+.pi-blocks .md table {
+  margin: 0.7em 0;
+}
+
+.pi-blocks .md h1,
+.pi-blocks .md h2,
+.pi-blocks .md h3,
+.pi-blocks .md h4,
+.pi-blocks .md h5,
+.pi-blocks .md h6 {
+  margin: 1.1em 0 0.5em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.pi-blocks .md h1 {
+  font-size: var(--dsw-font-markdown-h1-font-size);
+}
+.pi-blocks .md h2 {
+  font-size: var(--dsw-font-markdown-h2-font-size);
+}
+.pi-blocks .md h3 {
+  font-size: var(--dsw-font-markdown-h3-font-size);
+}
+.pi-blocks .md h4,
+.pi-blocks .md h5,
+.pi-blocks .md h6 {
+  font-size: var(--dsh-content-font-size, 14px);
+}
+
+.pi-blocks .md ul,
+.pi-blocks .md ol {
+  padding-left: 1.5em;
+}
+
+.pi-blocks .md li + li {
+  margin-top: 0.25em;
+}
+
+.pi-blocks .md a {
+  color: var(--dsw-alias-brand-text);
+  text-decoration: none;
+}
+
+.pi-blocks .md a:hover {
+  text-decoration: underline;
+}
+
+.pi-blocks .md code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-skeleton);
+  font-family: var(--app-mono);
+  font-size: 0.86em;
+}
+
+.pi-blocks .md pre {
+  padding: 10px 12px;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-bg-layer-1);
+  overflow-x: auto;
+}
+
+.pi-blocks .md pre code {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.pi-blocks .md blockquote {
+  padding-left: 12px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.pi-blocks .md table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* 首列是短标签（S2 绕过入口 / .md 基准），避免被长文本挤成每行一两个字 */
+.pi-blocks .md th:first-child,
+.pi-blocks .md td:first-child {
+  min-width: 88px;
+  white-space: nowrap;
+}
+
+.pi-blocks .md th,
+.pi-blocks .md td {
+  padding: 4px 10px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  text-align: left;
+}
+
+.pi-blocks .md th {
+  background: var(--dsw-alias-bg-layer-2);
+  font-weight: 600;
+}
+
+.pi-blocks .md hr {
+  border: none;
+  border-top: 1px solid var(--dsw-alias-border-l3);
+  margin: 1.2em 0;
+}
+
+.pi-blocks .md img {
+  max-width: 100%;
+}
+
+/* ---------- 系统行 ---------- */
+
+.pi-blocks .systemRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 4px 22px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pi-blocks .systemRow[data-tone='warn'] {
+  color: var(--dsw-alias-state-error-secondary);
+}
+
+.pi-blocks .systemRow[data-tone='error'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---------- 运行指示 ---------- */
+
+.pi-blocks .running {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 0 2px;
+  border-top: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.pi-blocks .runningContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-blocks .runningIcon {
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.pi-blocks .runningWhaleAnimated {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+
+@supports (mask-mode: alpha) and (mask-image: url('')) {
+  @media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+.pi-blocks .runningWhaleAnimated {
+      display: block;
+      background: currentColor;
+      mask: url('../assets/running-whale@2x.png') center / 100% 100% no-repeat;
+      mask-mode: alpha;
+      will-change: transform;
+    }
+.pi-blocks .runningWhaleStill {
+      display: none;
+    }
+  }
+}
+/* 以下两条原本住在外壳段，块在用：块内保留作用域副本，外壳的原规则不动。 */
+
+.pi-blocks .spacer {
+  flex: 1 1 auto;
+}
+
+.pi-blocks .label {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}

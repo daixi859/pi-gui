@@ -1,6 +1,6 @@
-/** Transcript 块的唯一数据模型。UI 与引擎事件共用，引擎尚未接入，先由 mock 供给。 */
+/** 跨进程的会话/工作区元数据。对话块类型不在这里——它来自 agent-design/blocks。 */
 
-/** pi 思考强度 → 界面文案；宿主快照与渲染层派生共用 */
+/** pi 思考强度 → 界面文案；宿主快照与渲染层共用 */
 export const LEVEL_LABEL: Record<string, string> = {
   off: '关闭',
   minimal: '最低',
@@ -10,51 +10,6 @@ export const LEVEL_LABEL: Record<string, string> = {
   xhigh: '很高',
   max: '最高'
 }
-
-export interface DiffLine {
-  type: 'add' | 'del' | 'ctx'
-  text: string
-  no?: number
-}
-
-export type ToolState = 'running' | 'done' | 'error'
-export type SystemTone = 'info' | 'warn' | 'error'
-
-/** diff 块形状：transcript 里并进 tool.diff，独立 kind 只剩预览库在用 */
-export type DiffBlock = {
-  id: string
-  file: string
-  added: number
-  removed: number
-  lines: DiffLine[]
-  /** edit 工具给的 unified patch，用于「撤销」 */
-  patch?: string
-}
-
-export type Block =
-  | { kind: 'user'; id: string; text: string; images?: number }
-  | { kind: 'assistant'; id: string; text: string; streaming?: boolean }
-  | {
-      kind: 'thinking'
-      id: string
-      text: string
-      level?: string
-      streaming?: boolean
-      /** 思考耗时；宿主还没接入，先由 mock 供给 */
-      durationMs?: number
-    }
-  | {
-      kind: 'tool'
-      id: string
-      name: string
-      args: string
-      state: ToolState
-      output?: string
-      /** edit / write 的变更（toolResult.details.diff 派生）：diff 属于它的工具行 */
-      diff?: DiffBlock
-    }
-  | ({ kind: 'diff' } & DiffBlock)
-  | { kind: 'system'; id: string; tone: SystemTone; text: string }
 
 export interface SessionMeta {
   id: string

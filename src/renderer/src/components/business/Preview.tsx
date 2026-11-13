@@ -1,9 +1,7 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState, type FC, type ReactNode, type SVGProps } from 'react'
-import { galleryBlocks, gallerySections, type GallerySection } from '../../mock'
-import { TranscriptStack } from './blocks'
-import { MockStage } from './transcript/MockStage'
-import { SessionBlockPreview } from './transcript/SessionBlockPreview'
+import { TurnView } from 'agent-design/blocks'
+import { previewLive, previewSettled } from '../../previewTurns'
 import { ComposerCard } from './Composer'
 import { AskCard } from './AskCard'
 import { UiPrompt } from './UiPrompt'
@@ -500,17 +498,18 @@ function InputsDemo(): ReactNode {
 }
 
 function DisplayDemo(): ReactNode {
-  const [section, setSection] = useState<GallerySection>('assistant')
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1">
-        {gallerySections.map((s) => (
-          <Chip key={s.id} active={s.id === section} onClick={() => setSection(s.id)}>
-            {s.label}
-          </Chip>
-        ))}
-      </div>
-      <TranscriptStack blocks={galleryBlocks[section]} />
+    <div className="flex flex-col gap-6">
+      <Section title="回合 · 已落定（过程分组 + 修改文件）">
+        <div className="pi-blocks">
+          <TurnView turn={previewSettled.turn} state={previewSettled.state} scope="preview" defaultOpen />
+        </div>
+      </Section>
+      <Section title="回合 · 运行中（走表计时）">
+        <div className="pi-blocks">
+          <TurnView turn={previewLive.turn} state={previewLive.state} scope="preview" now={previewLive.now} />
+        </div>
+      </Section>
     </div>
   )
 }
@@ -595,15 +594,16 @@ function DialogsDemo(): ReactNode {
 
 function TranscriptDemo(): ReactNode {
   return (
-    <div className="flex flex-col gap-4">
-      <Section title="会话块设计稿 · 加载 / 完成 / 失败">
-        <SessionBlockPreview />
+    <div className="flex flex-col gap-6">
+      <Section title="完整回合（对话块来自 agent-design/blocks）">
+        <div className="pi-blocks">
+          <TurnView turn={previewSettled.turn} state={previewSettled.state} scope="preview" />
+        </div>
       </Section>
-      <Section title="mock 回放（脚本模拟 pi 工具调用，含延时）">
-        <MockStage />
-      </Section>
-      <Section title="旧渲染 · 静态样例">
-        <TranscriptStack blocks={gallerySections.flatMap((s) => galleryBlocks[s.id])} />
+      <Section title="展开过程块">
+        <div className="pi-blocks">
+          <TurnView turn={previewSettled.turn} state={previewSettled.state} scope="preview-open" defaultOpen />
+        </div>
       </Section>
     </div>
   )

@@ -1,95 +1,95 @@
-import { memo, type ReactNode } from 'react'
-import type { Block } from '@shared/blocks'
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import {
+  TurnView,
+  type Block,
+  type ConversationState,
+  type MarkdownRenderer,
+  type Turn
+} from 'agent-design/blocks'
 import { MarkdownView } from '../../base/MarkdownView'
-import { IconImage } from '../../base/icons'
 import { useEngine } from '../../../store'
-import { count } from '../../../perf'
-import { Step } from './Step'
-import { TurnSection, StaticTurn } from './TurnView'
-import type { TurnSpan } from '../../../store/timeline'
 
-function UserLine({ text, images }: { text: string; images?: number }): ReactNode {
-  return (
-    <div className="mb-8 flex justify-end">
-      <div className="max-w-[85%] rounded-lg rounded-br-sm bg-sunken px-4 py-2 text-sm leading-relaxed whitespace-pre-wrap">
-        {images ? (
-          <div className="mb-1 flex items-center gap-1 text-xs text-muted">
-            <IconImage className="size-3.5" />
-            {images} 张图片
-          </div>
-        ) : null}
-        {text}
-      </div>
-    </div>
-  )
+/** 回合外的字段用不到（组件只读 state.blocks），给一份常量，别每次渲染新建对象 */
+const EMPTY: ConversationState = {
+  turns: [],
+  blocks: {},
+  seq: 0,
+  callIndex: {},
+  liveMessage: null,
+  activeTurn: null,
+  liveTools: {}
 }
 
-/** 三点呼吸：会话还在跑时挂在正文末尾，跑完自动消失 */
-export function WorkingDots(): ReactNode {
-  return (
-    <div role="status" className="mt-4 flex items-center gap-1 pl-1 text-faint">
-      <span className="sr-only">正在生成…</span>
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          aria-hidden="true"
-          className="breathe size-1.5 rounded-pill bg-current"
-          style={{ animationDelay: `${i * 160}ms` }}
-        />
-      ))}
-    </div>
-  )
+/** 正文的 Markdown 由宿主注入：shiki 高亮、外链走系统浏览器（ADR-0018） */
+const renderMarkdown: MarkdownRenderer = (text, streaming) => (
+  <MarkdownView text={text} streaming={streaming} />
+)
+
+/** 折叠记忆按会话分开：同一个 turn key 在不同会话里不该共用开合状态 */
+function scopeOf(viewPath: string | null): string {
+  if (!viewPath) return ''
+  const name = viewPath.split(/[\\/]/).pop() ?? ''
+  return name.replace(/\.jsonl$/, '')
+}
+
+/** live 时钟：只有存在 live 回合时才走表，落定后停表（库不自己定时，ADR-0018） */
+function useLiveClock(active: boolean): number | undefined {
+  const [now, setNow] = useState<number>()
+  useEffect(() => {
+    if (!active) {
+      setNow(undefined)
+      return
+    }
+    setNow(Date.now())
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [active])
+  return now
 }
 
 /**
- * 一个块 → 一行。引用不变就跳过渲染（memo 的浅比较就是这个语义）。
- * open = 所在段展开与否：收起时 user 气泡与 assistant 文本仍显示，过程块整行不渲染。
+ * 一个回合的块：只挑本回合用到的，浅比较引用。
+ * 别的回合的块变了不惊动这个回合，正在流的那一行变了只有它重渲染。
  */
-export const RowView = memo(function RowView({ block, open }: { block: Block; open: boolean }): ReactNode {
-  count('row')
-  switch (block.kind) {
-    case 'user':
-      return <UserLine text={block.text} images={block.images} />
-    case 'assistant':
-      return <MarkdownView text={block.text} streaming={block.streaming} />
-    default:
-      return open ? <Step block={block} /> : null
-  }
+const TurnFrame = memo(function TurnFrame({
+  turn,
+  scope,
+  now
+}: {
+  turn: Turn
+  scope: string
+  now: number | undefined
+}): ReactNode {
+  const blocks = useEngine(
+    useShallow((s) => {
+      const picked: Record<string, Block> = {}
+      // 用户气泡不在 blockIds 里（它渲染在回合头之上），单独补一份
+      if (turn.userId !== null) {
+        const user = s.byId[turn.userId]
+        if (user !== undefined) picked[turn.userId] = user
+      }
+      for (const id of turn.blockIds) {
+        const block = s.byId[id]
+        if (block !== undefined) picked[id] = block
+      }
+      return picked
+    })
+  )
+  const state = useMemo(() => ({ ...EMPTY, blocks }), [blocks])
+  return <TurnView turn={turn} state={state} scope={scope} now={now} renderMarkdown={renderMarkdown} />
 })
 
-/**
- * 一行只订阅自己那个块（按 id）。
- * 别的块变了不惊动这一行，这一行变了也只有它重渲染——段容器也不参与。
- */
-export const Row = memo(function Row({ id, open }: { id: string; open: boolean }): ReactNode {
-  const block = useEngine((s) => s.byId[id])
-  return block ? <RowView block={block} open={open} /> : null
-})
-
-/** 会话正文：只订阅段坐标（turns），折叠呈现与块内容都由段容器 / 行自己负责。 */
+/** 会话正文：只订阅回合坐标，块内容由每个回合自己订阅（行级 memo 继续生效） */
 export const Transcript = memo(function Transcript(): ReactNode {
   const turns = useEngine((s) => s.turns)
+  const viewPath = useEngine((s) => s.viewPath)
+  const scope = scopeOf(viewPath)
+  const now = useLiveClock(turns.some((t) => t.status === 'live'))
   return (
-    <div className="space-y-4">
-      {turns.map((span) => (
-        <TurnSection key={span.key} span={span} />
-      ))}
-    </div>
-  )
-})
-
-/** 给定段结构直接渲染：预览页的假流用，不碰引擎状态 */
-export const StaticTranscript = memo(function StaticTranscript({
-  turns,
-  defaultOpen
-}: {
-  turns: { span: TurnSpan; blocks: Block[] }[]
-  defaultOpen?: boolean
-}): ReactNode {
-  return (
-    <div className="space-y-4">
-      {turns.map(({ span, blocks }) => (
-        <StaticTurn key={span.key} span={span} blocks={blocks} defaultOpen={defaultOpen} />
+    <div className="pi-blocks flex flex-col">
+      {turns.map((turn) => (
+        <TurnFrame key={turn.key} turn={turn} scope={scope} now={now} />
       ))}
     </div>
   )

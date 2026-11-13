@@ -6,11 +6,33 @@
 
 对话记录的最小渲染单元。一个 Block 有唯一 `id` 与 `kind`，渲染层只会根据 `kind` 选择组件，不知道消息来自哪个模型、哪次请求。
 
-Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking / tool / assistant / diff）。它是渲染层从消息派生的视图模型，不跨进程传输（ADR-0014）。
+Block 不是「消息」：一次助手回复会被拆成多个 Block（thinking / tool / assistant / system）。它是渲染层从消息派生的视图模型，不跨进程传输（ADR-0014）。
+
+没有 diff 这种 kind：文件改动从工具结果的 `details.diff` 派生，直接放进那条工具块（ADR-0015）。Block 的类型定义只有一份，在 `agent-design/src/reducer/types.ts`（ADR-0018）。
 
 ## Turn（回合）
 
-用户发出一次输入，到助手停止工作之间的完整过程。Turn 是 Block 的容器，可以折叠、可以带中断标记与时长。Turn 之外出现的 Block 属于会话级提示（见 System）。
+用户发出一次输入，到助手停止工作之间的完整过程。Turn 是 Block 的容器：只用 `blockIds` 记录自己拥有哪些块（顺序即渲染顺序），统计信息（工具数、失败数）从这些块现场算，不另存。可以折叠、可以带中断标记与时长。Turn 之外出现的 Block 属于会话级提示（见 System）。
+
+渲染层此前的 `TurnSpan`（ADR-0015 引入的段坐标，只记范围与统计）已退役，由本定义取代。
+
+## 过程分组（ProcessGroup）
+
+一次 Turn 之内，两段 assistant 文本之间的那些过程块（思考、工具、系统行）被收成一组，组头按类别汇总（「已读取文件、搜索代码」），组体限高内滚。分组是**渲染期**的视图，不是数据层概念：数据层只有平铺的 Turn 与 Block，分组由 `turnLayout` 按文本切段现算。
+
+一个 Turn 通常有多组，只有最后一组在运行时是 live 的。折叠 Turn 收起的是这些组的组体，assistant 文本（含中途汇报）常显。
+
+## 过程类别（ProcessKind）
+
+过程块的归类标签，共 15 类（thinking / read / readImage / write / search / edit / commands / code / webSearch / webFetch / subagents / plan / questions / tools / context）。它同时驱动三件事：分组的组头文案（落定 / live / 准备中三套）、组头图标、以及「这一组在做什么」的活动指示。
+
+`kind` 是唯一保留的归类词；旧实现里的 `variant` 已退役，工具名到类别的映射只有一张表（`agent-design/src/blocks/tools.ts`，ADR-0018）。
+
+## 对话块库（agent-design/blocks）
+
+`agent-design` 包里的块组件子路径，是对话正文的唯一实现：`import { TurnView } from 'agent-design/blocks'` 引入组件，同时引入块的类型定义与文案。它自带 `blocks.css`（作用域 `.pi-blocks`，只声明块自己消费的变量），不带来宿主的全局样式。
+
+`agent-design` 因此同时是「块组件库」与「设计验收场」：验收场（回放页 / 状态画廊）用纯 props 渲染同一套块，是块的对照物而非第二份实现（ADR-0018）。
 
 ## System 提示
 

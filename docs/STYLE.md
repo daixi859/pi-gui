@@ -86,9 +86,8 @@
 | `pi-page` | 内容页容器（820px 最大宽 + 32px 横向内边距） |
 | `pi-input` | 单行输入框（含 placeholder / focus 描边） |
 | `pi-shimmer` / `pi-shimmer-content` / `pi-shimmer-decoration` / `pi-sweep` / `pi-sweep-copy` | 运行中文字的一次扫光：真实文字留在基础层（可选中、可读屏），之上叠 inert 装饰副本，移动遮罩扫出亮带，两层反向平移相抵使字形不动。业务代码不直接写类名，统一用 `components/base/Shimmer.tsx` 的 `<Shimmer active>`；包整条行头（标题 + 装饰圆点 + 摘要），落定即 `active={false}`。装饰点用 `data-shimmer-decoration` 让底色跟随亮带 |
-| `pi-fade-end` | 流式中文字的右端 48px 渐隐，代替省略号（内容还在写，不该读成「说完了」）；只用于思考摘要，非流式时仍用 `text-ellipsis` |
-| `pi-marquee` | 流式思考长摘要的连续视窗：短文本静止，溢出后无缝滚动，副本对读屏隐藏。业务代码统一用 `components/base/Marquee.tsx`，减少动态时停止并只留首份 |
-| `pi-sticky-head` | 展开后钉在顶部的行头：粘性定位 + 画布底色（盖住滚过的正文）；只用于 `StepRow` 的 `stickyHeader` |
+| `pi-fade-end` / `pi-marquee` | 流式文字的右端渐隐与连续滚动。**当前无使用者**：思考摘要改由 `agent-design/blocks` 的 `ThinkingRow` 渲染，这两条连同 `components/base/{Shimmer,Marquee}.tsx` 一并挂在待清理名单（见 BACKLOG） |
+| `pi-sticky-head` | 展开后钉在顶部的行头：粘性定位 + 画布底色（盖住滚过的正文）。**当前无使用者**：原来的 `StepRow` 已随正文重写删除，块的展开体由 `agent-design/blocks` 自带样式负责 |
 
 语义类只装**结构与状态**，不装业务尺寸。业务差异继续用工具类叠加：`className="pi-card p-4 shadow-dialog"`。
 

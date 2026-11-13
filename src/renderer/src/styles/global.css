@@ -286,107 +286,8 @@ body {
   background: var(--color-edge);
 }
 
-/* markdown 排版：只保留品牌所需的间距与层级。
-   .md 的字号就是 1em 基准（正文 = 标准字号），
-   内部一律用 em 相对它缩放：正文/表格/引用 = 1em，标题才放大；
-   代码是唯一例外，固定用刻度上的 --text-xs（12px）。 */
-.md {
-  font-size: var(--text-sm);
-  line-height: 1.85;
-  color: var(--color-fg);
-}
-.md > * + * {
-  margin-top: 0.9em;
-}
-.md h1,
-.md h2,
-.md h3,
-.md h4 {
-  font-weight: 600;
-  line-height: 1.4;
-  margin-top: 1.6em;
-}
-.md h1 {
-  font-size: 1.5em;
-}
-.md h2 {
-  font-size: 1.25em;
-}
-.md h3 {
-  font-size: 1.125em;
-}
-.md h4 {
-  font-size: 1em;
-}
-.md ul,
-.md ol {
-  padding-left: 1.4em;
-}
-.md ul {
-  list-style: disc;
-}
-.md ol {
-  list-style: decimal;
-}
-.md li + li {
-  margin-top: 0.35em;
-}
-.md a {
-  color: var(--color-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.md code {
-  font-family: var(--font-mono);
-  /* 代码小一号：固定用刻度上的 --text-xs（12px），不随 em 缩放 */
-  font-size: var(--text-xs);
-  background: var(--color-sunken);
-  border-radius: 4px;
-  padding: 0.12em 0.36em;
-}
-.md pre code {
-  background: transparent;
-  padding: 0;
-}
-.md blockquote {
-  border-left: 2px solid var(--color-edge);
-  padding-left: 1em;
-  color: var(--color-muted);
-}
-.md hr {
-  border: 0;
-  border-top: 1px solid var(--color-edge);
-}
-.md table {
-  border-collapse: collapse;
-}
-.md th,
-.md td {
-  border: 1px solid var(--color-edge);
-  padding: 0.4em 0.7em;
-  text-align: left;
-}
-.md th {
-  background: var(--color-sunken);
-  font-weight: 600;
-}
-
-/* 流式光标 */
-.streaming::after {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 1em;
-  margin-left: 2px;
-  vertical-align: -0.15em;
-  background: var(--color-fg);
-  animation: caret 1s steps(2) infinite;
-}
-@keyframes caret {
-  50% {
-    opacity: 0;
-  }
-}
+/* markdown 排版由对话块库负责（agent-design/src/blocks/blocks.css 的 .pi-blocks .md）：
+   正文文本一律通过 blocks 的 AssistantText 渲染，这里的 .md 副本已删除，避免两份规则对撞。 */
 /* 亮带从左外侧扫到右外侧；叠层副本反向平移，两者相抵，字形不动（见 pi-sweep）。
    66.67% 之后停住：扫一遍 + 停一拍的节奏，模型停顿时亮带也停下，读起来才像「在跑」 */
 @keyframes sweep-box {
@@ -448,9 +349,6 @@ a:focus-visible,
 }
 /* 新动效在 reduced-motion 下关闭：过渡清零即瞬变 */
 @media (prefers-reduced-motion: reduce) {
-  .streaming::after {
-    animation: none;
-  }
   .pi-menu {
     transition: none;
   }

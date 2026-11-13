@@ -4,7 +4,7 @@
  * 于是列表一次都不重渲染，只有正在变的那一行重渲染。
  */
 import { keyOf, type MessageDelta } from '@shared/ipc'
-import type { Block } from '@shared/blocks'
+import type { Block } from 'agent-design/blocks'
 import type { EngineState } from './state'
 import { engine } from './state'
 import { deriveBlocks } from './timeline'
@@ -56,7 +56,7 @@ export function blocksOf(): Block[] {
       const u = byId[t.userId]
       if (u) out.push(u)
     }
-    for (const id of t.ids) {
+    for (const id of t.blockIds) {
       const b = byId[id]
       if (b) out.push(b)
     }

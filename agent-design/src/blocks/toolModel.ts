@@ -1,46 +1,9 @@
 /**
- * tool 块 → 行模型：工具名派生 variant、标题、摘要、diff 行与统计。
- * 对齐 harness `ToolRowModel` 的语义（variant + summary + extra），但只保留本应用
- * 渲染需要的字段，不搬 shiki/anser 那一层。
+ * tool 块 → 行模型：标题、摘要、diff 行与统计。
+ * 类别与动词来自 tools.ts（唯一登记处），这里只负责「这个块怎么显示」。
  */
 import type { ToolBlock, ToolSubCall, ToolState } from '../reducer/types'
-
-export type ToolVariant = 'search' | 'read' | 'bash' | 'write' | 'edit' | 'code' | 'others'
-
-const VARIANTS: Record<string, ToolVariant> = {
-  grep: 'search',
-  glob: 'search',
-  read: 'read',
-  ls: 'read',
-  powershell: 'bash',
-  bash: 'bash',
-  cmd: 'bash',
-  write: 'write',
-  edit: 'edit',
-  codemode: 'code',
-}
-
-const TITLES: Record<ToolVariant, string> = {
-  search: '检索',
-  read: '阅读',
-  bash: '执行',
-  write: '写入',
-  edit: '修改',
-  code: '脚本',
-  others: '工具',
-}
-
-export function variantOf(name: string): ToolVariant {
-  return VARIANTS[name] ?? 'others'
-}
-
-export function titleOf(name: string): string {
-  const variant = variantOf(name)
-  if (variant === 'read' && name === 'ls') return '查看'
-  if (variant === 'search' && name === 'glob') return '查找'
-  if (variant === 'others') return name
-  return TITLES[variant]
-}
+import { toolMeta, toolVerb, type ProcessKind } from './tools'
 
 interface Args {
   readonly path?: unknown
@@ -65,7 +28,7 @@ export function baseName(path: string): string {
 }
 
 export interface ToolRowModel {
-  readonly variant: ToolVariant
+  readonly kind: ProcessKind
   readonly title: string
   readonly summary: string
   /** 摘要走等宽字体（命令、pattern、原始参数）。 */
@@ -77,35 +40,35 @@ export interface ToolRowModel {
   readonly durationMs?: number
 }
 
-function extraOf(block: ToolBlock): string | undefined {
+function extraOf(block: ToolBlock, kind: ProcessKind): string | undefined {
   const args = (block.args ?? {}) as Args
-  const variant = variantOf(block.name)
-  if (variant === 'read' && typeof args.offset === 'number') return `第 ${args.offset} 行起`
+  if (kind === 'read' && typeof args.offset === 'number') return `第 ${args.offset} 行起`
   if (block.state === 'stopped') return '已中断'
   return undefined
 }
 
-/** 摘要优先用参数；参数还没到时退回「准备中…」。 */
+/** 摘要优先用参数；参数还没到时为空串（行尾显示「准备中…」）。 */
 export function toolRowModel(block: ToolBlock): ToolRowModel {
   const args = (block.args ?? {}) as Args
-  const variant = variantOf(block.name)
+  const { kind } = toolMeta(block.name)
   const path = str(args.path) ?? str(args.file_path)
   let summary = ''
   let detail: string | undefined
   let mono = false
 
-  switch (variant) {
+  switch (kind) {
     case 'read':
       summary = path !== undefined ? baseName(path) : (block.name === 'ls' ? '.' : '')
       detail = path
       break
-    case 'search':
+    case 'search': {
       const pattern = str(args.pattern) ?? ''
       summary = pattern
       detail = path !== undefined ? `${pattern}  in ${path}` : pattern
       mono = true
       break
-    case 'bash':
+    }
+    case 'commands':
       summary = str(args.command) ?? ''
       detail = summary
       mono = true
@@ -118,31 +81,25 @@ export function toolRowModel(block: ToolBlock): ToolRowModel {
     case 'code': {
       const calls = block.subCalls ?? []
       summary = calls.length > 0 ? `${calls.length} 次嵌套调用` : ''
-      mono = false
       break
     }
-    case 'others':
-      summary = block.argsRaw !== '' ? block.argsRaw : ''
+    default:
+      summary = block.argsRaw
       mono = true
       break
   }
 
-  if (summary === '' && block.state === 'preparing') summary = ''
-
   return {
-    variant,
-    title: titleOf(block.name),
+    kind,
+    title: toolVerb(block.name),
     summary,
     mono,
     detail,
-    extra: extraOf(block),
+    extra: extraOf(block, kind),
     state: block.state,
     durationMs: block.durationMs,
   }
 }
-
-/** 由 variant 决定行首图标；未知工具用兜底图标。 */
-export type ToolIconKey = ToolVariant
 
 export interface DiffLine {
   readonly kind: 'add' | 'remove' | 'context' | 'gap'

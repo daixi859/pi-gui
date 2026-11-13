@@ -16,7 +16,7 @@ import rust from 'shiki/langs/rust.mjs'
 import sql from 'shiki/langs/sql.mjs'
 import ts from 'shiki/langs/ts.mjs'
 import tsx from 'shiki/langs/tsx.mjs'
-import { IconCheck, IconChevronDown, IconChevronRight, IconStop } from './icons'
+
 
 /** 语法包写死成静态 import：模板字符串的动态 import Vite 分析不了，打包后根本加载不到 */
 const LANGS = { ts, tsx, js, jsx, json, bash, python, css, html, md, sql, go, rust }
@@ -79,45 +79,3 @@ export function CodeBlock({
     </figure>
   )
 }
-
-export function Disclosure({
-  open,
-  onToggle,
-  children,
-  summary,
-  className = ''
-}: {
-  open: boolean
-  onToggle: () => void
-  children: ReactNode
-  summary: ReactNode
-  className?: string
-}): ReactNode {
-  return (
-    <div className={className}>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center gap-1 text-left text-xs text-muted transition-colors hover:text-fg"
-      >
-        {open ? <IconChevronDown className="shrink-0" /> : <IconChevronRight className="shrink-0" />}
-        {summary}
-      </button>
-      {open && <div className="pt-1 pl-4">{children}</div>}
-    </div>
-  )
-}
-
-export function StateDot({ state }: { state: 'running' | 'done' | 'error' }): ReactNode {
-  if (state === 'running')
-    return (
-      <span className="relative flex size-3 shrink-0 items-center justify-center">
-        <span className="absolute size-3 animate-ping rounded-full bg-fg/10" />
-        <span className="size-1.5 rounded-full bg-fg" />
-      </span>
-    )
-  if (state === 'error') return <span className="size-1.5 shrink-0 rounded-full bg-del" />
-  return <IconCheck className="size-3 shrink-0 text-add" />
-}
-
-export { IconStop }

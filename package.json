@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^1.4.0",
+    "agent-design": "workspace:*",
     "zustand": "^5.1.0"
   },
   "devDependencies": {

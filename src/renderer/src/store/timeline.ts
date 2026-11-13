@@ -1,53 +1,60 @@
 /**
- * 消息 → Block 的派生（ADR-0014/0015）：宿主只搬运 pi 消息，转成什么样子在这里定。
- * 产出是平铺块 + 回合段坐标（TurnSpan）：tool 状态配对、diff 从消息推导，
- * 折叠的呈现（哪些收进折叠、收起时留什么）不在数据里，全部由组件按段坐标决定。
- * 流式中的 toolCall 只有名字（参数要等 message_end 才解析完），画成 pending 行。
+ * 消息 → 块 的派生（ADR-0014/0018）：宿主只搬运 pi 消息，转成什么样子在这里定。
+ *
+ * 形状由对话块库（agent-design/blocks）定：Block 五种、Turn 只有坐标与统计。
+ * 折叠的呈现（哪些收进折叠、收起时留什么）不在数据里，全部由组件按 Turn 决定。
+ * 流式中的 toolCall 参数还没解析完，画成 preparing 行。
  *
  * 派生结果按消息引用 memo：增量到达时未变的消息产出同引用块，行级 memo 继续生效。
  */
 import type { PiMessage } from '@shared/ipc'
-import { LEVEL_LABEL, type Block, type DiffBlock, type DiffLine, type SystemTone } from '@shared/blocks'
+import type {
+  AssistantBlock,
+  AssistantStatus,
+  Block,
+  SystemBlock,
+  ThinkingBlock,
+  ToolBlock,
+  ToolState,
+  Turn,
+  TurnActivity,
+  UserBlock
+} from 'agent-design/blocks'
 import { liveReasoningDetail } from '../util'
 
 type Assistant = Extract<PiMessage, { role: 'assistant' }>
+type UserMessage = Extract<PiMessage, { role: 'user' }>
 type ToolResult = Extract<PiMessage, { role: 'toolResult' }>
-
-let seq = 0
 
 const textOf = (content: unknown): string => {
   if (typeof content === 'string') return content
   if (!Array.isArray(content)) return ''
-  return content.map((c: { type?: string; text?: string }) => (c.type === 'text' ? (c.text ?? '') : '')).join('')
+  return content
+    .map((c: { type?: string; text?: string }) => (c.type === 'text' ? (c.text ?? '') : ''))
+    .join('')
 }
 
-/** 工具参数预览：流式中（参数没解析完）给空串画 pending；完整参数给 JSON 串，截断防大文件 */
+/** 工具参数预览：流式中（参数没解析完）给空串画 preparing；完整参数给 JSON 串，截断防大文件 */
 function argsPreview(m: Assistant, args: unknown): string {
   if (m.stopReason === 'pending' || args === undefined || args === null) return ''
   const s = JSON.stringify(args) ?? ''
   return s.length > 2000 ? s.slice(0, 2000) + '…' : s
 }
 
-/** edit 工具输出的 diff 形如 "+  12 text"，转成 UI 的行模型 */
-function parseDiff(diff: string, name: string): DiffBlock {
-  const lines: DiffLine[] = []
-  for (const raw of diff.split('\n')) {
-    if (!raw) continue
-    const sign = raw[0]
-    if (sign !== '+' && sign !== '-' && sign !== ' ') continue
-    const m = /^([+\- ])\s*(\d+)?\s?(.*)$/.exec(raw)
-    if (!m) continue
-    const no = m[2] ? Number(m[2]) : undefined
-    if (m[3].trim() === '...') continue
-    lines.push({ type: sign === '+' ? 'add' : sign === '-' ? 'del' : 'ctx', text: m[3], no })
-  }
-  return {
-    id: `d-${++seq}`,
-    file: name,
-    added: lines.filter((l) => l.type === 'add').length,
-    removed: lines.filter((l) => l.type === 'del').length,
-    lines
-  }
+/** 用户消息里的图片：pi 给的是 base64 + mime，块里要可直接放进 <img src> 的地址 */
+function imageSources(m: UserMessage): string[] {
+  if (!Array.isArray(m.content)) return []
+  return m.content.flatMap((c) =>
+    c.type === 'image' && typeof c.data === 'string' && c.data !== ''
+      ? [`data:${c.mimeType ?? 'image/png'};base64,${c.data}`]
+      : []
+  )
+}
+
+/** 错误摘要：工具失败时工具体只显示一行，完整输出仍在 output 里 */
+function errorLine(text: string): string {
+  const line = text.split('\n').find((s) => s.trim() !== '') ?? ''
+  return line.length > 200 ? line.slice(0, 200) + '…' : line
 }
 
 /* ---------------- 按消息 memo ----------------
@@ -71,41 +78,51 @@ function memoBlocks(key: object, deps: unknown[], make: () => Block[]): Block[] 
 function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[] {
   const out: Block[] = []
   const streaming = m.stopReason === 'pending'
-  const level = LEVEL_LABEL[m.thinkingLevel ?? ''] ?? undefined
+  const status: AssistantStatus = streaming
+    ? 'running'
+    : m.stopReason === 'aborted'
+      ? 'interrupted'
+      : 'settled'
   // 流式尾巴只有一个块是「正在跑」的（照 deepseek-harness）：思考行只看自己是不是最后一个
   const last = m.content.length - 1
   m.content.forEach((c, i) => {
     if (c.type === 'thinking' && c.thinking) {
-      out.push({
+      const block: ThinkingBlock = {
         kind: 'thinking',
         id: `th-${m.timestamp}-${i}`,
         text: c.thinking,
-        level,
-        streaming: streaming && i === last
-      })
+        streaming: streaming && i === last,
+        ts: m.timestamp
+      }
+      out.push(block)
     } else if (c.type === 'text' && c.text) {
-      out.push({ kind: 'assistant', id: `a-${m.timestamp}-${i}`, text: c.text, streaming })
+      const block: AssistantBlock = {
+        kind: 'assistant',
+        id: `a-${m.timestamp}-${i}`,
+        text: c.text,
+        status,
+        // 一条消息的最后一段文本、且不是因工具调用收尾，才是这段回答的答案
+        final: !streaming && m.stopReason !== 'toolUse' && i === last,
+        ts: m.timestamp
+      }
+      out.push(block)
     } else if (c.type === 'toolCall' && c.id) {
       const r = results.get(c.id)
-      const details = r?.details as { diff?: unknown; patch?: unknown } | undefined
-      const args = c.arguments as { path?: unknown } | undefined
-      const d =
-        r && typeof details?.diff === 'string' && details.diff
-          ? {
-              ...parseDiff(details.diff, String(args?.path ?? c.name)),
-              patch: typeof details.patch === 'string' ? details.patch : undefined
-            }
-          : undefined
-      out.push({
+      const output = r ? textOf(r.content) : ''
+      const state: ToolState = r ? (r.isError ? 'error' : 'ok') : streaming ? 'preparing' : 'running'
+      const block: ToolBlock = {
         kind: 'tool',
         id: `tc-${c.id}`,
+        callId: c.id,
         name: c.name ?? 'tool',
-        args: argsPreview(m, c.arguments),
-        state: r ? (r.isError ? 'error' : 'done') : 'running',
-        ...(r ? { output: textOf(r.content).slice(0, 8000) || undefined } : {}),
-        // diff 属于它的工具行，派生时直接并进来
-        ...(d ? { diff: d } : {})
-      })
+        argsRaw: argsPreview(m, c.arguments),
+        ...(c.arguments !== undefined && c.arguments !== null ? { args: c.arguments } : {}),
+        state,
+        ...(r ? { output: output.slice(0, 8000) || undefined, details: r.details } : {}),
+        ...(r?.isError ? { error: { code: 'tool_error', message: errorLine(output) || '工具执行失败' } } : {}),
+        ts: m.timestamp
+      }
+      out.push(block)
     }
   })
   return out
@@ -115,15 +132,17 @@ function assistantBlocks(m: Assistant, results: Map<string, ToolResult>): Block[
 function messageBlocks(m: PiMessage, results: Map<string, ToolResult>): Block[] {
   switch (m.role) {
     case 'user': {
-      const imgs = Array.isArray(m.content) ? m.content.filter((c) => c.type === 'image').length : 0
-      return memoBlocks(m, [], () => [
-        {
+      const images = imageSources(m)
+      return memoBlocks(m, [], () => {
+        const block: UserBlock = {
           kind: 'user',
           id: `u-${m.timestamp}`,
           text: textOf(m.content),
-          ...(imgs ? { images: imgs } : {})
+          images,
+          ts: m.timestamp
         }
-      ])
+        return [block]
+      })
     }
     case 'assistant':
       return memoBlocks(
@@ -132,36 +151,43 @@ function messageBlocks(m: PiMessage, results: Map<string, ToolResult>): Block[] 
         () => assistantBlocks(m, results)
       )
     case 'bashExecution':
-      return memoBlocks(m, [], () => [
-        {
+      return memoBlocks(m, [], () => {
+        const block: ToolBlock = {
           kind: 'tool',
           id: `tc-bash-${m.timestamp}`,
+          callId: `bash-${m.timestamp}`,
           name: 'bash',
-          args: m.command ?? '',
-          state: m.cancelled || m.exitCode ? 'error' : 'done',
-          output: (m.output ?? '').slice(0, 8000)
+          argsRaw: m.command ?? '',
+          state: m.cancelled ? 'stopped' : m.exitCode ? 'error' : 'ok',
+          output: (m.output ?? '').slice(0, 8000),
+          ts: m.timestamp
         }
-      ])
+        return [block]
+      })
     case 'custom':
       if (!m.display) return []
-      return memoBlocks(m, [], () => [
-        {
+      return memoBlocks(m, [], () => {
+        const block: SystemBlock = {
           kind: 'system',
           id: `s-${m.timestamp}`,
-          tone: ((m.details as { tone?: SystemTone } | undefined)?.tone ?? 'info'),
-          text: typeof m.content === 'string' ? m.content : textOf(m.content)
+          tone: (m.details as { tone?: SystemBlock['tone'] } | undefined)?.tone ?? 'info',
+          text: typeof m.content === 'string' ? m.content : textOf(m.content),
+          ts: m.timestamp
         }
-      ])
+        return [block]
+      })
     case 'compactionSummary':
       // 历史里的压缩记录与实时的合成通知（pigui-notice）同一副面孔
-      return memoBlocks(m, [], () => [
-        {
+      return memoBlocks(m, [], () => {
+        const block: SystemBlock = {
           kind: 'system',
           id: `s-${m.timestamp}`,
           tone: 'info',
-          text: `上下文已压缩：${Math.round(Number(m.tokensBefore ?? 0) / 1000)}k tokens`
+          text: `上下文已压缩：${Math.round(Number(m.tokensBefore ?? 0) / 1000)}k tokens`,
+          ts: m.timestamp
         }
-      ])
+        return [block]
+      })
     default:
       return []
   }
@@ -210,50 +236,13 @@ function groupLive(g: Group, results: Map<string, ToolResult>): boolean {
   return false
 }
 
-/** live 段此刻在干什么：工具优先（带参数摘要），其次流式思考 / 回复 */
-export interface TurnActivity {
-  kind: 'thinking' | 'replying' | 'tool'
-  /** kind === 'tool' 时的工具名 */
-  toolName?: string
-  /** 一行任务摘要（command/path/pattern… 截断；参数没流完时缺省） */
-  detail?: string
-}
-
-/** 一个回合的段坐标：只记范围与统计，不嵌套块。折叠与否、收起时留什么由组件决定 */
-export interface TurnSpan {
-  /** `t-${user 消息 timestamp}`：live 到落定不变，折叠记忆也按它存 */
-  key: string
-  /** user 气泡块 id，渲染在段头之前；首条 user 之前的散件组没有 */
-  userId?: string
-  /** 段头之后的全部块（过程、中间文本、答案），顺序即渲染顺序 */
-  ids: string[]
-  /** 回合起点；live 走表（UI 时钟）与落定时长（durationMs）都从它算 */
-  startedAt: number
-  /** 落定后的总时长；live 段恒 0（走表不靠派生刷新，交给组件里的时钟） */
-  durationMs: number
-  /** 过程块数（thinking/tool/diff/file/system），> 0 才有折叠按钮 */
-  stepCount: number
-  /** 文本块数（中间文本 + 答案），> 1 且无过程块才有纯时长行 */
-  noteCount: number
-  toolCount: number
-  /** 已收到 isError 的工具数；折叠时也不能吞掉失败 */
-  errorCount: number
-  live: boolean
-  /** live 段当前活动；落定后无 */
-  activity?: TurnActivity
-  aborted: boolean
-}
-
 export interface Derived {
-  turns: TurnSpan[]
+  turns: Turn[]
   byId: Record<string, Block>
   answerText: string
 }
 
-/** 上一次的段索引：值没变的段复用旧对象（含 ids 引用），段容器 memo 才能命中 */
-let prevTurns: TurnSpan[] = []
-
-/** 工具参数抽一行摘要：command/path/pattern 优先，压空白截长。mock 假流也用它 */
+/** 工具参数抽一行摘要：command/path/pattern 优先，压空白截长 */
 export function argDetail(args: Record<string, unknown> | undefined): string | undefined {
   if (!args) return undefined
   for (const key of ['command', 'path', 'pattern', 'query', 'url']) {
@@ -279,7 +268,7 @@ function groupActivity(g: Group, results: Map<string, ToolResult>): TurnActivity
     if (call) {
       const detail =
         m.stopReason === 'pending' ? undefined : argDetail(call.args as Record<string, unknown> | undefined)
-      return { kind: 'tool', toolName: call.name ?? 'tool', ...(detail ? { detail } : {}) }
+      return { kind: 'tool', ...(detail ? { detail } : {}) }
     }
     if (m.stopReason === 'pending') {
       const last = [...m.content].reverse().find((c) => c.type === 'thinking' || c.type === 'text')
@@ -295,41 +284,46 @@ function groupActivity(g: Group, results: Map<string, ToolResult>): TurnActivity
 
 function sameActivity(a: TurnActivity | undefined, b: TurnActivity | undefined): boolean {
   if (!a || !b) return a === b
-  return a.kind === b.kind && a.toolName === b.toolName && a.detail === b.detail
+  return a.kind === b.kind && a.detail === b.detail
 }
 
-/** 值相等（含 ids 逐位）才算没变：live 段的走表不进派生，只有内容 / 活动真变了才换对象 */
-function sameSpan(p: TurnSpan, t: TurnSpan): boolean {
+/** 值相等（含 blockIds 逐位）才算没变：live 段的走表不进派生，只有内容 / 活动真变了才换对象 */
+function sameTurn(p: Turn, t: Turn): boolean {
   return (
     p.userId === t.userId &&
-    p.live === t.live &&
-    p.aborted === t.aborted &&
-    p.durationMs === t.durationMs &&
-    p.stepCount === t.stepCount &&
-    p.noteCount === t.noteCount &&
+    p.status === t.status &&
+    p.endedAt === t.endedAt &&
+    p.startedAt === t.startedAt &&
     p.toolCount === t.toolCount &&
     p.errorCount === t.errorCount &&
     sameActivity(p.activity, t.activity) &&
-    p.ids.length === t.ids.length &&
-    p.ids.every((id, i) => id === t.ids[i])
+    p.blockIds.length === t.blockIds.length &&
+    p.blockIds.every((id, i) => id === t.blockIds[i])
   )
 }
 
-/** 全量派生：平铺块按消息顺序产出，回合只给段坐标。最后一段在流式 / 有工具没结果时算 live */
+/** 上一次的回合索引：值没变的回合复用旧对象（含 blockIds 引用），回合容器 memo 才能命中 */
+let prevTurns: Turn[] = []
+
+/** 全量派生：平铺块按消息顺序产出，回合只给坐标。最后一段在流式 / 有工具没结果时算 live */
 export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): Derived {
   const groups = groupMessages(order, byId)
   const outById: Record<string, Block> = {}
-  const turns: TurnSpan[] = []
+  const turns: Turn[] = []
   let answerText = ''
 
   groups.forEach((g, gi) => {
     const results = new Map<string, ToolResult>()
     for (const m of g.items) if (m.role === 'toolResult') results.set(m.toolCallId, m)
 
-    // user 气泡单独走（渲染在段头之前），段头之下只放回应过程
+    // user 气泡单独走（渲染在回合头之前），回合头之下只放回应过程
     const userBlock = g.user ? messageBlocks(g.user, results)[0] : undefined
     const items: Block[] = []
     for (const m of g.items) items.push(...messageBlocks(m, results))
+
+    // 一条 user 都还没有、也没有可渲染的块（首条 user 之前的 system prompt 等）：不成回合，
+    // 否则正文顶上会多出一个空回合头（「已完成，用时 0 秒」）
+    if (!userBlock && items.length === 0) return
 
     if (userBlock) outById[userBlock.id] = userBlock
     for (const b of items) {
@@ -340,28 +334,28 @@ export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): 
 
     const userTs = g.user ? g.user.timestamp : (g.items[0]?.timestamp ?? 0)
     const live = gi === groups.length - 1 && groupLive(g, results)
-    // live 段不算时长（走表归 UI 时钟），落定用末条消息 timestamp 定格
-    const endTs = live ? userTs : (g.items[g.items.length - 1]?.timestamp ?? userTs)
+    // live 段不定格（走表归 UI 时钟），落定用末条消息 timestamp
+    const endTs = live ? undefined : (g.items[g.items.length - 1]?.timestamp ?? userTs)
+    const aborted = g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')
+    const activity = live ? groupActivity(g, results) : undefined
+
     turns.push({
       key: `t-${userTs}`,
-      ...(userBlock ? { userId: userBlock.id } : {}),
-      ids: items.map((b) => b.id),
+      userId: userBlock ? userBlock.id : null,
+      blockIds: items.map((b) => b.id),
+      status: live ? 'live' : aborted ? 'aborted' : 'settled',
       startedAt: userTs,
-      durationMs: Math.max(0, endTs - userTs),
-      stepCount: items.filter((b) => b.kind !== 'assistant').length,
-      noteCount: items.filter((b) => b.kind === 'assistant').length,
+      ...(endTs !== undefined ? { endedAt: endTs } : {}),
+      ...(activity ? { activity } : {}),
       toolCount: items.filter((b) => b.kind === 'tool').length,
-      errorCount: items.filter((b) => (b.kind === 'tool' && b.state === 'error') || (b.kind === 'system' && b.tone === 'error')).length,
-      live,
-      ...(live ? { activity: groupActivity(g, results) } : {}),
-      aborted: g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')
+      errorCount: items.filter((b) => (b.kind === 'tool' && b.state === 'error') || (b.kind === 'system' && b.tone === 'error')).length
     })
   })
 
   const prevByKey = new Map(prevTurns.map((t) => [t.key, t]))
   const stable = turns.map((t) => {
     const p = prevByKey.get(t.key)
-    return p && sameSpan(p, t) ? p : t
+    return p && sameTurn(p, t) ? p : t
   })
   prevTurns = stable
   return { turns: stable, byId: outById, answerText }

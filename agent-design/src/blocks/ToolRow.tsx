@@ -1,18 +1,11 @@
 import { memo, useState } from 'react'
 import { DisclosureRow } from '../primitives/DisclosureRow'
 import { StateDot } from '../primitives/StateDot'
-import {
-  IconApiOutlineRegular,
-  IconBrowseOutlineRegular,
-  IconDeliverDocRegular,
-  IconEditOutlineRegular,
-  IconEllipsisOutlineRegular,
-  IconSearchOutlineRegular,
-} from '../icons'
 import { zh } from '../i18n/zh'
 import { formatDuration } from '../lib/format'
 import type { ToolBlock, ToolState } from '../reducer/types'
-import { hasBody, parseDiff, splitOutput, toolRowModel, type ToolVariant } from './toolModel'
+import { KIND_ICON } from './kindIcons'
+import { hasBody, parseDiff, splitOutput, toolRowModel } from './toolModel'
 
 const DOT: Record<ToolState, 'done' | 'error' | 'warning' | 'ongoing'> = {
   preparing: 'ongoing',
@@ -20,25 +13,6 @@ const DOT: Record<ToolState, 'done' | 'error' | 'warning' | 'ongoing'> = {
   ok: 'done',
   error: 'error',
   stopped: 'warning',
-}
-
-function ToolIcon({ variant }: { variant: ToolVariant }) {
-  switch (variant) {
-    case 'search':
-      return <IconSearchOutlineRegular size={14} />
-    case 'read':
-      return <IconDeliverDocRegular size={14} />
-    case 'bash':
-      return <IconApiOutlineRegular size={14} />
-    case 'write':
-      return <IconEditOutlineRegular size={14} />
-    case 'edit':
-      return <IconEditOutlineRegular size={14} />
-    case 'code':
-      return <IconBrowseOutlineRegular size={14} />
-    case 'others':
-      return <IconEllipsisOutlineRegular size={14} />
-  }
 }
 
 function Code({ text, wrap }: { text: string; wrap?: boolean }) {
@@ -72,7 +46,7 @@ export const ToolRow = memo(function ToolRow({
   const running = block.state === 'preparing' || block.state === 'running'
   const expandable = hasBody(block)
   const diff = parseDiff((block.details as { diff?: unknown } | undefined)?.diff)
-  const hasDiff = diff.lines.length > 0 && (model.variant === 'edit' || model.variant === 'write')
+  const hasDiff = diff.lines.length > 0 && (model.kind === 'edit' || model.kind === 'write')
   // 所有工具默认收起，包括失败与修改；需要时手动开。
   const [open, setOpen] = useState(defaultOpen)
 
@@ -97,7 +71,7 @@ export const ToolRow = memo(function ToolRow({
   return (
     <div className="tool">
       <DisclosureRow
-        icon={<ToolIcon variant={model.variant} />}
+        icon={KIND_ICON[model.kind]}
         title={model.title}
         open={open}
         expandable={expandable}
@@ -144,7 +118,7 @@ function ToolBody({
       <div className="toolBodyHead" data-error={block.state === 'error' || undefined}>
         <span className="label toolBodyLabel">{model.title}</span>
         {model.detail !== undefined && <span>{model.detail}</span>}
-        {model.variant === 'code' && (block.subCalls?.length ?? 0) > 0 && (
+        {model.kind === 'code' && (block.subCalls?.length ?? 0) > 0 && (
           <span className="label toolBodyMeta">
             {zh.tool.subCalls(block.subCalls?.length ?? 0)}
           </span>

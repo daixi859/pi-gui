@@ -6,8 +6,8 @@
  */
 import { create } from 'zustand'
 import type { AgentCommand, AskQuestion, CommandInfo, ModelOption, PiMessage, UiRequest } from '@shared/ipc'
-import type { Block, ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
-import type { TurnSpan } from './timeline'
+import type { Block, Turn } from 'agent-design/blocks'
+import type { ProjectMeta, ProjectRow, SessionMeta, Snapshot } from '@shared/blocks'
 
 /** 待用户作答的问卷（一张卡一道或多道题） */
 export interface Ask {
@@ -27,9 +27,9 @@ export interface EngineState {
   /* ---- 正文 ---- */
   /** 宿主消息（传输模型，ADR-0014）：key 是 timestamp */
   msgs: { order: string[]; byId: Record<string, PiMessage> }
-  /** 回合段坐标（timeline.ts）：只记范围与统计，折叠呈现全在组件；未变段复用旧引用 */
-  turns: TurnSpan[]
-  /** 段内全部块（timeline.ts 派生），没有嵌套，行级订阅只认这里 */
+  /** 回合坐标（timeline.ts）：只记范围与统计，折叠呈现全在组件；未变回合复用旧引用 */
+  turns: Turn[]
+  /** 回合内全部块（timeline.ts 派生），没有嵌套，行级订阅只认这里 */
   byId: Record<string, Block>
   /** 最后一段回答的纯文本，随正文增量顺带更新（复制用） */
   answerText: string

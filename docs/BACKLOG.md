@@ -62,20 +62,22 @@
 - ~~**P2** 图片粘贴/拖拽发送未实现~~ → 已实现（粘贴 / 拖拽 / 文件选择）。
 - ~~**P3** 多行输入不自动增高~~ → 已用 `scrollHeight` 同步。
 
-## 8. 会话渲染 `src/renderer/src/components/blocks.tsx` / `DiffBlock.tsx`
+## 8. 会话渲染（2026-11-13 起由 `agent-design/blocks` 接管）
 
 - ~~**P1** diff 块的「撤销」无 handler~~ → 已实现（宿主 `revertEdit` + `git apply -R`）。
-- ~~**P2** 长 diff 不截断~~ → 超 300 行截断并提示剩余行数。
-- ~~**P3** `TurnBlock` 折叠状态不记忆~~ → 按块 id 存 localStorage。
+- ~~**P2** 长 diff 不截断~~ → 超 300 行截断并提示剩余行数；新正文里工具行的输出超 24 行截断（`DEFAULT_VISIBLE_LINES`）。
+- ~~**P3** `TurnBlock` 折叠状态不记忆~~ → 按 `turn.key` 存 localStorage，scope 用会话标识。
+- **P2** 新正文的工具行只展示，没有「撤销这次编辑」入口（旧 `DiffBlock` 的那个按钮随文件一起删了）。需要的话在块的 `ToolRow` 外面加动作，不进库。
+- **P3** 旧正文的下拉「打开 diff」随重复实现一起消失：块的 diff 体只在工具行内展开。
 
 ## 9. 代码与 Markdown `CodeBlock.tsx` / `MarkdownView.tsx`
 
 - **P2** shiki 语言只覆盖 14 种，遇到其他语言回落为纯文本（可接受，记录在此）。
 - **P3** 大代码块无「折叠 / 展开全部」。
 
-## 10. 调试页 `src/renderer/src/components/Gallery.tsx`
+## 10. 调试页 `src/renderer/src/components/business/Preview.tsx`（`#gallery`）
 
-- **P3** 仍读 `mock.ts`，接入真实引擎后未同步；`mock.ts` 只剩它一个使用者。
+- **P3** ~~仍读 `mock.ts`，接入真实引擎后未同步~~ → `mock.ts` / `mockTimeline.ts` 已删；对话块分类改吃 `previewTurns.ts` 的静态回合夹具，与实际正文同一套组件。
 
 ## 11. 工程与文档
 
@@ -119,6 +121,14 @@
 - **P3** 验收：`src/renderer/src/perf.ts` 暴露 `window.__piPerf.renders`（dev-only），组件渲染体里 `count('app'/'sidebar'/'row')`（另暴露 `reset()`，生产构建里整块被摇掉）。2026-11-09 实测（`PI_SHOT_JS_FILE` 打开一条 27KB 会话并发一句 prompt）：启动阶段 app=4、sidebar=80、row=40（全是 `sessions` / `busy` 事件，一次性）；流式 6 秒内 app +4、sidebar +4、row +2（侧栏增量全部来自 `sessions` 事件，不是正文增量）。正文块增量未触发过侧栏重渲染，目标达成。
 - **P2** 待重测：上面这组数取自重构前。ADR-0011 的「打开 700 块会话 < 400ms」「DOM < 8k」与 ARCHITECTURE §「万级块不卡」都还没在 id 化缓存 + `TurnDelta` 之后验过，旧数字作废。
 - 重构后的审查修补：`store/engine.ts` 用 `hot.accept` 重新订阅（否则改该文件后引擎永久失联）；`dispatch` 末尾 `never(ev)` 兜底，新增 `AgentEvent` 成员会编译失败而不是静默丢弃；`App` 的会话查找改为先订 `sessions` 再 `useMemo`，不再每个 delta 跑一遍 `find`。
+
+## 15. 2026-11-13 正文改用 agent-design/blocks（ADR-0018）
+
+- 会话正文的三层块（回合 → 过程分组 → 思考/工具/文本行）整体换成包里那一套，PiGui 侧只剩 `transcript/Transcript.tsx` 薄壳：1 秒时钟、折叠 scope、Markdown 注入。
+- `store/timeline.ts` 直接产包的 `Turn`/`Block`；`TurnSpan`、`stepCount`/`noteCount`、`mock.ts`、`mockTimeline.ts`、`config/tools.ts`、`blocks.tsx`、`DiffBlock.tsx` 与 `transcript/` 的旧组件全部删除。
+- 工具元数据四表（`TOOL_META`/`VARIANTS`/`TITLES`/`TOOL_KIND`/`ICONS`）合成包里的 `blocks/tools.ts` 一张表，组头图标与行标题同源。
+- **P2** 包里的 `base/{Shimmer,Marquee}.tsx` 在 PiGui 已无 importer，`global.css` 的 `pi-shimmer`/`pi-sweep`/`pi-fade-end`/`pi-marquee`/`pi-sticky-head` 也随之成死样式；清理要连同 STYLE.md 的对应行一起动。
+- ~~**P2** 包进生产依赖后，`scripts/pack.mjs` 会把 TSX 源码拷进 `release/app/agent-design`~~ → 已在 `scripts/pack.mjs:63–69` 修掉：拷贝前滤掉不含 `node_modules` 的路径，工作区包（`agent-design`、`web-demo`）不再进 release。实测 `pnpm ls --prod --depth Infinity --parseable` 共 317 条，其中 3 条被跳过（仓库根、`agent-design`、`web-demo`）。
 
 ## 建议的下一刀
 

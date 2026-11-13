@@ -1,4 +1,4 @@
-import type { Block } from '@shared/blocks'
+import type { Block } from 'agent-design/blocks'
 
 /** 把一个块序列化成 Markdown */
 function line(b: Block): string {
@@ -11,8 +11,6 @@ function line(b: Block): string {
       return `<details><summary>Thinking</summary>\n\n${b.text}\n\n</details>`
     case 'tool':
       return `> 工具 \`${b.name}\` · ${b.state}${b.output ? `\n>\n> ${b.output.replace(/\n/g, '\n> ')}` : ''}`
-    case 'diff':
-      return `> 修改 \`${b.file}\` +${b.added} -${b.removed}`
     case 'system':
       return `> ${b.text}`
   }

@@ -1,11 +1,15 @@
-# 会话块 · pi 事件流 → 对话块复刻
+# agent-design · 对话块组件库 + 设计验收场
 
-把 pi 的 JSON 事件流（`pi --mode json` / 会话 `.jsonl`）归约成与 DeepSeek harness 同构的三层对话块（总行 → 分组 → 行），并用同一套块组件做两件事：
+> **这个包有两个身份。** `src/blocks/` 是 PiGui 对话正文的**唯一实现**，作为生产依赖被 `import { TurnView } from 'agent-design/blocks'` 引入（ADR-0018）；`src/ds/` 与下面的回放页 / 状态画廊则是设计验收场，不属于 PiGui 的运行时。
+>
+> 改块 = 改 PiGui 的主界面。改动后跑 `pnpm run typecheck`，并在验收场与 PiGui 各看一眼。
+
+把 pi 的 JSON 事件流（`pi --mode json` / 会话 `.jsonl`）归约成三层对话块（总行 → 分组 → 行），并用同一套块组件做两件事：
 
 - **回放**：按事件时间轴播放真实会话，含思考、工具行、失败重试、中断、子调用、超长输出，以及「工具 / 思考 / 标准文本」交替出现的回合；过程按 assistant 文本切成可独立开合的分组。
 - **状态画廊**：纯 props 渲染每种终态，不经过事件流，用来单独调块的样子。
 
-以上两页现在归入「旧页面」：默认入口是 PiDS（见下节），旧页从顶栏最右进入，保留着作对照。
+以上两页现在归入「旧页面」：默认入口是 PiDS（见下节），旧页从顶栏最右进入，保留着作对照。它们同时是 `src/blocks/` 的验收场——块改了什么，这里能直接看到，且不经过 PiGui 的宿主与 store。
 
 ## PiDS（`src/ds/`）
 
@@ -104,12 +108,14 @@ scripts/
 src/
   ds/                  # PiDS：令牌、基础组件、规范页、高保真（见上节）
   reducer/             # PiEvent 类型 + 纯 reducer（状态机）
-  blocks/              # 旧：三层 turn / ProcessGroup / thinking、tool、assistant、system 行
-  primitives/          # 旧：搬来的 DisclosureRow / TextShimmer / StateDot
-  icons/               # 旧：图标 artwork + sprite 注入
-  lib/                 # 旧：回放时钟、主题、折叠、格式化
-  pages/               # 旧：Player（回放 + 调试） / Gallery（状态画廊）
-  styles/              # 旧：harness token（design-platform/base）+ 应用层 app.css
+  blocks/              # 对话块：TurnView / ProcessGroup / thinking、tool、assistant、system 行
+                       #   + index.ts（包入口 agent-design/blocks）、tools.ts（工具元数据）、blocks.css
+  primitives/          # 块的内脏：DisclosureRow / TextShimmer / StateDot / HoverPreview
+  icons/               # 图标 artwork + sprite 注入（导入 blocks 时自动执行一次）
+  i18n/                # 块内文案（唯一文案源，随包导出）
+  lib/                 # 回放时钟、主题、折叠、格式化
+  styles/              # 验收场外壳与 PiDS 之外的旧样式（app.css 只剩外壳段）
+  pages/               # 旧：Player（回放 + 调试） / Gallery（状态画廊）——块的验收场
 public/fixtures/       # 7 份夹具 + index.json
 ```
 
@@ -131,7 +137,7 @@ ID 约定：
 ## 渲染决策
 
 - **三层结构**：总行（耗时/状态）→ 分组（assistant 文本之间的思考/工具）→ 行。折叠总行只隐藏分组，所有 assistant 文本（包括中途汇报）常显；最终答案只是 `final` 的那一段。
-- **总行**：全宽 33px、底部分隔线，只显示「已完成，用时 X」或「已停止」；时长数字等宽 tabular，可折叠时才出现 chevron。右侧不再放工具数/失败数。live 期间不渲染；尾部是鲸鱼 +「深度求索中，用时 X」，文字前后各一条 16px 短线，时间按回放时钟走，暂停即冻结。
+- **总行**：全宽 33px、底部分隔线，只显示「已完成，用时 X」或「已停止」；时长数字等宽 tabular，可折叠时才出现 chevron。右侧不再放工具数/失败数。live 期间不渲染；尾部是鲸鱼 +「正在工作中，用时 X」（与品牌无关的中性文案：PiGui 是 pi agent 客户端，不是 DeepSeek harness），时间按宿主的 1 秒时钟走，回放页则按回放时钟走、暂停即冻结。
 - **分组**：24px 整行按钮，图标按组内次数最多的类别选，悬停/展开时淡出成 chevron，运行中整行扫光。收起标题按次数取前 3 类、无计数：`已读取文件` / `已读取文件并搜索代码`（第二项去掉共用「已」）/ `执行了命令，已读取文件，已搜索代码等`（超过 3 类加「等」）；整组没有工具时显示「已完成分析」。live 时只有**最后一个分组**显示「正在读取文件 · 路径 / 正在运行命令 · 命令」；被文本切开的前序分组已经完成，按类别摘要展示，不再全部显示「正在分析请求」。
 - **分组容器**：展开后标题底部 8px，组内行距 4px；组体 `max-height: min(400px, 50vh)` 内滚，触顶/触底各有 24px 渐隐，滚动条 6px。运行中的组展开时自动贴底，读者上滚后停止跟随；落定后从顶部开始读。分组成员按原顺序，`codemode` 有子调用时只按子调用类别计数。开合状态按夹具 id 隔离。
 - **思考行**：默认收起，和 harness 一致。运行中标题是「思考」，摘要取最新「已完成段落」的首行并扫光；落定后显示「已思考 · X 秒」+ 首行摘要。手动展开后正文超过 168px 会自动贴底（顶部渐隐），读者上滚停止跟随。整行可点，图标只是装饰。

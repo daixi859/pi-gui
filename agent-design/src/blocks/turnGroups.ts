@@ -1,23 +1,8 @@
 import { zh } from '../i18n/zh'
 import type { AssistantBlock, Block, ConversationState, ToolBlock, Turn } from '../reducer/types'
+import { toolKind, type ProcessKind } from './tools'
 
-/** 过程类别，取词与 DeepSeek harness 的 step-process 轴一致。 */
-export type ProcessKind =
-  | 'thinking'
-  | 'read'
-  | 'readImage'
-  | 'write'
-  | 'search'
-  | 'edit'
-  | 'commands'
-  | 'code'
-  | 'webSearch'
-  | 'webFetch'
-  | 'subagents'
-  | 'plan'
-  | 'questions'
-  | 'tools'
-  | 'context'
+export type { ProcessKind } from './tools'
 
 export interface ProcessCount {
   readonly kind: ProcessKind
@@ -49,42 +34,6 @@ export type TurnEntry =
 export interface TurnLayout {
   readonly entries: readonly TurnEntry[]
   readonly groups: readonly ProcessGroupView[]
-}
-
-const TOOL_KIND: Record<string, ProcessKind> = {
-  read: 'read',
-  read_image: 'readImage',
-  readImage: 'readImage',
-  grep: 'search',
-  glob: 'search',
-  write: 'write',
-  edit: 'edit',
-  apply_patch: 'edit',
-  bash: 'commands',
-  pwsh: 'commands',
-  powershell: 'commands',
-  cmd: 'commands',
-  exec_command: 'commands',
-  write_stdin: 'commands',
-  run_code: 'code',
-  web_search: 'webSearch',
-  web_fetch: 'webFetch',
-  subagent: 'subagents',
-  todo_write: 'plan',
-  create_goal: 'plan',
-  update_goal: 'plan',
-  get_goal: 'plan',
-  ask_user_question: 'questions',
-  request_user_input: 'questions',
-}
-
-/** 工具名 → 类别；未登记一律「调用工具」。 */
-export function toolKind(name: string): ProcessKind {
-  if (TOOL_KIND[name] !== undefined) return TOOL_KIND[name]
-  if (name.endsWith('_inspect')) return 'search'
-  if (name.startsWith('terminal_')) return 'commands'
-  if (name.startsWith('subagent_')) return 'subagents'
-  return 'tools'
 }
 
 const DETAIL_KEYS = [

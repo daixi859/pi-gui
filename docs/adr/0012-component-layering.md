@@ -19,8 +19,8 @@
 components/
 ├── base/       Button, Menu, Dropdown, ListRow, Tip, Toasts, icons, PiLogo, CodeBlock, MarkdownView
 └── business/   Sidebar, Composer, Projects, TitleBar, StartPage, AskCard,
-                UiPrompt, DiffBlock, Preview, blocks
-                └── transcript/   会话正文子分组
+                UiPrompt, Preview, MessageActions, WorkingDots
+                └── transcript/   会话正文薄壳（块来自 agent-design/blocks，见 ADR-0018）
 ```
 
 业务可以 import base，反之禁止；base 内部不越出 base/。

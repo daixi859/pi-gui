@@ -1,45 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import {
-  IconAgentPresetOutlineRegular,
-  IconApiOutlineRegular,
-  IconBrowseOutlineRegular,
-  IconChevronDownOutlineRegular,
-  IconChevronUpOutlineRegular,
-  IconCodeOutlineRegular,
-  IconContextInjectionOutlineRegular,
-  IconEditOutlineRegular,
-  IconGlobeOutlineRegular,
-  IconPlanOutlineRegular,
-  IconQuestionOutlineRegular,
-  IconSearchOutlineRegular,
-  IconSparkleRegular,
-  IconThinkOutlineRegular,
-} from '../icons'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { IconChevronDownOutlineRegular, IconChevronUpOutlineRegular } from '../icons'
 import { useFold } from '../lib/useFold'
 import { TextShimmer } from '../primitives/TextShimmer'
 import type { Block, ConversationState } from '../reducer/types'
+import { KIND_ICON } from './kindIcons'
 import { SystemRow } from './SystemRow'
 import { ThinkingRow } from './ThinkingRow'
 import { ToolRow } from './ToolRow'
-import { groupActivity, groupDoneTitle, groupLiveTitle, type ProcessGroupView, type ProcessKind } from './turnGroups'
-
-const ICONS: Record<ProcessKind, ReactNode> = {
-  thinking: <IconThinkOutlineRegular size={14} />,
-  read: <IconBrowseOutlineRegular size={14} />,
-  readImage: <IconBrowseOutlineRegular size={14} />,
-  search: <IconSearchOutlineRegular size={14} />,
-  edit: <IconEditOutlineRegular size={14} />,
-  write: <IconEditOutlineRegular size={14} />,
-  commands: <IconApiOutlineRegular />,
-  code: <IconCodeOutlineRegular size={14} />,
-  webSearch: <IconGlobeOutlineRegular />,
-  webFetch: <IconBrowseOutlineRegular size={14} />,
-  subagents: <IconAgentPresetOutlineRegular size={14} />,
-  plan: <IconPlanOutlineRegular />,
-  questions: <IconQuestionOutlineRegular />,
-  tools: <IconSparkleRegular size={14} />,
-  context: <IconContextInjectionOutlineRegular size={14} />,
-}
+import { groupActivity, groupDoneTitle, groupLiveTitle, type ProcessGroupView } from './turnGroups'
 
 function renderRow(block: Block) {
   switch (block.kind) {
@@ -125,7 +93,7 @@ export const ProcessGroup = memo(function ProcessGroup({
         onClick={toggle}
       >
         <span className="groupLeading" aria-hidden="true">
-          <span className="groupIcon">{ICONS[activity]}</span>
+          <span className="groupIcon">{KIND_ICON[activity]}</span>
           <span className="groupChevron">
             {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
           </span>

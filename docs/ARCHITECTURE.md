@@ -28,7 +28,7 @@
        │ utilityProcess.fork + postMessage（无共享内存）
 ┌──────▼───────────────────────────────────────────────────────────┐
 │ 引擎宿主 agent-host.ts — 唯一加载 pi SDK 的进程                    │
-│   AgentSession ── 事件订阅 ── Block 组装 ── uiContext 通用桥        │
+│   AgentSession ── 事件订阅 ── 消息增量搬运 ── uiContext 通用桥      │
 └──────┬───────────────────────────────────────────────────────────┘
        │
    pi SDK 1.4.0  ~/.pi/agent/{sessions,settings.json,extensions}
@@ -56,8 +56,8 @@ Composer 提交
   → agent-host 只做 upsert（key = timestamp），60ms 合并一次
   → send({type:'messages', delta: MessageDelta})   ← 只推变了的消息
   → main 转发 → preload → store/engine.ts dispatch → store/blocks.ts applyMessages
-  → store/timeline.ts 派生成 Block（未变的消息产出同引用块）
-  → 只有变化的那一行（useEngine(s => s.byId[id])）重渲染，ChatView 贴底
+  → store/timeline.ts 派生成 Turn/Block（形状由 agent-design/blocks 定；未变的消息产出同引用块）
+  → 只有变化的那个回合壳（Turn）与块（useEngine(s => s.byId[id])）重渲染，ChatView 贴底
 ```
 
 **增量而非全量**：`MessageDelta` 带 `items`（变了的消息，整条）、可选 `order`（顺序变了才带）。
@@ -138,7 +138,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ store/             引擎状态的唯一入口（ADR-0013）
         │  ├─ state.ts        EngineState 形状 + zustand 实例 + send
         │  ├─ blocks.ts       MessageDelta → msgs{order,byId}，再派生成块
-        │  ├─ timeline.ts     消息 → 平铺块 + 回合段坐标 TurnSpan（tool 配对、diff 并工具行）
+        │  ├─ timeline.ts     消息 → Turn/Block（形状来自 agent-design/blocks；tool 配对、diff 并工具行）
         │  ├─ interaction.ts  ui 槽位、问卷回填、toast 计时
         │  ├─ engine.ts       宿主事件 dispatch + startEngine + HMR 退订
         │  └─ index.ts        动作层：组件只从这里 import
@@ -146,11 +146,9 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ useScrollRail.ts   滚动条贴到右边缘才露出滑块（WebKit 没有轨道 hover）
         ├─ drafts.ts          输入框草稿 store（按会话键，仅内存）
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
-        ├─ config/            渲染层通用配置表（非业务状态）：tools.ts 工具图标 + 中文动词 TOOL_META
-        ├─ mock.ts            画廊样本数据（仅 Gallery 使用，不参与运行时）
-        ├─ mockTimeline.ts    假流时间线数据（仅 transcript/MockStage 使用）
-        ├─ util.ts            workTime 时长文案
-        ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角 + .md 排版 + 流式光标
+        ├─ previewTurns.ts    组件预览的静态回合夹具（不进运行时路径）
+        ├─ util.ts            进行中思考的一行摘要（分组头用）
+        ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角（Markdown 排版归对话块库）
         └─ components/
             ├─ base/               基础组件（不知道 pi，控件外观唯一书写地，ADR-0012）
             │  ├─ Button.tsx       全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
@@ -169,10 +167,8 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
                ├─ Projects.tsx     项目页：从会话扫描派生的项目表 + 软移除/恢复/真删
                ├─ StartPage.tsx    起始页：水印 + 问候 + 大输入卡 + 建议胶囊
                ├─ Composer.tsx     WorkspaceBar / InputCard / ChatComposer / 模型弹窗
-               ├─ transcript/      会话正文（运行时）：Transcript / TurnView / Step / tool 展开体
+               ├─ transcript/      会话正文薄壳：Transcript（1 秒时钟 + 折叠 scope + Markdown 注入）
                ├─ MessageActions.tsx 回合结束后的动作条（复制/赞踩/分享/导出）
-               ├─ blocks.tsx       旧 Block 分派：仅供组件预览对照
-               ├─ DiffBlock.tsx    文件变更折叠行 + 行号着色
                ├─ AskCard.tsx      问卷卡片：翻页、单选/多选、自定义输入、忽略/继续/提交
                ├─ UiPrompt.tsx     裸 UI 请求的原生弹窗（confirm/select/input/editor）
                └─ Preview.tsx      组件预览（#gallery）+ 令牌面板
@@ -187,7 +183,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
 | 状态 | 存在哪 | 谁写 | 谁读 |
 |---|---|---|---|
 | 会话历史 / 模型列表 / 快照 | 宿主 | pi 事件 | 渲染层 store（只读副本） |
-| 正文块 `{order, byId}` | 宿主组装增量，渲染层 store | `blocks` 事件的 `BlockDelta` | `Transcript` 只读 `order`，每行只读 `byId[id]` |
+| 正文回合 `turns` + 块 `byId` | 渲染层 store（从消息增量派生） | `applyMessages` 调 `deriveBlocks` | `Transcript` 只读 `turns`，每个回合的块按 `blockIds` 逐块订阅 `byId[id]` |
 | `answerText` / `liveTurnId` | 渲染层 store（派生缓存） | `blocks.ts` 应用增量时顺带算 | `AnswerActions` / `Transcript` |
 | 问卷答案 / UI 槽位 | `store/interaction.ts` 的 `slots` | 用户提交 | `flushSlot` |
 | 路由、侧栏折叠、下拉开关 | 渲染层组件 state | 用户 | 各自组件 |

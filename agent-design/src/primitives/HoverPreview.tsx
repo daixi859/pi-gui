@@ -154,17 +154,21 @@ export function HoverPreview({ anchor, content, widthRef }: {
         {anchor}
       </div>
       {phase !== 'closed' && createPortal(
-        <div
-          ref={cardRef}
-          className={closing ? `${css.card} ${css.closing}` : css.card}
-          data-hover-preview=""
-          style={placement === null
-            ? { visibility: 'hidden' }
-            : { left: placement.left, top: placement.top, bottom: placement.bottom, width: placement.width, maxHeight: placement.maxHeight }}
-          onPointerEnter={() => { clearTimer('close') }}
-          onPointerLeave={scheduleClose}
-        >
-          {content}
+        // 卡片 portal 到 body，脱离了 .pi-blocks 作用域：外再包一层 pi-blocks，
+        // 否则卡片拿不到块的设计令牌（圆角、底色、阴影全退化成默认值）。
+        <div className="pi-blocks">
+          <div
+            ref={cardRef}
+            className={closing ? `${css.card} ${css.closing}` : css.card}
+            data-hover-preview=""
+            style={placement === null
+              ? { visibility: 'hidden' }
+              : { left: placement.left, top: placement.top, bottom: placement.bottom, width: placement.width, maxHeight: placement.maxHeight }}
+            onPointerEnter={() => { clearTimer('close') }}
+            onPointerLeave={scheduleClose}
+          >
+            {content}
+          </div>
         </div>,
         document.body,
       )}

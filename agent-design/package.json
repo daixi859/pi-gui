@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    ".": "./src/App.tsx",
+    "./blocks": "./src/blocks/index.ts",
+    "./blocks/blocks.css": "./src/blocks/blocks.css"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
