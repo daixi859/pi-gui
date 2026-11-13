@@ -110,7 +110,7 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
  ├─ tsconfig.web.json         renderer + shared + preload/index.d.ts
  ├─ package.json              scripts: dev / build / start / release / typecheck；packageManager 固定 pnpm
  ├─ AGENTS.md                 硬约束（preload CJS、sandbox 不可关、禁止 npm install 装依赖）
-  ├─ pnpm-workspace.yaml       workspace 成员（conversation-block-react、web-demo）+ catalog 版本源 + nodeLinker=hoisted
+  ├─ pnpm-workspace.yaml       workspace 成员（agent-design、web-demo）+ catalog 版本源 + nodeLinker=hoisted
   ├─ pnpm-lock.yaml            唯一锁文件（已删除 package-lock.json）
  ├─ GLOSSARY.md               术语表：只定义语言，不记实现
  │

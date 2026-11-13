@@ -14,13 +14,13 @@ pnpm run typecheck  # 三端类型检查，改完必跑
 ## 工作区（pnpm workspace）
 
 - 根目录就是 Electron 应用 `pi`，同时是 workspace 的一员。
-- 子项目列在 `pnpm-workspace.yaml` 的 `packages` 中：`conversation-block-react/`、`web-demo/`。各自有独立 `package.json`。
+- 子项目列在 `pnpm-workspace.yaml` 的 `packages` 中：`agent-design/`、`web-demo/`。各自有独立 `package.json`。
 - 共享依赖版本只在 `pnpm-workspace.yaml` 的 `catalog:` 里写一次，子包用 `"catalog:"` 引用。升级依赖只改这一处。
-- 子包命令用 `--filter`：`pnpm --filter web-demo dev`、`pnpm --filter conversation-block-react build`。
+- 子包命令用 `--filter`：`pnpm --filter web-demo dev`、`pnpm --filter agent-design build`。
 - `pnpm-workspace.yaml` 里 `nodeLinker: hoisted` 不能删：`scripts/pack.mjs` 依赖扁平的 `node_modules` 原样拷贝生产依赖。
 - 安装脚本白名单在 `allowBuilds`（electron、protobufjs、@google/genai）。新增带安装脚本的依赖要同步加入。
 
-有测试脚本的只有 `conversation-block-react`（`pnpm --filter conversation-block-react check` 跑 reducer 校验，`lint` 用 oxlint）。根目录无测试、无 lint。
+有测试脚本的只有 `agent-design`（`pnpm --filter agent-design check` 跑 reducer 校验，`lint` 用 oxlint）。根目录无测试、无 lint。
 
 项目有 git 仓库（根目录 `.git`）。改文件仍要精确替换，改完跑 `pnpm run typecheck`。
 

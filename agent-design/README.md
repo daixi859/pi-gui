@@ -13,16 +13,16 @@
 
 ```bash
 pnpm install                                   # 在仓库根执行，不要在本目录 npm install
-pnpm --filter conversation-block-react dev     # http://localhost:5173
+pnpm --filter agent-design dev     # http://localhost:5173
 ```
 
 Vite 8 默认只监听 `localhost`（`::1`），用 `http://localhost:5173` 访问；`127.0.0.1` 会拒绝连接。
 
 ```bash
-pnpm --filter conversation-block-react fixtures # 从真实会话重新生成 public/fixtures/*.json
-pnpm --filter conversation-block-react check    # 只跑 reducer，打印每份夹具的块统计与落定校验
-pnpm --filter conversation-block-react shots    # Playwright 截图 + 横向溢出/耗时/播放态断言（需 dev server）
-pnpm --filter conversation-block-react build
+pnpm --filter agent-design fixtures # 从真实会话重新生成 public/fixtures/*.json
+pnpm --filter agent-design check    # 只跑 reducer，打印每份夹具的块统计与落定校验
+pnpm --filter agent-design shots    # Playwright 截图 + 横向溢出/耗时/播放态断言（需 dev server）
+pnpm --filter agent-design build
 ```
 
 `shots` 用全局安装的 Playwright（`npm root -g` 下找 `playwright`），输出到 `screenshots/`：

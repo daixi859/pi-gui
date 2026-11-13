@@ -1,7 +1,7 @@
 # pnpm workspace：根目录是 Electron 应用本身（pi），子项目各自独立 package.json。
 # 根始终是 workspace 成员，这里只列子包。
 packages:
-  - conversation-block-react
+  - agent-design
   - web-demo
 
 # 扁平化 node_modules（与 npm 时代一致）。scripts/pack.mjs 依赖扁平布局原样拷贝生产依赖，
