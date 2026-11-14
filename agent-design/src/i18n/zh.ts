@@ -2,6 +2,10 @@
 export const zh = {
   appTitle: '会话块',
   appSubtitle: 'pi 事件流 → 对话块复刻',
+  tabs: {
+    replay: '回放',
+    components: '组件',
+  },
   fixture: '夹具',
   player: {
     play: '播放',
@@ -130,7 +134,8 @@ export const zh = {
     noDiff: '没有可显示的改动',
     truncated: (limit: number) => `仅显示前 ${limit} 行`,
   },
-  running: '正在工作中…',
+  running: '深度求索中 ···',
+  runningFor: (duration: string) => `深度求索中，用时 ${duration} ···`,
 } as const
 
 export type Copy = typeof zh

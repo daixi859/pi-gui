@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
+import styles from './Marquee.module.css'
 
 /**
  * 流式摘要的单行走马灯：内容超出视窗才滚动，短文本保持静止。
@@ -22,12 +24,12 @@ export function Marquee({ text }: { text: string }): ReactNode {
   }, [text])
 
   return (
-    <span ref={viewport} className="pi-marquee" data-overflow={overflow || undefined} title={text}>
-      <span className="pi-marquee-track">
-        <span ref={first} className="pi-marquee-segment">
+    <span ref={viewport} className={styles.marquee} data-overflow={overflow || undefined} title={text}>
+      <span className={styles.track}>
+        <span ref={first} className={styles.segment}>
           {text}
         </span>
-        <span className="pi-marquee-segment pi-marquee-copy" aria-hidden="true">
+        <span className={clsx(styles.segment, styles.copy)} aria-hidden="true">
           {text}
         </span>
       </span>

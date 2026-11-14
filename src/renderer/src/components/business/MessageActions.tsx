@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { Button } from '../base/Button'
-import { IconCopy, IconShare, IconThumbDown, IconThumbUp } from '../base/icons'
+import { Button, IconCopy, IconShare, IconThumbDown, IconThumbUp } from 'agent-design/components'
 
 /** 渲染层不能直接用 shell / clipboard，全部过 preload 的主进程桥 */
 const host = (): Window['pi']['host'] | undefined => window.pi?.host

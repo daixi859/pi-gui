@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import type { SVGProps } from 'react'
+import styles from './icons.module.css'
 
 type P = SVGProps<SVGSVGElement>
 
@@ -350,7 +351,7 @@ export const IconStop = (p: P) => (
 )
 
 export const IconSpinner = (p: P) => (
-  <svg {...base(p)} className={clsx('animate-spin', p.className)} style={{ animationDuration: '1.4s' }}>
+  <svg {...base(p)} className={clsx(styles.spin, p.className)} style={{ animationDuration: '1.4s' }}>
     <circle cx="8" cy="8" r="5.5" strokeOpacity="0.2" />
     <path d="M13.5 8A5.5 5.5 0 0 0 8 2.5" />
   </svg>

@@ -10,7 +10,7 @@
 
 | 层 | 组件 | 说明 |
 | --- | --- | --- |
-| 总行 | `blocks/TurnView.tsx` | 用户气泡、`已完成，用时 X`、`pi.fold.*` 折叠记忆；live 时尾部是 `RunningStatus` |
+| 总行 | `blocks/TurnView.tsx`、`blocks/RunningHead.tsx` | 用户气泡、`已完成，用时 X`、`pi.fold.*` 折叠记忆；live 时由 `RunningHead` 画「正在工作中，用时 X」，尾部是 `RunningStatus` |
 | 分组 | `blocks/ProcessGroup.tsx` | 24px 整行按钮，组头按类别汇总，组体限高内滚、运行中贴底 |
 | 行 | `blocks/ThinkingRow.tsx` `blocks/ToolRow.tsx` `blocks/SystemRow.tsx` `blocks/AssistantText.tsx` | 每行默认收起，整行可点 |
 | 汇总 | `blocks/ChangedFiles.tsx` | 回合尾的文件改动卡，悬停预览 diff |
@@ -104,7 +104,8 @@ ID 约定：
 
 ## 渲染决策
 
-- **总行**：全宽 33px、底部分隔线，只显示「已完成，用时 X」或「已停止」；时长数字等宽 tabular，可折叠时才出现 chevron。右侧不放工具数/失败数。live 期间不渲染；尾部是鲸鱼 +「正在工作中，用时 X」（与品牌无关的中性文案：PiGui 是 pi agent 客户端，不是 DeepSeek harness），时间按宿主的 1 秒时钟走，回放页则按回放时钟走、暂停即冻结。
+- **总行**：全宽 33px、底部分隔线（整回合唯一的横线）。首条回应成形后才渲染：运行中写「正在工作中，用时 X」，`data-live` 标记、不可点（`RunningHead`）；落定后换成按钮「已完成，用时 X」/「已停止」，可折叠时才出现 chevron。时长数字等宽 tabular。落定耗时用宿主 settled 的墙钟（`stampSettled`）：pi 的消息 timestamp 是首包时刻，用消息 ts 会闪「不到 1 秒」。运行中不足 1 秒只写「正在工作中…」，不报时长。首包未回时总行不渲染，只有 user 气泡 + 末尾鲸鱼；`aborted` 例外，仍显示「已停止」。
+- **鲸鱼**：回合末尾一只（`RunningStatus`，无分隔线），文案只说「此刻在干什么」——最后一个运行中分组的 `groupLiveTitle`（如「正在读取文件 · src/a.ts」），正文正在写则「正在回复」，否则「正在分析请求」。耗时归总行，两处不重复。鲸鱼是纯 SVG 描边 + CSS 浮动动画（`running-whale-swim`），不依赖外挂图片；`prefers-reduced-motion: no-preference` 时才动。
 - **分组**：24px 整行按钮，图标按组内次数最多的类别选（`blocks/tools.ts` 的 kind），悬停/展开时淡出成 chevron，运行中整行扫光。收起标题按次数取前 3 类、无计数：`已读取文件` / `已读取文件并搜索代码`（第二项去掉共用「已」）/ `执行了命令，已读取文件，已搜索代码等`（超过 3 类加「等」）；整组没有工具时显示「已完成分析」。live 时只有**最后一个分组**显示「正在读取文件 · 路径 / 正在运行命令 · 命令」；被文本切开的前序分组已经完成，按类别摘要展示，不再全部显示「正在分析请求」。
 - **分组容器**：展开后标题底部 8px，组内行距 4px；组体 `max-height: min(400px, 50vh)` 内滚，触顶/触底各有 24px 渐隐，滚动条 6px。运行中的组展开时自动贴底，读者上滚后停止跟随；落定后从顶部开始读。分组成员按原顺序，`codemode` 有子调用时只按子调用类别计数。开合状态按 `useFold(scope, key)` 存进 localStorage（`pi.fold.<scope>.<key>`）。
 - **思考行**：默认收起。运行中标题是「思考」，摘要取最新「已完成段落」的首行并扫光；落定后显示「已思考 · X 秒」+ 首行摘要。手动展开后正文超过 168px 会自动贴底（顶部渐隐），读者上滚停止跟随。整行可点，图标只是装饰。思考不带档位——档位输入在宿主，块不显示。

@@ -1,0 +1,18 @@
+/* 图标动效。转速由 IconSpinner 的内联 animationDuration 决定，这里只给循环方式 */
+@layer components {
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spin {
+      animation: none;
+    }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -148,19 +148,14 @@ init → SessionManager.listAll()  (~589 个 JSONL 文件)
         ├─ interactions/      交互适配器：questionsOf / multiReply / selectReply / registry
         ├─ previewTurns.ts    组件预览的静态回合夹具（不进运行时路径）
         ├─ util.ts            进行中思考的一行摘要（分组头用）
-        ├─ styles/global.css  Tailwind 4 @theme 色板/字体/圆角（Markdown 排版归对话块库）
+        ├─ styles/global.css  Tailwind 4 @theme 别名（指向 agent-design 的 --pi-*）；业务用的 pi-card/pi-panel/pi-page/pi-input（Markdown 排版归对话块库）
         └─ components/
-            ├─ base/               基础组件（不知道 pi，控件外观唯一书写地，ADR-0012）
-            │  ├─ Button.tsx       全站唯一按钮：变体 × 尺寸 × 形状，图标作插槽
-            │  ├─ Menu.tsx         公共下拉：遮罩 + 面板 + 条目 + 分组标题
-            │  ├─ Dropdown.tsx     点击下拉：把 Menu 面板 portal 到 body 并自己定位
-            │  ├─ ListRow.tsx      全宽列表行底座：select/quiet × 两档高度
-            │  ├─ Tip.tsx          悬停提示（靠父级 group 显隐）
-            │  ├─ Toasts.tsx       扩展 notify 的右下角提示
-            │  ├─ MarkdownView.tsx react-markdown + gfm，围栏代码转 CodeBlock
-            │  ├─ CodeBlock.tsx    shiki 懒加载高亮（流式中先渲染纯文本）
-            │  ├─ PiLogo.tsx       三色 logo + 描边水印
-            │  └─ icons.tsx        自绘 SVG 图标集
+            ├─ base/               主仓残留的基础组件（ADR-0012）
+            │  ├─ MarkdownView.tsx react-markdown + gfm，围栏代码转 agent-design 的 CodeBlock
+            │  └─ PiLogo.tsx       三色 logo + 描边水印
+            ├─ （基础组件本体在 agent-design/src/components/，经 agent-design/components 引入：
+            │  Button / Menu / Dropdown / ListRow / Tip / Toasts / Marquee / Shimmer / CodeBlock / icons，
+            │  CSS Modules，令牌来自 agent-design/src/styles/tokens.css）
             └─ business/           业务组件（知道 pi，由基础组件组合，不写控件外观）
                ├─ TitleBar.tsx     无框拖拽条 + 窗口按钮 + 品牌/收起按钮（浮动工具条在 App）
                ├─ Sidebar.tsx      268px 侧栏：导航、任务列表(搜索/排序)、项目分组

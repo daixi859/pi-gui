@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react'
 import type { UiRequest } from '@shared/ipc'
-import { IconClose } from '../base/icons'
-import { Button } from '../base/Button'
+import { Button, IconClose } from 'agent-design/components'
 
 /**
  * 裸 UI 请求的原生弹窗：没有交互适配器认领的 select/input/confirm/editor 落到这里，

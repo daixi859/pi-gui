@@ -1,0 +1,53 @@
+/* 流式摘要的单行走马灯：超出视窗才滚动，首尾各 16px 渐隐。时长 12s 与 Marquee.tsx 无关，由这里定 */
+@layer components {
+  .marquee {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .segment {
+    flex-shrink: 0;
+    padding-right: calc(var(--pi-spacing) * 8);
+  }
+
+  /* 副本只在溢出时显示，读屏只读第一份 */
+  .copy {
+    display: none;
+  }
+
+  .marquee[data-overflow='true'] .track {
+    animation: thought-marquee 12s linear infinite;
+  }
+  .marquee[data-overflow='true'] .copy {
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee[data-overflow='true'] .track {
+      animation: none;
+    }
+    .copy {
+      display: none;
+    }
+  }
+}
+
+@keyframes thought-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

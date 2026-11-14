@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { MenuPanel, MenuScrim, usePresence } from './Menu'
+import styles from './Dropdown.module.css'
 
 /**
  * 点击展开的下拉：定位 + 开关 + 关闭，全部在这里；面板外观与菜单项仍来自 Menu。
@@ -8,8 +9,7 @@ import { MenuPanel, MenuScrim, usePresence } from './Menu'
  * 只管点击展开；hover 提示用 Tip，不混进来。
  */
 
-
-/** 面板与触发元素的间距，与 pi-menu 的视觉节奏对齐 */
+/** 面板与触发元素的间距，与菜单面板的视觉节奏对齐 */
 const GAP = 4
 /** 贴视口边缘的最小留白 */
 const EDGE = 8
@@ -142,7 +142,7 @@ export function Dropdown({
 
   return (
     <>
-      <span ref={anchorRef} className="contents">
+      <span ref={anchorRef} className={styles.anchor}>
         {trigger({ open, toggle })}
       </span>
       {mounted &&

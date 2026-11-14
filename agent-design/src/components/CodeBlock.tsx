@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import githubDark from 'shiki/themes/github-dark.mjs'
@@ -16,7 +17,7 @@ import rust from 'shiki/langs/rust.mjs'
 import sql from 'shiki/langs/sql.mjs'
 import ts from 'shiki/langs/ts.mjs'
 import tsx from 'shiki/langs/tsx.mjs'
-
+import styles from './CodeBlock.module.css'
 
 /** 语法包写死成静态 import：模板字符串的动态 import Vite 分析不了，打包后根本加载不到 */
 const LANGS = { ts, tsx, js, jsx, json, bash, python, css, html, md, sql, go, rust }
@@ -67,14 +68,14 @@ export function CodeBlock({
   }, [html, key, lang, code, streaming])
 
   return (
-    <figure className="my-4 overflow-hidden rounded-md border border-edge">
-      <figcaption className="flex items-center justify-between border-b border-edge bg-sunken px-2 py-1 text-xs text-muted">
-        <span className="font-mono">{lang}</span>
+    <figure className={styles.figure}>
+      <figcaption className={styles.caption}>
+        <span className={styles.lang}>{lang}</span>
       </figcaption>
       {html && !streaming ? (
-        <div className="overflow-x-auto px-4 py-2 text-xs leading-code" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className={styles.code} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <pre className="overflow-x-auto px-4 py-2 font-mono text-xs leading-code">{code}</pre>
+        <pre className={clsx(styles.code, styles.pre)}>{code}</pre>
       )}
     </figure>
   )

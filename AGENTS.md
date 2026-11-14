@@ -51,7 +51,9 @@ pnpm run typecheck  # 三端类型检查，改完必跑
 | `src/preload/` | `window.pi` 的唯一出口 |
 | `src/renderer/src/store/` | 引擎状态唯一入口（zustand，ADR-0013）：`state.ts` 形状+实例、`blocks.ts` 消息增量、`timeline.ts` 消息→Block 派生、`interaction.ts` UI 请求、`engine.ts` 事件接入、`index.ts` 动作层 |
 | `src/renderer/src/interactions/` | 扩展 UI 请求 → 具体控件的适配器 |
-| `src/renderer/src/components/base/` | 基础组件：不知道 pi 的通用控件，控件外观唯一书写地（ADR-0012） |
+| `agent-design/src/components/` | 基础组件（Button、Menu、Dropdown、ListRow、Tip、Toasts 等）：不知道 pi，控件外观唯一书写地，CSS Modules（ADR-0012） |
+| `agent-design/src/pages/Components.tsx` | 基础组件预览页（令牌面板、图标、按钮、弹层） |
+| `src/renderer/src/components/base/` | 主仓残留的基础组件（PiLogo、MarkdownView） |
 | `src/renderer/src/components/business/` | 业务组件：知道 pi，由基础组件组合，不写控件外观 |
 | `src/renderer/src/components/business/transcript/` | 会话正文渲染（运行时路径，blocks.tsx 只留给预览页） |
 | `docs/ARCHITECTURE.md` | 分层图 + 数据流 + 逐文件职责 |
@@ -70,7 +72,9 @@ pnpm run typecheck  # 三端类型检查，改完必跑
 - 重复 3 次以上的类组合提成 `pi-` 语义类（`pi-panel`、`pi-card`、`pi-icon-btn`、`pi-menu`、`pi-menu-item`、`pi-page`、`pi-input`），定义在 `global.css` 的 `@utility`。
 - 可访问性底线：可点区域 ≥24px、键盘焦点可见、正文对比 ≥4.5:1；动效尊重 `prefers-reduced-motion`。
 
-令牌调整走「组件预览」页（`components/business/Preview.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `@theme`。图标全是手绘 SVG，在 `components/base/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。
+令牌调整走 agent-design 的「组件预览」页（`agent-design/src/pages/Components.tsx`）：改动只写运行时变量与 localStorage，「复制为 CSS」后手动贴回 `agent-design/src/styles/tokens.css` 的 `:root`。图标全是手绘 SVG，在 `agent-design/src/components/icons.tsx`，不接受 `size` prop，用 `className="size-4"`。业务组件的预览仍在主仓 `components/business/Preview.tsx`。
+
+`agent-design` 内的组件不使用 Tailwind，只用 CSS Modules 与 `--pi-*` 令牌。
 
 ## 调试
 

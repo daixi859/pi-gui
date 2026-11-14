@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
+import styles from './Shimmer.module.css'
 
 /**
  * 运行中文字的一次扫光（照 deepseek-harness 的 TextShimmer）：真实文字留在基础层，
@@ -20,12 +21,12 @@ export function Shimmer({
   children: ReactNode
 }): ReactNode {
   return (
-    <span className={clsx('pi-shimmer', className)} data-shimmer={active || undefined}>
-      <span className={clsx('pi-shimmer-content', contentClassName)}>{children}</span>
+    <span className={clsx(styles.shimmer, className)} data-shimmer={active || undefined}>
+      <span className={clsx(styles.content, contentClassName)}>{children}</span>
       {active ? (
-        <span className="pi-shimmer-decoration" aria-hidden="true" inert>
-          <span className="pi-sweep">
-            <span className={clsx('pi-sweep-copy', contentClassName)}>{children}</span>
+        <span className={styles.decoration} aria-hidden="true" inert>
+          <span className={styles.sweep}>
+            <span className={clsx(styles.sweepCopy, contentClassName)}>{children}</span>
           </span>
         </span>
       ) : null}

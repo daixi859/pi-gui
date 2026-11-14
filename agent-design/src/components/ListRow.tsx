@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import styles from './ListRow.module.css'
 
 /**
  * 全宽列表行：导航、会话列表、分组折叠行的统一底座。
@@ -34,19 +35,17 @@ export function ListRow({
     <button
       type="button"
       className={clsx(
-        'flex w-full items-center gap-2 rounded-sm pr-1 pl-2 text-left text-sm transition-colors',
+        styles.row,
         /* 行高不在间距刻度内，按控件三档（Button 24/28/32）对齐：导航行 h-8、列表行 h-7 */
-        size === 'lg' ? 'h-8' : 'h-7',
-        tone === 'select'
-          ? [active ? 'bg-select font-medium' : 'hover:bg-select/60']
-          : 'text-muted hover:text-fg',
+        size === 'lg' ? styles.lg : styles.md,
+        tone === 'select' ? (active ? styles.active : styles.select) : styles.quiet,
         className
       )}
       {...rest}
     >
       {icon}
-      {children ?? (label != null && <span className="min-w-0 flex-1 truncate">{label}</span>)}
-      {hint != null && <span className="ml-auto shrink-0 text-2xs text-faint">{hint}</span>}
+      {children ?? (label != null && <span className={styles.label}>{label}</span>)}
+      {hint != null && <span className={styles.hint}>{hint}</span>}
     </button>
   )
 }

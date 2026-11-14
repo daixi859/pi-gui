@@ -4,11 +4,22 @@ import type { Snapshot } from '@shared/blocks'
 import type { CommandInfo, ModelOption, PromptImage } from '@shared/ipc'
 import { setDraftImages, setDraftText, useDraft } from '../../drafts'
 import { abort, queryFiles, setModel, setThinkingLevel, switchWorkspace, toggleAccess, useEngine } from '../../store'
-import { MenuItem, MenuLabel, MenuPanel } from '../base/Menu'
-import { Dropdown } from '../base/Dropdown'
-import { Button } from '../base/Button'
-import { IconArrowUp, IconBranch, IconChevronDown, IconClose, IconFolder, IconHand, IconPlus } from '../base/icons'
-import { Tip } from '../base/Tip'
+import {
+  Button,
+  Dropdown,
+  IconArrowUp,
+  IconBranch,
+  IconChevronDown,
+  IconClose,
+  IconFolder,
+  IconHand,
+  IconPlus,
+  MenuItem,
+  MenuLabel,
+  MenuPanel,
+  Tip,
+  tipHost,
+} from 'agent-design/components'
 
 const LEVEL_LABEL: Record<string, string> = {
   off: '关闭',
@@ -160,7 +171,7 @@ function Toolbar({
         </Dropdown>
         {/* 视觉 26，外圈 28 保住可点热区 */}
         {streaming ? (
-          <div className="group relative">
+          <div className={tipHost}>
             <Button
               aria-label="停止生成"
               variant="ghost"
@@ -175,7 +186,7 @@ function Toolbar({
             <Tip text="停止生成" kbd="Esc" />
           </div>
         ) : (
-          <div className="group relative">
+          <div className={tipHost}>
             <Button
               aria-label="发送"
               variant="ghost"

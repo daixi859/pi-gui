@@ -219,8 +219,11 @@ function groupMessages(order: string[], byId: Record<string, PiMessage>): Group[
 }
 
 /** 回合还活着吗：消息在流式、有工具没结果，或末条 assistant 因工具收尾——
- * 结果虽都配对了，模型马上接着说（工具间隙），不算落定，否则头会闪断式收起又展开 */
-function groupLive(g: Group, results: Map<string, ToolResult>): boolean {
+ * 结果虽都配对了，模型马上接着说（工具间隙），不算落定，否则头会闪断式收起又展开。
+ * streaming 是宿主报的这一轮在跑：刚发出 user、回应还没到那一段也算活着，
+ * 否则回合头会先闪一下「已完成，用时 不到 1 秒」。 */
+function groupLive(g: Group, results: Map<string, ToolResult>, streaming: boolean): boolean {
+  if (g.items.length === 0) return streaming
   for (let i = g.items.length - 1; i >= 0; i--) {
     const m = g.items[i]
     if (m.role !== 'assistant') continue
@@ -305,8 +308,13 @@ function sameTurn(p: Turn, t: Turn): boolean {
 /** 上一次的回合索引：值没变的回合复用旧对象（含 blockIds 引用），回合容器 memo 才能命中 */
 let prevTurns: Turn[] = []
 
-/** 全量派生：平铺块按消息顺序产出，回合只给坐标。最后一段在流式 / 有工具没结果时算 live */
-export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): Derived {
+/** 全量派生：平铺块按消息顺序产出，回合只给坐标。最后一段在流式 / 有工具没结果时算 live。
+ * streaming 由调用方从 store 给：它决定「只有 user、回应未到」的那一段算不算 live。 */
+export function deriveBlocks(
+  order: string[],
+  byId: Record<string, PiMessage>,
+  streaming = false
+): Derived {
   const groups = groupMessages(order, byId)
   const outById: Record<string, Block> = {}
   const turns: Turn[] = []
@@ -333,7 +341,7 @@ export function deriveBlocks(order: string[], byId: Record<string, PiMessage>): 
     }
 
     const userTs = g.user ? g.user.timestamp : (g.items[0]?.timestamp ?? 0)
-    const live = gi === groups.length - 1 && groupLive(g, results)
+    const live = gi === groups.length - 1 && groupLive(g, results, streaming)
     // live 段不定格（走表归 UI 时钟），落定用末条消息 timestamp
     const endTs = live ? undefined : (g.items[g.items.length - 1]?.timestamp ?? userTs)
     const aborted = g.items.some((m) => m.role === 'assistant' && m.stopReason === 'aborted')

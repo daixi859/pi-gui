@@ -3,11 +3,9 @@ import { clsx } from 'clsx'
 import type { SessionMeta } from '@shared/blocks'
 import { removeProject, renameSession, useEngine } from '../../store'
 import { count } from '../../perf'
-import { Button } from '../base/Button'
-import { Dropdown } from '../base/Dropdown'
-import { ListRow } from '../base/ListRow'
-import { Menu, MenuItem } from '../base/Menu'
 import {
+  Button,
+  Dropdown,
   IconBlocks,
   IconClock,
   IconChevronDown,
@@ -27,7 +25,10 @@ import {
   IconSortList,
   IconSparkle,
   IconSpinner,
-} from '../base/icons'
+  ListRow,
+  Menu,
+  MenuItem,
+} from 'agent-design/components'
 
 type Nav = (route: 'start' | 'chat' | 'gallery' | 'projects') => void
 

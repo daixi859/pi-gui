@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/App.tsx",
     "./blocks": "./src/blocks/index.ts",
-    "./blocks/blocks.css": "./src/blocks/blocks.css"
+    "./blocks/blocks.css": "./src/blocks/blocks.css",
+    "./components": "./src/components/index.ts"
   },
   "scripts": {
     "dev": "vite",
@@ -22,7 +23,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-markdown": "catalog:",
-    "remark-gfm": "catalog:"
+    "remark-gfm": "catalog:",
+    "shiki": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

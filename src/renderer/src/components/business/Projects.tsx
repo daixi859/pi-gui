@@ -2,11 +2,17 @@ import { useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import type { ProjectRow } from '@shared/blocks'
 import { deleteProject, removeProject, restoreProject, useEngine } from '../../store'
-import { MenuItem } from '../base/Menu'
-import { Dropdown } from '../base/Dropdown'
-import { Button } from '../base/Button'
-import { ListRow } from '../base/ListRow'
-import { IconChevronDown, IconChevronRight, IconFolder, IconSearch, IconTrash } from '../base/icons'
+import {
+  Button,
+  Dropdown,
+  IconChevronDown,
+  IconChevronRight,
+  IconFolder,
+  IconSearch,
+  IconTrash,
+  ListRow,
+  MenuItem,
+} from 'agent-design/components'
 import { useScrollRail } from '../../useScrollRail'
 
 /** 相对时间：和会话列表的口径一致，但这里是明细页，给到「分钟/小时/天」 */

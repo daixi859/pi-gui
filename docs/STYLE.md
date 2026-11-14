@@ -1,12 +1,14 @@
 # 样式规范
 
-渲染层样式只有三层，从上到下改动成本递增：
+主仓渲染层样式只有三层，从上到下改动成本递增：
 
 ```
-@theme 变量（global.css）  →  Tailwind 工具类  →  pi- 语义类（@utility）
+令牌（agent-design/src/styles/tokens.css 的 --pi-*）  →  Tailwind 工具类（主仓 global.css 的 @theme 别名）  →  pi- 语义类（主仓 global.css 的 @layer components）
 ```
 
-组件里**只写后两层的类名**，不写具体数值。唯一的数值出口是 `@theme`。
+主仓业务组件里**只写后两层的类名**，不写具体数值。唯一的数值出口是 `tokens.css`。
+
+`agent-design` 内的基础组件**不用 Tailwind**：每个组件一个 CSS Module，只引用 `var(--pi-*)`，控件外观全在组件自己的模块里。
 
 设计立场：**安静的中性外壳 + 一个记忆点**。Pi 的三色 logo 是界面里唯一的彩色强调，其余一切用中性灰阶、字重和留白建立层级；不做装饰性渐变、不做每块一样的卡片。
 
@@ -109,7 +111,7 @@ className={clsx('base classes', active && 'bg-select', danger && 'text-del')}
 
 ## 6.1 图标
 
-全部手绘在 `src/renderer/src/components/base/icons.tsx`，16 网格、1.5 描边、只落 0.25 网格坐标。新增或改图标按这四条：
+全部手绘在 `agent-design/src/components/icons.tsx`，16 网格、1.5 描边、只落 0.25 网格坐标。新增或改图标按这四条：
 
 - **尺寸三档**，按墨迹外接框（含描边半宽 0.75）算：`S` 10.5（方向、符号：chevron/arrow/check/close/plus/pause/dots/stop/undo）、`M` 12.5（常规物件）、`L` 14.5（容器满框：圆圈类、panel、terminal、eye、sparkle、blocks、settings）。尺寸差控制在 1.4 倍内。
 - **重心必须在 (8,8)**，左右上下各偏不超过 0.1。非对称图形（folder 的标签、hand 的手腕）先按整体平移再验。

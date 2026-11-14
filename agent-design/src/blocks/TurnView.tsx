@@ -7,6 +7,8 @@ import type { ConversationState, Turn, UserBlock } from '../reducer/types'
 import { AssistantText, defaultRenderMarkdown, type MarkdownRenderer } from './AssistantText'
 import { ChangedFiles } from './ChangedFiles'
 import { ProcessGroup } from './ProcessGroup'
+import { withNumeric } from './headText'
+import { RunningHead } from './RunningHead'
 import { RunningStatus } from './RunningStatus'
 import { turnLayout } from './turnGroups'
 
@@ -39,19 +41,6 @@ export const UserMessage = memo(function UserMessage({
   )
 })
 
-/** 时长里的数字单独走等宽、tabular，和 harness 的总行一致。 */
-function withNumeric(value: string) {
-  return value.split(/(\d+)/).map((part, index) =>
-    /^\d+$/.test(part) ? (
-      <span className="turnNumber" key={index}>
-        {part}
-      </span>
-    ) : (
-      part
-    ),
-  )
-}
-
 /**
  * 一个回合的三层结构：
  * 总行（耗时/状态，折叠全部过程）→ 分组（assistant 文本之间的过程）→ 行。
@@ -83,21 +72,27 @@ export const TurnView = memo(function TurnView({
   const layout = turnLayout(turn, state)
   const live = turn.status === 'live'
   const foldable = layout.groups.length > 0
-  const [open, toggle] = useFold(scope, turn.key, live || defaultOpen)
+  // 默认收起（不展开工具列表）：运行中的活动由末尾鲸鱼负责，点总行才展开过程
+  const [open, toggle] = useFold(scope, turn.key, defaultOpen)
   const shown = !foldable || open
 
+  // 只有 user、还没有任何回应：不画落定的总行，否则会先闪一句「已完成，用时 不到 1 秒」。
+  // 被停止的例外：没有回应也应该看到「已停止」
+  const stopped = turn.status === 'aborted'
+  const responded = layout.entries.length > 0 || stopped
   const duration =
     turn.endedAt !== undefined ? formatDuration(Math.max(0, turn.endedAt - turn.startedAt)) : undefined
-  const stopped = turn.status === 'aborted'
-  const elapsed = now === undefined ? undefined : Math.max(1000, now - turn.startedAt)
-  const runningLabel =
-    elapsed === undefined ? zh.turn.working : zh.turn.workingFor(formatDuration(elapsed))
+  // 不足一秒先只说「正在工作中…」：算到 1 秒才报时长，避免开局就弹「用时 不到 1 秒」
+  const elapsed = now === undefined ? undefined : now - turn.startedAt
 
   return (
     <div className="turn">
       {user !== undefined && <UserMessage block={user} renderImages={renderImages} />}
 
-      {!live && (
+      {/* 回应还没到（首 token 未回）不画总行：只有 user 气泡 + 末尾鲸鱼；
+          首条内容一旦成形，总行才顶上来接手计时 */}
+      {live && responded && <RunningHead elapsed={elapsed} />}
+      {!live && responded && (
         <button
           type="button"
           className="turnHead"
@@ -132,7 +127,7 @@ export const TurnView = memo(function TurnView({
       </div>
 
       {!live && <ChangedFiles turn={turn} state={state} />}
-      {live && <RunningStatus label={runningLabel} />}
+      {live && <RunningStatus elapsed={elapsed} />}
     </div>
   )
 })

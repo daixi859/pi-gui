@@ -1,0 +1,125 @@
+/*
+ * 层序与 Tailwind 一致（theme < base < components < utilities）。
+ * 组件外观放在 components 层，调用方传入的工具类（utilities 层）才能覆盖默认外观。
+ * 必须是这个文件里第一条层声明，否则组件层可能先于 Tailwind 的 base 注册，preflight 会压住组件。
+ */
+@layer theme, base, components, utilities;
+
+/*
+ * 基础组件的令牌源（唯一）。主仓 global.css 的 @theme 只把 Tailwind 名别名到这里。
+ * 取值与迁移前 global.css 的 @theme 逐项一致，迁移本身不改视觉。
+ */
+:root {
+  /* 主题种子：换配色只改这 5 个值，下面的色阶与语义令牌会自动跟着变 */
+  --pi-seed-neutral: #26241f;
+  --pi-seed-primary: #2f6feb;
+  --pi-seed-success: #1f8a4c;
+  --pi-seed-warning: #b7791f;
+  --pi-seed-danger: #c0392b;
+
+  /* 色阶：1 最浅 → 10 最深。中性色 1 是纯白、10 是种子；强调色 6 是种子，1–5 往白里调，7–10 往黑里调 */
+  --pi-neutral-1: #fff;
+  --pi-neutral-2: color-mix(in oklab, var(--pi-seed-neutral) 4%, white);
+  --pi-neutral-3: color-mix(in oklab, var(--pi-seed-neutral) 8%, white);
+  --pi-neutral-4: color-mix(in oklab, var(--pi-seed-neutral) 12%, white);
+  --pi-neutral-5: color-mix(in oklab, var(--pi-seed-neutral) 17%, white);
+  --pi-neutral-6: color-mix(in oklab, var(--pi-seed-neutral) 34%, white);
+  --pi-neutral-7: color-mix(in oklab, var(--pi-seed-neutral) 45%, white);
+  --pi-neutral-8: color-mix(in oklab, var(--pi-seed-neutral) 62%, white);
+  --pi-neutral-9: color-mix(in oklab, var(--pi-seed-neutral) 78%, white);
+  --pi-neutral-10: var(--pi-seed-neutral);
+
+  --pi-primary-1: color-mix(in oklab, var(--pi-seed-primary) 6%, white);
+  --pi-primary-2: color-mix(in oklab, var(--pi-seed-primary) 14%, white);
+  --pi-primary-3: color-mix(in oklab, var(--pi-seed-primary) 26%, white);
+  --pi-primary-4: color-mix(in oklab, var(--pi-seed-primary) 42%, white);
+  --pi-primary-5: color-mix(in oklab, var(--pi-seed-primary) 66%, white);
+  --pi-primary-6: var(--pi-seed-primary);
+  --pi-primary-7: color-mix(in oklab, var(--pi-seed-primary) 86%, black);
+  --pi-primary-8: color-mix(in oklab, var(--pi-seed-primary) 70%, black);
+  --pi-primary-9: color-mix(in oklab, var(--pi-seed-primary) 55%, black);
+  --pi-primary-10: color-mix(in oklab, var(--pi-seed-primary) 40%, black);
+
+  --pi-success-1: color-mix(in oklab, var(--pi-seed-success) 6%, white);
+  --pi-success-2: color-mix(in oklab, var(--pi-seed-success) 14%, white);
+  --pi-success-3: color-mix(in oklab, var(--pi-seed-success) 26%, white);
+  --pi-success-4: color-mix(in oklab, var(--pi-seed-success) 42%, white);
+  --pi-success-5: color-mix(in oklab, var(--pi-seed-success) 66%, white);
+  --pi-success-6: var(--pi-seed-success);
+  --pi-success-7: color-mix(in oklab, var(--pi-seed-success) 86%, black);
+  --pi-success-8: color-mix(in oklab, var(--pi-seed-success) 70%, black);
+  --pi-success-9: color-mix(in oklab, var(--pi-seed-success) 55%, black);
+  --pi-success-10: color-mix(in oklab, var(--pi-seed-success) 40%, black);
+
+  --pi-warning-1: color-mix(in oklab, var(--pi-seed-warning) 6%, white);
+  --pi-warning-2: color-mix(in oklab, var(--pi-seed-warning) 14%, white);
+  --pi-warning-3: color-mix(in oklab, var(--pi-seed-warning) 26%, white);
+  --pi-warning-4: color-mix(in oklab, var(--pi-seed-warning) 42%, white);
+  --pi-warning-5: color-mix(in oklab, var(--pi-seed-warning) 66%, white);
+  --pi-warning-6: var(--pi-seed-warning);
+  --pi-warning-7: color-mix(in oklab, var(--pi-seed-warning) 86%, black);
+  --pi-warning-8: color-mix(in oklab, var(--pi-seed-warning) 70%, black);
+  --pi-warning-9: color-mix(in oklab, var(--pi-seed-warning) 55%, black);
+  --pi-warning-10: color-mix(in oklab, var(--pi-seed-warning) 40%, black);
+
+  --pi-danger-1: color-mix(in oklab, var(--pi-seed-danger) 6%, white);
+  --pi-danger-2: color-mix(in oklab, var(--pi-seed-danger) 14%, white);
+  --pi-danger-3: color-mix(in oklab, var(--pi-seed-danger) 26%, white);
+  --pi-danger-4: color-mix(in oklab, var(--pi-seed-danger) 42%, white);
+  --pi-danger-5: color-mix(in oklab, var(--pi-seed-danger) 66%, white);
+  --pi-danger-6: var(--pi-seed-danger);
+  --pi-danger-7: color-mix(in oklab, var(--pi-seed-danger) 86%, black);
+  --pi-danger-8: color-mix(in oklab, var(--pi-seed-danger) 70%, black);
+  --pi-danger-9: color-mix(in oklab, var(--pi-seed-danger) 55%, black);
+  --pi-danger-10: color-mix(in oklab, var(--pi-seed-danger) 40%, black);
+
+  /* 语义令牌：组件只认这一层 */
+  --pi-canvas: var(--pi-neutral-4);
+  --pi-panel: var(--pi-neutral-2);
+  --pi-surface: var(--pi-neutral-1);
+  --pi-sunken: var(--pi-neutral-3);
+  --pi-select: var(--pi-neutral-5);
+
+  --pi-edge: color-mix(in oklab, var(--pi-seed-neutral) 14%, white);
+  --pi-fg: var(--pi-neutral-10);
+  --pi-muted: var(--pi-neutral-8);
+  --pi-faint: var(--pi-neutral-6);
+  --pi-link: var(--pi-primary-6);
+  --pi-add: var(--pi-success-6);
+  --pi-del: var(--pi-danger-6);
+  --pi-warn: var(--pi-warning-6);
+  /* 运行中流光的亮带色：亮带扫过时文字比 muted 更实 */
+  --pi-shimmer: var(--pi-neutral-10);
+
+  /* 透明黑蒙层：hover 用 tint，按压/常驻态用 tint-strong */
+  --pi-tint: rgb(0 0 0 / 0.04);
+  --pi-tint-strong: rgb(0 0 0 / 0.06);
+
+  --pi-font-ui:
+    -apple-system, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --pi-font-mono: 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+
+  /* 字号刻度：正文/标题 14，代码与小字 12，最小 11；--pi-text-2xl 是展示字号特例 */
+  --pi-text-2xs: 11px;
+  --pi-text-xs: 12px;
+  --pi-text-sm: 14px;
+  --pi-text-2xl: 28px;
+
+  /* 行高：正文 1.8、代码 1.7 */
+  --pi-leading-prose: 1.8;
+  --pi-leading-code: 1.7;
+
+  /* 间距单位：Tailwind 的 spacing 步长，组件里写 calc(var(--pi-spacing) * n) */
+  --pi-spacing: 4px;
+
+  --pi-radius-sm: 4px;
+  --pi-radius-md: 8px;
+  --pi-radius-lg: 16px;
+  --pi-radius-pill: 999px;
+
+  /* 阴影：按浮起高度四档 */
+  --pi-shadow-hairline: 0 1px 2px rgb(0 0 0 / 0.04);
+  --pi-shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -16px rgb(0 0 0 / 0.18);
+  --pi-shadow-pop: 0 8px 24px -12px rgb(0 0 0 / 0.25);
+  --pi-shadow-dialog: 0 12px 40px -12px rgb(0 0 0 / 0.3);
+}

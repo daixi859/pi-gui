@@ -1,0 +1,6 @@
+/* 触发元素的包裹层：不生成盒子，让触发元素的布局保持原样 */
+@layer components {
+  .anchor {
+    display: contents;
+  }
+}

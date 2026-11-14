@@ -1,0 +1,50 @@
+/* 代码块外观。shiki 输出的 .shiki 类由 shiki 生成，不经过模块哈希，所以用 :global 包住 */
+@layer components {
+  .figure {
+    /* 清掉浏览器给 figure 的左右 40px 默认外边距（preflight 原本就清零） */
+    margin: calc(var(--pi-spacing) * 4) 0;
+    overflow: hidden;
+    border: 1px solid var(--pi-edge);
+    border-radius: var(--pi-radius-md);
+  }
+
+  .caption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--pi-spacing) calc(var(--pi-spacing) * 2);
+    border-bottom: 1px solid var(--pi-edge);
+    background-color: var(--pi-sunken);
+    font-size: var(--pi-text-xs);
+    line-height: calc(1 / 0.75);
+    color: var(--pi-muted);
+  }
+
+  .lang {
+    font-family: var(--pi-font-mono);
+  }
+
+  .code {
+    overflow-x: auto;
+    padding: calc(var(--pi-spacing) * 2) calc(var(--pi-spacing) * 4);
+    font-size: var(--pi-text-xs);
+    line-height: var(--pi-leading-code);
+  }
+  .code :global(pre) {
+    margin: 0;
+  }
+
+  .pre {
+    margin: 0;
+    font-family: var(--pi-font-mono);
+  }
+
+  /* shiki 双主题：--shiki-light / --shiki-dark 由 CodeBlock 注入 */
+  :global(.shiki),
+  :global(.shiki) span {
+    color: var(--shiki-light);
+  }
+  :global(.shiki) {
+    background: transparent !important;
+  }
+}

@@ -1,0 +1,120 @@
+/* 按钮外观。尺寸与变体的取值见 Button.tsx；组件自带重置，不依赖 Tailwind preflight */
+@layer components {
+  .button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--pi-spacing) * 1);
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+    border-radius: 0;
+    background-color: transparent;
+    font: inherit;
+    color: inherit;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .button:disabled {
+    opacity: 0.35;
+  }
+  .button:focus-visible {
+    outline: 2px solid var(--pi-muted);
+    outline-offset: 2px;
+  }
+
+  .sm {
+    height: 24px;
+    padding-inline: calc(var(--pi-spacing) * 2);
+    font-size: var(--pi-text-sm);
+  }
+  .md {
+    height: 28px;
+    padding-inline: calc(var(--pi-spacing) * 2);
+    font-size: var(--pi-text-sm);
+  }
+  .lg {
+    height: 32px;
+    padding-inline: calc(var(--pi-spacing) * 4);
+    font-size: var(--pi-text-sm);
+  }
+  .squareSm {
+    width: 24px;
+    height: 24px;
+  }
+  .squareMd {
+    width: 28px;
+    height: 28px;
+  }
+  .squareLg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .primary {
+    background-color: var(--pi-fg);
+    color: #fff;
+  }
+  .secondary {
+    border: 1px solid var(--pi-edge);
+    color: var(--pi-fg);
+  }
+  /* 浮在内容/滚动区上方的实底按钮 */
+  .raised {
+    border: 1px solid var(--pi-edge);
+    background-color: var(--pi-panel);
+    color: var(--pi-fg);
+    box-shadow: var(--pi-shadow-pop);
+  }
+  .ghost {
+    color: var(--pi-muted);
+  }
+  .danger {
+    border: 1px solid var(--pi-edge);
+    color: var(--pi-del);
+  }
+
+  .square {
+    border-radius: var(--pi-radius-sm);
+  }
+  .circle {
+    border-radius: var(--pi-radius-pill);
+  }
+
+  .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* preflight 把 svg 设成 block，children 里的图标拉回 inline，沿用 4px 间距 */
+  .label > svg {
+    display: inline;
+    margin-inline: calc(var(--pi-spacing) * 1);
+  }
+
+  @media (hover: hover) {
+    .primary:enabled:hover {
+      background-color: color-mix(in oklab, var(--pi-fg) 85%, transparent);
+    }
+    .secondary:enabled:hover {
+      background-color: var(--pi-tint);
+    }
+    .raised:enabled:hover {
+      background-color: var(--pi-sunken);
+    }
+    .ghost:enabled:hover {
+      background-color: var(--pi-sunken);
+      color: var(--pi-fg);
+    }
+    .danger:enabled:hover {
+      background-color: var(--pi-danger-1);
+    }
+  }
+}

@@ -29,6 +29,7 @@ export type {
 export { AssistantText, defaultRenderMarkdown, type MarkdownRenderer } from './AssistantText'
 export { ChangedFiles, type ChangedFile } from './ChangedFiles'
 export { KIND_ICON } from './kindIcons'
+export { RunningHead } from './RunningHead'
 export { RunningStatus } from './RunningStatus'
 export { SystemRow } from './SystemRow'
 export { ThinkingRow } from './ThinkingRow'

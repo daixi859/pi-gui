@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { initTokens } from './components/business/Preview'
+import { initTokens } from 'agent-design/components'
 import { startEngine } from './store/engine'
 import './styles/global.css'
 

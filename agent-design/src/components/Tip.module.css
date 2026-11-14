@@ -1,0 +1,45 @@
+/* 悬停提示。宿主元素挂 tipHost 类后，悬停宿主即显示提示；不再依赖父级 group 类 */
+@layer components {
+  .host {
+    position: relative;
+  }
+
+  .tip {
+    pointer-events: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    z-index: 50;
+    display: none;
+    align-items: center;
+    gap: var(--pi-spacing);
+    margin-bottom: var(--pi-spacing);
+    transform: translateX(-50%);
+    padding: 2px calc(var(--pi-spacing) * 2);
+    border: 1px solid var(--pi-edge);
+    border-radius: var(--pi-radius-md);
+    background-color: var(--pi-surface);
+    box-shadow: var(--pi-shadow-pop);
+    white-space: nowrap;
+  }
+
+  .text {
+    font-size: var(--pi-text-2xs);
+    font-weight: 500;
+    color: var(--pi-fg);
+  }
+
+  .kbd {
+    padding-inline: var(--pi-spacing);
+    border-radius: var(--pi-radius-sm);
+    background-color: var(--pi-sunken);
+    font-size: var(--pi-text-2xs);
+    color: var(--pi-muted);
+  }
+
+  @media (hover: hover) {
+    .host:hover > .tip {
+      display: flex;
+    }
+  }
+}

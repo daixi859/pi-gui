@@ -6,13 +6,23 @@
  */
 import type { PromptImage } from '@shared/ipc'
 import { engine, send } from './state'
+import { applyStreaming } from './blocks'
 
 export type { Ask, EngineState, Toast } from './state'
 export { engine, initial, useEngine } from './state'
 export { blocksOf } from './blocks'
 export { answerAsk, cancelAsk, replyUi } from './interaction'
 
-export const prompt = (text: string, images?: PromptImage[]): void => send({ type: 'prompt', text, images })
+export const prompt = (text: string, images?: PromptImage[]): void => {
+  // 先自己进「工作中」：宿主的 status(true) 要等 agent_start，
+  // 而 agent_start 又在 before_agent_start 扩展跑完之后，空会话里这段空窗
+  // 会让正文只剩一句「这个会话还没有内容」，看起来像没发出去
+  if (!engine.get().streaming) {
+    engine.set({ streaming: true, settledAt: null })
+    applyStreaming()
+  }
+  send({ type: 'prompt', text, images })
+}
 export const abort = (): void => send({ type: 'abort' })
 export const renameSession = (path: string, title: string): void => send({ type: 'renameSession', path, title })
 export const removeProject = (path: string): void => send({ type: 'projectRemove', path })

@@ -6,7 +6,7 @@
  */
 import type { AgentEvent } from '@shared/ipc'
 import { engine, send } from './state'
-import { applyMessages } from './blocks'
+import { applyMessages, applyStreaming } from './blocks'
 import { acceptRequest, clearTimers, flushSlot, pushToast } from './interaction'
 
 /** 新增 AgentEvent 成员时这里会编译失败：提醒同步 store，而不是静默丢掉事件 */
@@ -40,6 +40,8 @@ function dispatch(ev: AgentEvent): void {
       // 只认当前会话的状态：切换期间旧会话还在推 status，别让它改掉界面
       if (ev.path !== engine.get().viewPath) return
       engine.set({ snapshot: ev.snapshot, streaming: ev.streaming })
+      // 流式状态也决定末段算不算 live（见 applyStreaming）
+      applyStreaming()
       return
     case 'error':
       engine.set({ error: ev.message })
@@ -51,6 +53,7 @@ function dispatch(ev: AgentEvent): void {
       const mine = ev.path === s.viewPath
       const unread = !mine && ev.path && !s.unread.includes(ev.path) ? [...s.unread, ev.path] : s.unread
       engine.set(mine ? { streaming: false, settledAt: Date.now(), unread } : { unread })
+      if (mine) applyStreaming()
       return
     }
     case 'uiRequest': {

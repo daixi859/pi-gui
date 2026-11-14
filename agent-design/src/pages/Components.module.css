@@ -1,0 +1,342 @@
+/*
+ * 组件预览页的版式与示意样式。这里不走 @layer：页面要能覆盖组件的默认外观（如 240px 宽的按钮）。
+ * 控件外观本身在 components/ 的各自 CSS Module 里，这里不重复写。
+ */
+
+.page {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.nav {
+  flex-shrink: 0;
+  width: 168px;
+  overflow-y: auto;
+  padding: 12px 0;
+  border-right: 1px solid var(--pi-edge);
+}
+.navItem {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 16px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--pi-text-xs);
+  text-align: left;
+  color: var(--pi-muted);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .navItem:hover {
+    background-color: var(--pi-sunken);
+  }
+}
+.navItemActive {
+  font-weight: 500;
+  color: var(--pi-fg);
+}
+
+.content {
+  min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+.column {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+/* 页面里所有按钮的焦点环，与组件自带的一致 */
+.page button:focus-visible {
+  outline: 2px solid var(--pi-muted);
+  outline-offset: 2px;
+}
+
+.stack12 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stack24 {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: var(--pi-text-xs);
+  font-weight: 500;
+  color: var(--pi-muted);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.toolRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background-color: var(--pi-edge);
+}
+.gapLeft {
+  margin-left: 8px;
+}
+.faint {
+  font-size: var(--pi-text-xs);
+  color: var(--pi-faint);
+}
+.muted {
+  font-size: var(--pi-text-xs);
+  color: var(--pi-muted);
+}
+.note {
+  margin: 0;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-faint);
+}
+
+.chip {
+  margin: 0;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--pi-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-muted);
+  cursor: pointer;
+}
+.chipActive {
+  border-color: var(--pi-edge);
+  background-color: var(--pi-select);
+  color: var(--pi-fg);
+}
+@media (hover: hover) {
+  .chip:not(.chipActive):hover {
+    background-color: var(--pi-sunken);
+  }
+}
+
+/* 令牌面板 */
+.tokenPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 460px;
+  max-width: 100%;
+}
+.tokenHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tokenTitle {
+  font-size: var(--pi-text-xs);
+  font-weight: 500;
+  color: var(--pi-fg);
+}
+.link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-muted);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .link:hover {
+    color: var(--pi-fg);
+  }
+}
+.tokenGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.tokenField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tokenColor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-faint);
+}
+.swatch {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-radius-sm);
+  background: transparent;
+}
+.colorName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-radius-sm);
+  background-color: color-mix(in oklab, var(--pi-panel) 80%, transparent);
+  font: inherit;
+  font-size: var(--pi-text-sm);
+  color: var(--pi-fg);
+  outline: none;
+}
+.input::placeholder {
+  color: var(--pi-faint);
+}
+.input:focus {
+  border-color: var(--pi-muted);
+}
+.copy {
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-muted);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .copy:hover {
+    background-color: var(--pi-sunken);
+    color: var(--pi-fg);
+  }
+}
+.hint {
+  margin: 0;
+  font-size: var(--pi-text-xs);
+  line-height: 1.5;
+  color: var(--pi-faint);
+}
+
+/* 图标 */
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+.iconCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--pi-edge);
+  border-radius: var(--pi-radius-sm);
+}
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  border: 1px solid transparent;
+}
+.iconFrame {
+  border-style: dashed;
+  border-color: var(--pi-edge);
+}
+.iconName {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  font-size: var(--pi-text-xs);
+  color: var(--pi-faint);
+}
+.s12 {
+  width: 12px;
+  height: 12px;
+}
+.s16 {
+  width: 16px;
+  height: 16px;
+}
+.s20 {
+  width: 20px;
+  height: 20px;
+}
+.s24 {
+  width: 24px;
+  height: 24px;
+}
+.s28 {
+  width: 28px;
+  height: 28px;
+}
+.colorFg {
+  color: var(--pi-fg);
+}
+.colorMuted {
+  color: var(--pi-muted);
+}
+.colorFaint {
+  color: var(--pi-faint);
+}
+.colorLink {
+  color: var(--pi-link);
+}
+.colorDel {
+  color: var(--pi-del);
+}
+
+/* 按钮 */
+.statusGrid {
+  display: inline-grid;
+  grid-template-columns: 80px repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+}
+.fixed240 {
+  width: 240px;
+  justify-content: flex-start;
+}
+.toolActive {
+  background-color: var(--pi-select);
+  color: var(--pi-fg);
+}
+
+/* 弹层 */
+.menuSlot {
+  position: relative;
+  width: 220px;
+  height: 168px;
+}
+.menuAnchor {
+  top: 0;
+  left: 0;
+}

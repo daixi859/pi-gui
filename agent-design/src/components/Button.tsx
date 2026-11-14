@@ -1,42 +1,40 @@
 import { clsx } from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { IconSpinner } from './icons'
+import styles from './Button.module.css'
 
 /**
  * 全站唯一按钮。五种语义变体 × 三档尺寸 × 两档形状，图标作为插槽。
  * 无 children 时按图标按钮渲染成正方形，此时必须给 aria-label。
- * 焦点环由 global.css 的 button:focus-visible 兜底，这里不再写。
+ * 焦点环由 Button.module.css 自带，不依赖宿主页面的全局样式。
  */
 
 type Variant = 'primary' | 'secondary' | 'raised' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
 type Shape = 'square' | 'circle'
 
-const BASE =
-  'inline-flex shrink-0 select-none items-center justify-center gap-1 whitespace-nowrap leading-none transition-colors disabled:opacity-35'
-
 const VARIANT: Record<Variant, string> = {
   /* 一屏只留一个主动作 */
-  primary: 'bg-fg text-white enabled:hover:bg-fg/85',
-  secondary: 'border border-edge text-fg enabled:hover:bg-tint',
+  primary: styles.primary,
+  secondary: styles.secondary,
   /* 浮在内容/滚动区上方的实底按钮：hover 也只能加深，不能变半透明露出底下的字 */
-  raised: 'border border-edge bg-panel text-fg shadow-pop enabled:hover:bg-sunken',
-  ghost: 'text-muted enabled:hover:bg-sunken enabled:hover:text-fg',
-  danger: 'border border-edge text-del enabled:hover:bg-danger-1'
+  raised: styles.raised,
+  ghost: styles.ghost,
+  danger: styles.danger
 }
 
 /* 24 / 28（默认，常规用这档） / 32 */
 const SIZE: Record<Size, string> = {
-  sm: 'h-6 px-2 text-sm',
-  md: 'h-7 px-2 text-sm',
-  lg: 'h-8 px-4 text-sm'
+  sm: styles.sm,
+  md: styles.md,
+  lg: styles.lg
 }
 
 /* 图标按钮保持与高度同宽的正方形热区 */
 const SQUARE: Record<Size, string> = {
-  sm: 'size-6',
-  md: 'size-7',
-  lg: 'size-8'
+  sm: styles.squareSm,
+  md: styles.squareMd,
+  lg: styles.squareLg
 }
 
 export function Button({
@@ -65,21 +63,15 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={clsx(
-        BASE,
+        styles.button,
         VARIANT[variant],
         iconOnly ? SQUARE[size] : SIZE[size],
-        /* 二选一，不能两个都给：CSS 里 rounded-sm 排在 rounded-pill 后面，同时出现时圆角永远是 4px */
-        shape === 'circle' ? 'rounded-pill' : 'rounded-sm',
+        shape === 'circle' ? styles.circle : styles.square,
         className
       )}
     >
       {loading ? <IconSpinner /> : icon}
-      {/* preflight 把 svg 设成 block，children 里的图标会各占一行，拉回 inline 并沿用 gap-1 的 4px 间距 */}
-      {iconOnly ? null : (
-        <span className="truncate [&>svg]:mx-1 [&>svg]:inline">
-          {children}
-        </span>
-      )}
+      {iconOnly ? null : <span className={styles.label}>{children}</span>}
     </button>
   )
 }

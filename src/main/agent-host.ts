@@ -744,6 +744,10 @@ async function prompt(text: string, images?: Array<{ data: string; mimeType: str
   await switching
   const rec = current
   if (!rec) return
+  // 先把权威状态推下去：建会话/切会话的 activate 会推一次 status(isStreaming=false)，
+  // 它可能晚于渲染层的乐观 streaming 到达，把那句「正在工作中」抹掉。
+  // 这里紧跟一条 status(true)，保证最后到达的是「在跑」
+  status(true)
   try {
     // 用户消息不做本地乐观插入：session.prompt 会同步发 user 的 message 事件（日志实测同一 tick）
     await rec.session.prompt(
@@ -753,6 +757,8 @@ async function prompt(text: string, images?: Array<{ data: string; mimeType: str
   } catch (err) {
     notice(rec, String((err as Error)?.message ?? err), 'error')
     flushNow(rec)
+    // 这一轮没开起来：渲染层在发消息时已乐观进了「工作中」，这里要收回，否则鲸鱼一直转
+    if (rec === current) status(false)
   }
 }
 
@@ -825,7 +831,9 @@ async function handle(cmd: AgentCommand): Promise<void> {
         loadProjects()
         // 扫会话列表要 ~850ms，和建会话并行，先用分批结果把侧栏填上
         void emitSessions()
-        await start()
+        // 加入切换链：启动期间发的第一条消息要等 current 就位，
+        // 否则 prompt 拿到 null 直接 return，用户的第一次输入被静默丢掉
+        await switchTo(() => start())
         break
       case 'prompt':
         await prompt(cmd.text, cmd.images)

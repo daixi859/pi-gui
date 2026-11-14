@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 import { clsx } from 'clsx'
 import { IconCheck } from './icons'
+import styles from './Menu.module.css'
 
 /** 浮层遮罩：点击空白关闭。调用方可能位于窗口拖拽区，必须显式 no-drag 才能收到点击 */
 export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
@@ -9,13 +10,13 @@ export function MenuScrim({ onClose }: { onClose: () => void }): ReactNode {
       type="button"
       aria-label="关闭"
       tabIndex={-1}
-      className="fixed inset-0 z-40 cursor-default [-webkit-app-region:no-drag]"
+      className={styles.scrim}
       onClick={onClose}
     />
   )
 }
 
-/** 退场期间保持挂载，让 CSS 过渡播完。时长与 global.css 里 .pi-menu 的 transition 保持一致 */
+/** 退场期间保持挂载，让 CSS 过渡播完。时长与 Menu.module.css 里 .panel 的 transition 保持一致 */
 const EXIT_MS = 140
 export function usePresence(open: boolean): boolean {
   const [mounted, setMounted] = useState(open)
@@ -84,7 +85,7 @@ export function MenuPanel({
       ref={ref}
       data-open={open}
       style={fixed ? { position: 'fixed', ...style } : style}
-      className={clsx('pi-menu [-webkit-app-region:no-drag]', className)}
+      className={clsx(styles.panel, className)}
     >
       {children}
     </div>
@@ -119,16 +120,16 @@ export function MenuItem({
       type="button"
       onClick={onClick}
       title={title}
-      className={clsx('pi-menu-item', danger && 'text-del', selected && 'font-medium')}
+      className={clsx(styles.item, danger && styles.danger, selected && styles.selected)}
     >
       {icon}
-      {children ?? (label != null && <span className="truncate">{label}</span>)}
+      {children ?? (label != null && <span className={styles.label}>{label}</span>)}
       {trailing}
-      {selected && <IconCheck className="ml-auto size-[15px] shrink-0 text-muted" />}
+      {selected && <IconCheck className={styles.check} />}
     </button>
   )
 }
 
 export function MenuLabel({ children }: { children: ReactNode }): ReactNode {
-  return <div className="px-2 pt-1 pb-1 text-xs text-faint">{children}</div>
+  return <div className={styles.menuLabel}>{children}</div>
 }

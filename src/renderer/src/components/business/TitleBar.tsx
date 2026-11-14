@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
-import { IconDots, IconFolder, IconClose, IconPanelCollapse, IconPanelExpand } from '../base/icons'
+import {
+  Button,
+  Dropdown,
+  IconDots,
+  IconFolder,
+  IconClose,
+  IconPanelCollapse,
+  IconPanelExpand,
+  MenuItem,
+} from 'agent-design/components'
 import { WindowControls } from './Sidebar'
-import { Button } from '../base/Button'
 import { PiLogo } from '../base/PiLogo'
-import { MenuItem } from '../base/Menu'
-import { Dropdown } from '../base/Dropdown'
 
 /** 品牌按钮：展开收起共用这一颗，hover 才换箭头，尺寸位置不变所以不抖 */
 export function CollapseButton({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }): ReactNode {

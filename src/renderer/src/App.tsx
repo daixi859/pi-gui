@@ -7,13 +7,11 @@ import { StartPage } from './components/business/StartPage'
 import { ChatComposer } from './components/business/Composer'
 import { MessageActions } from './components/business/MessageActions'
 import { Transcript } from './components/business/transcript/Transcript'
-import { WorkingDots } from './components/business/WorkingDots'
 import { Preview } from './components/business/Preview'
 import { AskCard } from './components/business/AskCard'
 import { UiPrompt } from './components/business/UiPrompt'
-import { Toasts } from './components/base/Toasts'
-import { IconArrowDown, IconArrowLeft, IconArrowRight, IconSpinner } from './components/base/icons'
-import { Button } from './components/base/Button'
+import { Button, IconArrowDown, IconArrowLeft, IconArrowRight, IconSpinner, Toasts } from 'agent-design/components'
+import { RunningStatus } from 'agent-design/blocks'
 import { toMarkdown } from './exportMarkdown'
 import { blocksOf } from './store'
 import {
@@ -220,6 +218,11 @@ function ChatView({ streaming, scope }: { streaming: boolean; scope: string }): 
   const rail = useScrollRail()
   const empty = useEngine((s) => s.turns.length === 0)
   const busy = useEngine((s) => s.busy)
+  // 已有 live 回时鲸鱼由 TurnView 自己画在回合尾部，这里只补「还没成形的那一段」
+  const live = useEngine((s) => s.turns.some((t) => t.status === 'live'))
+  // 开局：一轮刚发出去，回合还没成形（连 user 块都还没到）时正文全是空的，
+  // 也要能看见正在工作，别只留一句「这个会话还没有内容」让人以为没发出去
+  const starting = streaming && !live
   const ask = useEngine((s) => s.asks[0])
   // 离底部超过这个余量才给回到最新，避免小波动一直闪
   const AWAY = 120
@@ -256,12 +259,16 @@ function ChatView({ streaming, scope }: { streaming: boolean; scope: string }): 
           {...rail}
         >
           <div className="pi-page">
-            {empty ? (
+            {empty && !streaming ? (
               <p className="pt-10 text-center text-xs text-faint">{busy ?? '这个会话还没有内容'}</p>
             ) : (
               <>
                 <Transcript />
-                {(streaming || busy) && <WorkingDots />}
+                {starting && (
+                  <div className="pi-blocks">
+                    <RunningStatus />
+                  </div>
+                )}
                 {!streaming && <AnswerActions />}
               </>
             )}

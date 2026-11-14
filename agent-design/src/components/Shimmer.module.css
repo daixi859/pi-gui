@@ -1,0 +1,83 @@
+/* 运行中文字的一次扫光。外壳结构常驻，装饰层与基础层用相反的 translateX 相抵，字形不动 */
+@layer components {
+  .shimmer {
+    position: relative;
+    display: inline-grid;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    vertical-align: top;
+  }
+
+  .content {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .decoration {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    user-select: none;
+  }
+
+  .sweep {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    color: var(--pi-shimmer);
+    -webkit-mask-image: linear-gradient(105deg, transparent 0%, #000 40%, #000 60%, transparent 100%);
+    mask-image: linear-gradient(105deg, transparent 0%, #000 40%, #000 60%, transparent 100%);
+    /* 起始位移写成静态值：animation-delay 的 0.3s 里还没进入首帧，没有它副本会先按原位正对基础文字闪一下 */
+    transform: translateX(-100%);
+    animation: sweep-box 1.5s steps(48, end) 0.3s infinite;
+  }
+  /* 亮带是唯一的着色来源：副本里的语义色让位，否则亮带扫不出来 */
+  .sweep * {
+    color: inherit !important;
+  }
+
+  /* 副本按基础层的同一套 flex 布局排，宽度铺满，字形才能逐字对齐 */
+  .sweepCopy {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    align-items: center;
+    transform: translateX(100%);
+    animation: sweep-copy 1.5s steps(48, end) 0.3s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* 只藏装饰层：真实文字照常，运行状态仍看得出来 */
+    .decoration {
+      display: none;
+    }
+    .sweep,
+    .sweepCopy {
+      animation: none;
+    }
+  }
+}
+
+/* 亮带从左外侧扫到右外侧；66.67% 之后停住：扫一遍 + 停一拍的节奏 */
+@keyframes sweep-box {
+  0% {
+    transform: translateX(-100%);
+  }
+  66.6667%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes sweep-copy {
+  0% {
+    transform: translateX(100%);
+  }
+  66.6667%,
+  100% {
+    transform: translateX(-100%);
+  }
+}

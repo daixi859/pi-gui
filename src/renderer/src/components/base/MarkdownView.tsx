@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { CodeBlock } from './CodeBlock'
+import { CodeBlock } from 'agent-design/components'
 
 /**
  * 宿主注入给对话块的 Markdown 渲染器（ADR-0018）：代码走 shiki 高亮、外链走系统浏览器。

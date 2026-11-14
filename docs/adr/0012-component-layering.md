@@ -16,14 +16,18 @@
 ### 目录
 
 ```
-components/
-├── base/       Button, Menu, Dropdown, ListRow, Tip, Toasts, icons, PiLogo, CodeBlock, MarkdownView
+agent-design/src/components/   基础组件：Button, Menu, Dropdown, ListRow, Tip, Toasts, Marquee, Shimmer, icons, CodeBlock
+                               唯一入口 agent-design/components；CSS Modules，令牌来自 styles/tokens.css
+src/renderer/src/components/
+├── base/       PiLogo, MarkdownView（引入 agent-design 的 CodeBlock）
 └── business/   Sidebar, Composer, Projects, TitleBar, StartPage, AskCard,
-                UiPrompt, Preview, MessageActions, WorkingDots
+                UiPrompt, Preview, MessageActions
                 └── transcript/   会话正文薄壳（块来自 agent-design/blocks，见 ADR-0018）
 ```
 
-业务可以 import base，反之禁止；base 内部不越出 base/。
+基础组件搬到 `agent-design/` 之后，主仓 `base/` 只剩不通用的两个。业务组件从 `agent-design/components` 引入基础组件；反之禁止。基础组件内部不越出 agent-design。
+
+基础组件的样式用 CSS Modules，不用 Tailwind：`agent-design` 作为独立包必须能脱离主仓的 Tailwind 运行。令牌在 `agent-design/src/styles/tokens.css` 的 `:root` 里，`--pi-*` 命名；主仓 `global.css` 的 `@theme` 只把 Tailwind 名别名过去（`var(--pi-*)`）。
 
 ### 样式硬规则
 

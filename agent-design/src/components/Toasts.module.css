@@ -1,0 +1,37 @@
+/* 提示条：容器整体不接收指针，不挡住下面的点击 */
+@layer components {
+  .stack {
+    position: fixed;
+    right: calc(var(--pi-spacing) * 4);
+    bottom: calc(var(--pi-spacing) * 4);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pi-spacing);
+    width: 300px;
+    pointer-events: none;
+  }
+
+  .toast {
+    padding: calc(var(--pi-spacing) * 2);
+    border: 1px solid;
+    border-radius: var(--pi-radius-md);
+    background-color: var(--pi-surface);
+    font-size: var(--pi-text-sm);
+    line-height: 1.5;
+    box-shadow: var(--pi-shadow-pop);
+  }
+
+  .info {
+    border-color: var(--pi-edge);
+    color: var(--pi-fg);
+  }
+  .warning {
+    border-color: var(--pi-warning-3);
+    color: var(--pi-warn);
+  }
+  .error {
+    border-color: var(--pi-danger-3);
+    color: var(--pi-del);
+  }
+}
